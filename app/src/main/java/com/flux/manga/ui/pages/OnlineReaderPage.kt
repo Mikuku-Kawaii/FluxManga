@@ -98,6 +98,37 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     private var terminalChapter: String? = null
     private var continuousReading = true
     private fun pageIdentity(page: SourcePageResource) = "${page.chapterId}:${page.id}"
+    /** Cache only the chapter the reader has entered, without decoding full-size bitmaps. */
+    suspend fun prefetchCurrentChapter() {
+        if (offlineOnly) return
+        val initial = state.value
+        val chapter = initial.pages.getOrNull(initial.index)?.chapterId ?: return
+        val remaining = initial.pages.filter { it.chapterId == chapter }.toMutableList()
+        fun active() {
+            repository.active()
+            val current = state.value
+            if (!session.state.value.foreground || current.loading ||
+                current.pages.getOrNull(current.index)?.chapterId != chapter) throw CancellationException()
+        }
+        while (remaining.isNotEmpty()) {
+            currentCoroutineContext().ensureActive(); active()
+            // Reprioritize after a seek; once the later pages are cached, fill earlier gaps.
+            val ordinal = state.value.pages[state.value.index].ordinal
+            val page = remaining.firstOrNull { it.ordinal >= ordinal } ?: remaining.first()
+            try {
+                // Every repository fetches/caches the encoded image before reading its bounds.
+                // Do not publish dimensions here: changing visible page keys would reload images.
+                repository.dimensions(page)
+                currentCoroutineContext().ensureActive(); active()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                // A speculative failure must not block other pages. The page's existing
+                // foreground loader reports the actual error and offers image retry.
+            }
+            remaining.remove(page)
+            yield()
+        }
+    }
     private fun stopPrefetch() {
         nextTicket++; nextJob?.cancel(); nextJob = null; nextAttempt = null
         mutable.value = state.value.copy(nextBusy = false)
@@ -419,6 +450,11 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
     val currentChapter = state.pages.getOrNull(state.index)?.chapterId.orEmpty()
     val chapterStart = state.pages.indexOfFirst { it.chapterId == currentChapter }.coerceAtLeast(0)
     val chapterCount = state.pages.count { it.chapterId == currentChapter }
+    LaunchedEffect(model, owner, currentChapter, state.loading, sessionState.foreground) {
+        if (!state.loading && sessionState.foreground) {
+            owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.prefetchCurrentChapter() }
+        }
+    }
     LaunchedEffect(state.index, state.pages.size, state.loading, state.chapterBusy, options.continuous, sessionState.foreground) {
         model.prefetchNext(options.continuous)
     }
