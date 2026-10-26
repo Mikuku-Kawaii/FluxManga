@@ -478,9 +478,9 @@ impl CopyMangaSource {
     ) -> Result<SourceSearchPage, SourceError> {
         self.check(&context)?;
         let expected = offset(page)?;
-        let page: Page<ComicEntry> = parse(self.http.get(context.clone(), format!(
-            "api/v3/update/newest?limit={LIMIT}&offset={expected}&platform={}", self.platform()
-        )).await?)?;
+        let page: Page<ComicEntry> = parse(
+            self.http.copy_updates(context.clone(), expected, LIMIT).await?
+        )?;
         self.page(context, Page {
             total: page.total,
             limit: page.limit,

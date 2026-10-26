@@ -912,6 +912,24 @@ impl SourceHttpSession {
         }
     }
 
+    // The legacy Copy API still serves recommendations, but newest now returns 404.
+    // Use the website's public feed without forwarding any account credentials.
+    pub(crate) async fn copy_updates(&self, context: SourceContext, offset: u32, limit: u32) -> Result<SourceHttpReply, SourceError> {
+        let url = Url::parse(&format!(
+            "https://api.copy4000.com/api/v3/update/newest?limit={limit}&offset={offset}&platform=1"
+        )).map_err(|_| SourceError::InvalidRequest)?;
+        let mut headers = header::HeaderMap::new();
+        headers.insert(header::ACCEPT, header::HeaderValue::from_static("application/json"));
+        headers.insert("platform", header::HeaderValue::from_static("1"));
+        headers.insert("version", header::HeaderValue::from_static("2026.10.16"));
+        headers.insert(header::ORIGIN, header::HeaderValue::from_static("https://mangacopy.com"));
+        headers.insert(header::REFERER, header::HeaderValue::from_static("https://mangacopy.com/"));
+        match self.dispatch_headers(context, url, None, None, true, headers).await? {
+            Output::Bytes(reply) => Ok(reply),
+            Output::Image(_) => unreachable!(),
+        }
+    }
+
     async fn request(
         &self,
         context: SourceContext,
