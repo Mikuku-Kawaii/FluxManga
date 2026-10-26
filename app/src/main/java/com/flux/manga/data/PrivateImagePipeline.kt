@@ -40,6 +40,21 @@ internal class PrivateImagePipeline<E>(
         }
         try {
             return withContext(Dispatchers.IO) {
+                // Cached pages must not wait behind an unrelated speculative network request.
+                check()
+                val cached = cache.read(key, allowed)
+                if (cached != null) {
+                    try {
+                        check()
+                        if (cached.isEmpty() || cached.size > MAX_BYTES) throw IOException("图片缓存容量无效")
+                        owned = decode(cached)
+                        check()
+                        return@withContext requireNotNull(owned)
+                    } finally {
+                        cached.fill(0)
+                        if (!allowed()) cache.clearMemory()
+                    }
+                }
                 lock.withLock {
                     check()
                     var bytes: ByteArray? = null

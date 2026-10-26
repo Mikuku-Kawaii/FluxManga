@@ -57,6 +57,9 @@ internal data class OnlineReaderState(
     val nextBusy: Boolean = false, val nextError: String? = null, val atSeriesEnd: Boolean = false,
 )
 
+internal data class OnlineReaderBitmapKey(val chapter: String, val page: String, val width: Int,
+    val top: Int, val bottom: Int?)
+
 internal class OnlineReaderModel(app: Application, val session: WorldSession, private val sourceId: String,
     mangaId: String, private val requestedChapter: String?, private val savedState: SavedStateHandle, val offlineOnly: Boolean = false,
     val syntheticPrivate: Boolean = false, syntheticNamespace: String = SyntheticPrivateReaderRepository.admissionNamespace
@@ -98,6 +101,27 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     private var terminalChapter: String? = null
     private var continuousReading = true
     private fun pageIdentity(page: SourcePageResource) = "${page.chapterId}:${page.id}"
+    // Recent screen-sized tiles only; encoded chapter files remain in the repository cache.
+    private val bitmaps = object : android.util.LruCache<OnlineReaderBitmapKey, Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: OnlineReaderBitmapKey, value: Bitmap) = value.allocationByteCount
+        // Never recycle an evicted bitmap: a Compose/GPU draw may still own it.
+    }
+    fun cachedBitmap(key: OnlineReaderBitmapKey): Bitmap? =
+        if (repository.isActive() && (!privateContent || session.state.value.foreground)) bitmaps.get(key) else null
+    suspend fun image(page: SourcePageResource, key: OnlineReaderBitmapKey): Bitmap {
+        cachedBitmap(key)?.let { return it }
+        val epoch = session.state.value.visibilityEpoch
+        val bitmap = repository.image(page, key.width, key.top, key.bottom)
+        try {
+            currentCoroutineContext().ensureActive(); repository.active()
+            if (privateContent && (!session.state.value.foreground || session.state.value.visibilityEpoch != epoch)) throw CancellationException()
+            bitmaps.put(key, bitmap)
+            return bitmap
+        } catch (failure: Throwable) {
+            bitmap.recycle()
+            throw failure
+        }
+    }
     /** Cache only the chapter the reader has entered, without decoding full-size bitmaps. */
     suspend fun prefetchCurrentChapter() {
         if (offlineOnly) return
@@ -117,9 +141,9 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
             val page = remaining.firstOrNull { it.ordinal >= ordinal } ?: remaining.first()
             try {
                 // Every repository fetches/caches the encoded image before reading its bounds.
-                // Do not publish dimensions here: changing visible page keys would reload images.
-                repository.dimensions(page)
+                val size = repository.dimensions(page)
                 currentCoroutineContext().ensureActive(); active()
+                dimensions(page, size)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
                 // A speculative failure must not block other pages. The page's existing
@@ -272,8 +296,10 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     fun dimensions(page: SourcePageResource, size: Pair<Int, Int>) {
         val index = state.value.pages.indexOfFirst { it.id == page.id && it.chapterId == page.chapterId }
         if (index < 0 || !repository.isActive()) return
+        val current = state.value.pages[index]
+        if (current.width == size.first.toUInt() && current.height == size.second.toUInt()) return
         mutable.value = state.value.copy(pages = state.value.pages.toMutableList().also {
-            it[index] = page.copy(width = size.first.toUInt(), height = size.second.toUInt())
+            it[index] = current.copy(width = size.first.toUInt(), height = size.second.toUInt())
         })
     }
     private fun record() {
@@ -390,11 +416,13 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     }
     fun background() {
         stopPrefetch()
+        bitmaps.evictAll()
         if (privateContent) { loadJob?.cancel(); chapterJob?.cancel(); mutable.value = state.value.copy(loading = false, chapterBusy = false) }
         loadedTiles.clear(); visibleLoaded = null; flush(); writer.launch { repository.clearImages() }
     }
     fun leave() { loadJob?.cancel(); chapterJob?.cancel(); mutable.value = state.value.copy(loading = false, chapterBusy = false); background() }
     override fun onCleared() {
+        bitmaps.evictAll()
         saveDelay?.cancel()
         flush().invokeOnCompletion { writer.launch { try { repository.releaseImages() } finally { repository.close(); writer.cancel() } } }
     }
@@ -578,17 +606,20 @@ private fun ReaderSeriesEnd(modifier: Modifier = Modifier) {
 private fun OnlineReaderImage(model: OnlineReaderModel, page: SourcePageResource, width: Int, selected: Boolean,
     modifier: Modifier = Modifier, top: Int = 0, bottom: Int? = null, doubleTap: Boolean = false,
     gestureActive: Boolean = selected, zoomChanged: (Boolean) -> Unit = {}) {
-    var bitmap by remember(page, width, top, bottom) { mutableStateOf<Bitmap?>(null) }
-    var error by remember(page, width) { mutableStateOf<String?>(null) }
-    var attempt by remember(page) { mutableIntStateOf(0) }
     val owner = LocalLifecycleOwner.current
     val lifecycle by owner.lifecycle.currentStateFlow.collectAsState()
     val visibility by model.session.state.collectAsState()
     val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) &&
         (!model.privateContent || (visibility.foreground && model.repository.isActive()))
     val epoch = if (model.privateContent) visibility.visibilityEpoch else 0L
-    var bitmapEpoch by remember(page, width, top, bottom) { mutableLongStateOf(-1) }
-    DisposableEffect(page, width, top, bottom) {
+    val bitmapKey = remember(page.chapterId, page.id, width, top, bottom) {
+        OnlineReaderBitmapKey(page.chapterId, page.id, width, top, bottom)
+    }
+    var bitmap by remember(bitmapKey) { mutableStateOf(model.cachedBitmap(bitmapKey)) }
+    var error by remember(bitmapKey) { mutableStateOf<String?>(null) }
+    var attempt by remember(bitmapKey) { mutableIntStateOf(0) }
+    var bitmapEpoch by remember(bitmapKey) { mutableLongStateOf(if (bitmap != null) epoch else -1) }
+    DisposableEffect(bitmapKey) {
         onDispose {
             // Published Bitmap pixels can still be in a render command. Drop UI ownership;
             // do not recycle memory underneath a queued GPU draw or promise zeroization.
@@ -596,14 +627,14 @@ private fun OnlineReaderImage(model: OnlineReaderModel, page: SourcePageResource
             model.unloaded(page.id, top, page.chapterId)
         }
     }
-    LaunchedEffect(page, width, top, bottom, attempt, active, epoch) {
+    LaunchedEffect(bitmapKey, attempt, active, epoch) {
         model.unloaded(page.id, top, page.chapterId)
-        bitmap = null; error = null
+        bitmap = if (active) model.cachedBitmap(bitmapKey) else null
+        if (bitmap != null) bitmapEpoch = epoch
+        error = null
         if (active) try {
-            val result = model.repository.image(page, width, top, bottom)
-            if (model.privateContent && (!model.session.state.value.foreground ||
-                model.session.state.value.visibilityEpoch != epoch || !model.repository.isActive())) result.recycle()
-            else { bitmapEpoch = epoch; bitmap = result }
+            val result = bitmap ?: model.image(page, bitmapKey)
+            bitmapEpoch = epoch; bitmap = result
         }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = if (failure is IOException) failure.message else model.failure(failure) }
@@ -644,6 +675,27 @@ private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, widt
         }
     }
     val currentTiles by rememberUpdatedState(tiles)
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    val visibility by model.session.state.collectAsState()
+    val predecodeActive = lifecycle.isAtLeast(Lifecycle.State.STARTED) && visibility.foreground && !state.loading
+    LaunchedEffect(list, width, predecodeActive, visibility.visibilityEpoch) {
+        if (predecodeActive) snapshotFlow {
+            val visible = list.layoutInfo.visibleItemsInfo
+            val first = visible.firstOrNull()?.index
+            val last = visible.lastOrNull()?.index
+            val chapter = first?.let { currentTiles.getOrNull(it)?.page?.chapterId }
+            if (last == null || chapter == null) emptyList()
+            else currentTiles.drop(last + 1).take(2).filter { it.bottom != null && it.page.chapterId == chapter }
+        }.distinctUntilChanged().collectLatest { upcoming ->
+            // Keep only a small decoded look-ahead; the full chapter stays encoded on disk.
+            for (tile in upcoming) {
+                try {
+                    model.image(tile.page, OnlineReaderBitmapKey(tile.page.chapterId, tile.page.id, width, tile.top, tile.bottom))
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { /* The visible tile retains its own error/retry UI. */ }
+            }
+        }
+    }
     LaunchedEffect(list, restored) {
         if (restored) snapshotFlow {
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == list.firstVisibleItemIndex }

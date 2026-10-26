@@ -1,6 +1,6 @@
 # 发布资料
 
-当前公开版本：0.1.2（versionCode 5），Android 12+，arm64-v8a / x86_64。
+当前公开版本：0.1.3（versionCode 6），Android 12+，arm64-v8a / x86_64。
 
 - [下载与发布记录](https://github.com/Mikuku-Kawaii/FluxManga/releases)
 - [构建与保留数据安装](build-and-install.md)

@@ -10,7 +10,7 @@
 
 ## 维护者发布一次新版本
 
-1. 修改版本说明；构建更高 versionCode 的同签名双 ABI release APK。公开 0.1.0 基线为 code 3；0.1.1 为 code 4，0.1.2 为 code 5，本次使用完整包更新。
+1. 修改版本说明；构建更高 versionCode 的同签名双 ABI release APK。公开 0.1.0 基线为 code 3；0.1.1 为 code 4，0.1.2 为 code 5，0.1.3 为 code 6，本次使用完整包更新。
 2. 准备候选源码提交并固定 SHA，构建期间不要继续修改应用源码。只提交源码、schema、lockfile、构建脚本、公共配置与许可材料。
 3. 用仓库外的 PKCS#8 RSA 私钥生成清单。PowerShell 7 示例：
 
@@ -18,19 +18,19 @@
 pwsh -File scripts/prepare-release.ps1 `
   -Apk app/build/outputs/apk/release/app-release.apk `
   -SigningKey <仓库外的更新私钥.pk8> `
-  -Notes release/notes/0.1.2.md `
-  -OutputDirectory build/publish/v0.1.2
+  -Notes release/notes/0.1.3.md `
+  -OutputDirectory build/publish/v0.1.3
 ```
 
-脚本校验 APK 并生成 `FluxManga-0.1.2-universal.apk`、`update-v2.signed`、`release-artifacts.json`、`SHA256SUMS.txt`。默认清单有效期 365 天；到期前应发布新的签名清单 / 版本，不能放任渠道过期。
+脚本校验 APK 并生成 `FluxManga-0.1.3-universal.apk`、`update-v2.signed`、`release-artifacts.json`、`SHA256SUMS.txt`。默认清单有效期 365 天；到期前应发布新的签名清单 / 版本，不能放任渠道过期。
 
-4. 用 `git archive --format=zip --prefix=FluxManga-0.1.2/ -o <源码ZIP> <提交SHA>` 生成对应源码，将源码 ZIP 哈希追加到校验清单。
+4. 用 `git archive --format=zip --prefix=FluxManga-0.1.3/ -o <源码ZIP> <提交SHA>` 生成对应源码，将源码 ZIP 哈希追加到校验清单。
 5. 推送该提交及版本 tag，然后显式运行发布工具：
 
 ```powershell
 # Assets 是明确列出的 APK、清单、元数据、源码 ZIP 和 SHA256SUMS.txt；不要传整个目录。
-.\scripts\publish-github-release.ps1 -Tag v0.1.2 -Commit <40位提交SHA> `
-  -Notes release/notes/0.1.2.md -Assets $assets -Publish
+.\scripts\publish-github-release.ps1 -Tag v0.1.3 -Commit <40位提交SHA> `
+  -Notes release/notes/0.1.3.md -Assets $assets -Publish
 ```
 
 工具通过本机 Git Credential Manager 或进程 `GH_TOKEN` 登录 GitHub；凭据不进入仓库 / 日志。先建立草稿，逐项核对 GitHub 返回的大小和 SHA-256，再公开并设为 latest。不传 `-Publish` 时保留草稿；已公开版本不被覆盖。API 依据：[Release](https://docs.github.com/en/rest/releases/releases)、[Release assets](https://docs.github.com/en/rest/releases/assets)。
