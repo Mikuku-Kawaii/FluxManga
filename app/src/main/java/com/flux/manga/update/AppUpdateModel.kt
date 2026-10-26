@@ -304,8 +304,16 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
-    private fun message(e: Exception, fallback: String) = if (e is IllegalArgumentException || e is IllegalStateException)
-        e.message?.takeIf { it.any { c -> c in '\u4e00'..'\u9fff' } && !it.contains("https:") }?.take(240) ?: fallback else fallback
+    private fun message(e: Exception, fallback: String): String = when (e) {
+        is java.net.SocketTimeoutException -> "更新连接或读取超时，请检查网络后重试"
+        is java.net.UnknownHostException -> "无法解析更新服务器地址，请检查网络或 DNS"
+        is javax.net.ssl.SSLException -> "更新服务器安全连接失败，请检查系统时间与网络"
+        is java.net.ConnectException -> "无法连接更新服务器，请检查网络后重试"
+        is java.io.IOException -> "更新文件或网络读取失败（${e.javaClass.simpleName}），可重试下载"
+        is IllegalArgumentException, is IllegalStateException ->
+            e.message?.takeIf { it.any { c -> c in '\u4e00'..'\u9fff' } && !it.contains("https:") }?.take(240) ?: fallback
+        else -> "$fallback（${e.javaClass.simpleName}）"
+    }
     private fun now() = System.currentTimeMillis() / 1000
     companion object { private val coldCheck = AtomicBoolean(false) }
 }

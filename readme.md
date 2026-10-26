@@ -54,18 +54,18 @@ Android 原生漫画阅读器 · 双空间 · 多图源 · 本地 CBZ · 液态�
 
 ## 下载与安装
 
-前往 [GitHub Releases](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest) 下载 `FluxManga-0.1.1-universal.apk`。
+前往 [GitHub Releases](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest) 下载 `FluxManga-0.1.2-universal.apk`。
 
 - **Android 12 / API 31 及以上**；一个 APK 包含 `arm64-v8a` 与 `x86_64`。
 - 首次安装按 Android 提示允许对应来源安装；升级直接覆盖安装，保留应用数据。
-- 0.1.1 为早期公开版本，仍在持续开发；请保留重要原文件和备份。
+- 0.1.2 为早期公开版本，仍在持续开发；请保留重要原文件和备份。
 - 如果系统提示签名冲突，请先停止安装并核对来源，不要通过卸载或清库解决。
 
 ### 自动更新
 
 应用启动后非阻断检查本仓库的签名更新清单，也可以在「设置 → 应用更新」手动检查。下载后校验长度、SHA-256、包名、版本和 APK 签名，再交给 Android 系统确认安装。
 
-可选开启前台非计费网络自动下载，默认不自动下载。下载支持暂停 / 续传；有匹配的可信差分包时可使用差分，否则下载完整 APK。**0.1.1 / versionCode 4 可从公开 0.1.0 / code 3 更新，本次提供完整包。** 后续发布继续递增 `versionCode` 并沿用同一签名，已有未配置渠道的旧预览包需要手动安装这次 APK 一次。
+可选开启前台非计费网络自动下载，默认不自动下载。下载支持暂停 / 续传；有匹配的可信差分包时可使用差分，否则下载完整 APK。**0.1.2 / versionCode 5 修复下载前的空间检查兼容问题，本次提供完整包。** 0.1.0 / 0.1.1 若点击下载立即失败，请从 Releases 手动覆盖安装 0.1.2 一次；修复不能通过更新服务器清单注入旧客户端。后续发布递增 `versionCode` 并沿用同一签名，安装保留现有数据。
 
 更新清单与 APK 都托管在 GitHub Releases，不使用用户的图源账号。发布方法见[自动更新与发布](docs/release/github-updates.md)。
 

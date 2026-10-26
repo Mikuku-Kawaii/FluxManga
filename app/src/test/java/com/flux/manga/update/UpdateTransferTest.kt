@@ -68,12 +68,16 @@ class UpdateTransferTest {
             UpdateTransfer(UpdateTransport { _, _ -> response(200, ByteArray(bytes.size)) }).download(artifact, file, {}, {})
         }
     }
-    @Test fun completeCheckpointIsRehashedWithoutNetworkAndCorruptionIsRejected() = withFile { file ->
+    @Test fun completeCheckpointIsRehashedAndCorruptCheckpointIsDownloadedAgain() = withFile { file ->
         file.writeBytes(bytes)
         val transfer = UpdateTransfer(UpdateTransport { _, _ -> error("no network") })
         transfer.download(artifact, file, {}, {})
         file.writeBytes(ByteArray(bytes.size))
-        assertThrows(IllegalArgumentException::class.java) { transfer.download(artifact, file, {}, {}) }
+        UpdateTransfer(UpdateTransport { _, offset ->
+            assertEquals(0L, offset)
+            response(200, bytes)
+        }).download(artifact, file, {}, {})
+        assertArrayEquals(bytes, file.readBytes())
     }
     @Test fun ioFailureRetainsWrittenPrefixClosesResponseAndNextRequestResumes() = withFile { file ->
         var closed = false

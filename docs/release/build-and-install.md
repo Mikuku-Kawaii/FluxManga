@@ -1,6 +1,6 @@
 # 构建与安装
 
-0.1.1 / versionCode 4，包名 `com.flux.manga`，minSdk 31。发行包包含 arm64-v8a、x86_64，启用 R8 与资源压缩，不启用 debuggable。
+0.1.2 / versionCode 5，包名 `com.flux.manga`，minSdk 31。发行包包含 arm64-v8a、x86_64，启用 R8 与资源压缩，不启用 debuggable。
 
 ## Windows 构建环境
 
@@ -24,7 +24,7 @@ cargo install cargo-ndk --version 4.1.2 --locked
 在本机进程设置 `FLUX_SIGNING_STORE`、`FLUX_SIGNING_STORE_PASSWORD`、`FLUX_SIGNING_ALIAS`、`FLUX_SIGNING_KEY_PASSWORD`；私钥与密码不能提交到仓库。
 
 ```powershell
-.\scripts\build-release.ps1 -VersionName 0.1.1 -VersionCode 4
+.\scripts\build-release.ps1 -VersionName 0.1.2 -VersionCode 5
 ```
 
 产物：`app/build/outputs/apk/release/app-release.apk`。未提供签名变量时，普通 `assembleRelease` 只生成未签名 APK，不可直接分发；发布脚本要求显式提供签名。

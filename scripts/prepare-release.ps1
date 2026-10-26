@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string]$SigningKey,
     [Parameter(Mandatory)][string]$OutputDirectory,
     [string]$Repository = 'Mikuku-Kawaii/FluxManga',
-    [string]$Notes = 'release/notes/0.1.1.md',
+    [string]$Notes = 'release/notes/0.1.2.md',
     [int]$ValidDays = 365
 )
 $ErrorActionPreference = 'Stop'

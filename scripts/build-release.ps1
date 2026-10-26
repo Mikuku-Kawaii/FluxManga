@@ -1,4 +1,4 @@
-param([string]$VersionName = '0.1.1', [int]$VersionCode = 4)
+param([string]$VersionName = '0.1.2', [int]$VersionCode = 5)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/env.ps1"
 if (-not $env:FLUX_SIGNING_STORE) { throw 'Set FLUX_SIGNING_STORE, FLUX_SIGNING_STORE_PASSWORD, FLUX_SIGNING_ALIAS and FLUX_SIGNING_KEY_PASSWORD in this process.' }

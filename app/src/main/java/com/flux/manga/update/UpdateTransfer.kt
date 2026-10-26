@@ -59,18 +59,27 @@ internal fun readUpdateManifest(transport: UpdateTransport, url: String): ByteAr
 }
 internal class UpdateTransfer(private val transport: UpdateTransport) {
     fun download(artifact: UpdateArtifact, part: File, checkpoint: () -> Unit, progress: (Long) -> Unit,
-        availableBytes: () -> Long = { java.nio.file.Files.getFileStore(part.parentFile!!.toPath()).usableSpace }) =
+        availableBytes: () -> Long = { part.parentFile!!.usableSpace }) =
         download(artifact.payload, part, checkpoint, progress, availableBytes)
 
     fun download(artifact: UpdatePayload, part: File, checkpoint: () -> Unit, progress: (Long) -> Unit,
-        availableBytes: () -> Long = { java.nio.file.Files.getFileStore(part.parentFile!!.toPath()).usableSpace }) {
-        part.parentFile!!.mkdirs()
+        availableBytes: () -> Long = { part.parentFile!!.usableSpace }) {
+        // File.getUsableSpace queries this directory directly. NIO getFileStore walks
+        // ancestors/mount entries which an Android app UID may not be allowed to read.
+        val directory = part.parentFile!!
+        require(directory.isDirectory || directory.mkdirs()) { "无法创建更新下载目录" }
         require(availableBytes() >= (artifact.size - part.length()).coerceAtLeast(0) + 16L * 1024 * 1024) { "更新空间不足，请腾出空间后重试" }
         if (part.length() > artifact.size) require(part.delete()) { "无法重置更新临时文件" }
-        if (part.length() == artifact.size) { verifyPayload(part, artifact, checkpoint); progress(artifact.size); return }
+        if (part.length() == artifact.size) {
+            if (sha256(part, checkpoint) == artifact.sha256) { progress(artifact.size); return }
+            // A complete but corrupt file cannot be resumed. Retry starts a fresh copy.
+            require(part.delete()) { "无法重置损坏的更新临时文件" }
+            progress(0)
+        }
         checkpoint()
         transport.open(artifact.url, part.length()).use { r ->
             checkpoint()
+            require(r.status == 200 || r.status == 206) { "更新下载请求失败（HTTP ${r.status}）" }
             val offset = resumeOffset(r.status, r.contentRange, part.length(), artifact.size)
             require(r.contentLength == -1L || r.contentLength == artifact.size - offset) { "响应长度不匹配" }
             require(availableBytes() >= artifact.size - offset + 16L * 1024 * 1024) { "更新空间不足" }
