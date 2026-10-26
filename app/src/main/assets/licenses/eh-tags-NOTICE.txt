@@ -1,0 +1,28 @@
+EH / EX tag dictionary format support for FluxManga, 2026-10-24
+
+Protocol/data-format reference: EhTagTranslation/Database
+https://github.com/EhTagTranslation/Database
+Pinned commit: 6c228f5ac76ca415e897dcc074f7e77c2afa14c2
+Inspected release: v7.29288.1, db.text.json, format version 7
+
+The upstream translation data belongs to its contributing editors and is
+licensed under CC BY-NC-SA 3.0 CN unless stated otherwise. See the adjacent
+license text. This is distinct from FluxManga's GPL-3.0-only application license.
+No complete dictionary or upstream executable code is bundled with FluxManga.
+
+FluxManga implements a JSON format reader using existing platform APIs. Users
+select a dictionary file, inspect its self-declared revision, measured SHA-256
+and entry count, and explicitly replace the app-owned name index. Only namespace,
+original label and translated name are retained. Descriptions, links, images and
+markup are not rendered or fetched. The source file is unchanged. No automatic
+network update, remote query translation or usage reporting is performed.
+
+The upstream README requests a downstream usage issue before using its database.
+No issue has been sent by this task. Any future data bundling/distribution or
+maintainer communication requires separate release preparation and authorization.
+This format integration is not a claim of permission to relicense that data.
+
+Local implementation: GalleryTags.kt, GalleryTagsPage.kt, GalleryTagsPicker.kt,
+private AtomicFile storage, existing gallery detail/search/settings and navigation.
+Updates are user-selected replacements; failures before commit retain the old file.
+No tests, compilation, packaging or device/live-manga-service access this stage.

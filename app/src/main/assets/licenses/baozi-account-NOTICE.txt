@@ -1,0 +1,20 @@
+Baozi account protocol adaptation for FluxManga, modified 2026-10-21.
+Source: https://github.com/skepsun/kototoro-parsers
+Commit: a94b6704997081b0b57544d3404dfc6809c9ae4b
+Path: src/main/kotlin/org/skepsun/kototoro/parsers/site/zh/Baozimh.kt
+License: GNU General Public License version 3 (baozi-account-GPL-3.0.txt).
+
+Adapted multipart username/password sign-in, JSON data -> TSID, personal
+bookshelf route and bookshelf-items / h4 > a selectors.
+Replaced host, OkHttp and global cookie jar with existing session-scoped Rust
+transport and Kotlin/jsoup DTO mapping. Fixed host cn.baozimh.com only;
+no mirror fallback or remote add/remove-favorite operations are included.
+Added bounded input/output, non-retried sign-in, no redirects, account context
+isolation and cancellation. Empty snapshots are unverified and a snapshot is
+not claimed to be the complete remote library. No passwords are persisted.
+2026-10-21 integration: added Keystore-envelope session storage, account-scoped
+identities and explicit selection/import of the visible bookshelf snapshot.
+Checkpoint and book inserts share a Room transaction; existing local favorites,
+reading modes and progress are preserved. Added login/revalidation/logout UI,
+source-management/library entry points and deferred persistence tests.
+No whole-library pagination or verified-empty-account capability is claimed.

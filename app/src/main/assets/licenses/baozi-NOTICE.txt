@@ -1,0 +1,25 @@
+Baozi metadata adapter, modified for FluxManga on 2026-10-21.
+Source: https://github.com/keiyoushi/extensions-source
+Commit: ff521c17bb3e503c01e658e8fac00b60a95829f3
+Path: src/zh/baozimanhua/src/eu/kanade/tachiyomi/extension/zh/baozimanhua/Baozi.kt
+License: Apache License 2.0 (baozi-Apache-2.0.txt).
+Adapted card/detail DOM selectors and search/catalog request semantics.
+Replaced extension host/OkHttp/preferences with WorldSession, existing Rust HTTP transport,
+project DTOs, cancellation/context checks and Compose pages. No chapter/image interceptors copied.
+HTML parser: org.jsoup:jsoup:1.21.2, https://jsoup.org/, MIT (jsoup-MIT.txt).
+
+2026-10-21 cover/chapter update: adapted img/og:image selectors and chapter directory
+ordering, href/onclick identities. Added source-scoped cover references and anonymous
+file transport; no banner processing, app reader rewriting or chapter read-state hack.
+
+2026-10-21 source completion: adapted appChapterUrl/getPageList image selection,
+reader CDN replacement, latest updates and pinned Filters.kt type categories.
+Reader images retain original pixels: optional banner crop/re-encode is not copied.
+Added project-owned bounded page references, reader/library/history integration.
+Account code from unlicensed candidates is not included.
+
+2026-10-22 detail metadata extension:
+Adapted fixed Baozi.kt detail publication status and explicitly labelled update-date selector;
+retained author text without inventing delimiters or roles. LocalDate validates calendar dates;
+no assumed timezone, directory-based latest-chapter inference, extra requests or mirror changes.
+Implementation: app/src/main/java/com/flux/manga/data/BaoziWorkMetadata.kt.

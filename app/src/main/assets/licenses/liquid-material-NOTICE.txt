@@ -1,0 +1,33 @@
+FluxManga liquid material adaptation, modified 2026-10-21.
+Copyright 2025 Kyant
+Source: https://github.com/Kyant0/AndroidLiquidGlass
+Commit: 65ab177e90e5c1d8c62e70cf7755841982da65f6
+Path: backdrop/src/commonMain/kotlin/com/kyant/backdrop/internal/Shaders.kt
+License: Apache License 2.0 (liquid-material-Apache-2.0.txt).
+
+Extracted rounded-rectangle distance and circle-map edge refraction mathematics.
+Added pod / two-lobe smooth union, shared finite-difference normals, bounded sampling,
+premultiplied theme material composition and directional contour highlight.
+Adapted to the existing Android API 31+ Compose layers and WorldSession lifecycle;
+API 33 gates RuntimeShader. No Backdrop / shapes / KMP runtime dependency added.
+Modified 2026-10-24: simultaneous endpoint merge/split geometry replaces the arc;
+the baseline uses a Compose path union and the shader supports the same three shapes.
+Haze at 8a96c505dde451b74edd76c562228f5a6f2e9ba0 (Apache-2.0) was evaluated
+as an architectural reference only; no Haze implementation is distributed.
+
+Modified 2026-10-25 per user direction: production navigation uses fixed left pod
+and right rounded-rectangle switch, with equal heights in both spaces. Added
+per-shape corner radii to the existing SDF; material layering and API gates remain.
+
+Modified 2026-10-25 (momentum Phase B): the latest user direction restores
+bidirectional detached-pod exchange. Fusion strength now follows the shared
+merge/neck/snap timeline; bright and dim rim colors are supplied by semantic
+theme tokens. API 31 uses a dynamically thresholded silhouette and a single
+gradient contour. No additional upstream code or runtime dependencies added.
+
+Modified 2026-10-25 (optical material): strengthened the existing edge-normal
+sampling displacement, added selected-lens magnification and dual-source contour
+lighting with inner thickness shading. SDF union geometry and motion remain
+unchanged. Background replay, ColorMatrix vibrancy, protruding lens contours and
+foreground-only shadows use existing Compose / Android APIs; no new upstream
+implementation or dependency was imported.

@@ -1,0 +1,68 @@
+ExHentai protocol adaptation for FluxManga, 2026-10-24
+
+Selected upstream: xiaojieonly/Ehviewer_CN_SXJ
+https://github.com/xiaojieonly/Ehviewer_CN_SXJ
+Commit: dfe356244d234c91f2bf65af60903f80b407a838
+Selected Java files carry explicit Apache License 2.0 headers:
+Copyright 2016 Hippo Seven
+Additional modifications remain attributed to upstream contributors.
+
+Protocol references and adapted selectors:
+app/src/main/java/com/hippo/ehviewer/client/
+  EhUrl.java, EhCookieStore.java, EhEngine.java
+app/src/main/java/com/hippo/ehviewer/ui/scene/sign/CookieSignInScene.java
+app/src/main/java/com/hippo/ehviewer/client/parser/
+  GalleryListParser.java, FavoritesParser.java, GalleryDetailParser.java,
+  GalleryPageParser.java, GalleryPageUrlParser.java, ForumsParser.java,
+  ProfileParser.java, GetEditCommentParser.java, VoteCommentParser.java
+
+The root upstream LICENSE interleaves GPL and Apache text. This adaptation relies
+on the selected files' explicit Apache-2.0 headers, not a whole-repository license
+claim. The original root text remains in the cached source evidence. Complete
+Apache-2.0 text is shared with ehentai-Apache-2.0.txt, obtained from
+seven332/EhViewer@ba6d41b91f53b0835f73fb2903b5c4ff1259786c/LICENSE.
+FluxManga as a whole remains GPL-3.0-only.
+
+FluxManga modifications:
+- Reuse the gallery core with an explicit site parameter. Separate EX settings,
+  source identity, user-entered credentials, cache and progress. No automatic EH
+  credential copying, account merging, content fallback or shared cookie jar.
+- Require forum identity plus readable EX index and EX favorites before saving
+  EX credentials. Saved identity is not a claim of continuing access. Recognize
+  denied, empty, challenge and Sad Panda responses without treating EH as EX.
+- Send igneous only to EX; forum requests use identity cookies only. Restrict
+  protected image cookies to same-site fullimg and EX /t/ thumbnails; external
+  image requests and redirects strip credentials. HTTPS only; no quota bypass.
+- Preserve returned favorite categories/cursors and explicit current-batch
+  import. Report same-gallery overlap with EH records without merging progress.
+- Reuse existing encrypted image decoding, reader modes, statistics, library,
+  navigation and lifecycle. No new runtime, database or whole upstream host.
+
+No tests, compilation, packaging or live-service requests were performed.
+Pinned source evidence: docs/verification/m4-storage-foundation-local/eh-upstream
+Adaptation index: docs/third-party/source-adapters.json
+
+2026-10-24 follow-up: adapted the same pinned EhEngine.addFavorites and
+EhUrl addfav/hc=1 contracts, and GalleryDetailParser comment selectors. Separate
+website-favorite drafts and confirmation, pre-write state comparison, one POST
+without retry, and post-write GET reconciliation; local favorites unchanged.
+Read-only plain-text comments with expand-all and local filtering. No comment
+posting/editing/voting, HTML execution, new runtime or live-service requests.
+
+2026-10-24 comment-actions follow-up: the same fixed Apache-2.0 EhEngine,
+GalleryDetailParser, GetEditCommentParser and VoteCommentParser contracts now
+support confirmed comment posting, raw-text editing and voting. Adapted to
+Kotlin/jsoup and dedicated, non-retried Rust requests with site-scoped Cookie
+and API credentials. Preserve original editing text, detect pre-write changes,
+reconcile uncertain submissions and display actual vote receipts. No durable
+outbox, automatic replay, comment HTML execution or new runtime dependency.
+No tests, compilation, packaging or live comments/votes were performed.
+
+2026-10-24 password-login follow-up: same fixed EhEngine.signIn / EhUrl form
+contract and SignInParser.java (Copyright 2016 Hippo Seven, Apache-2.0), with
+SignInScene.java inspected as workflow reference. Adapted to isolated temporary
+Rust authentication sessions and Kotlin/jsoup/platform HttpCookie parsing.
+No global cookie jar, WebView, database or runtime dependency added. Passwords
+are not persisted; account credentials are sealed only after site verification.
+EX still requires user-provided igneous and independent EX access confirmation.
+No tests, build, packaging or live authentication requests were performed.

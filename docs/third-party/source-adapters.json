@@ -1,0 +1,888 @@
+{
+  "schema_version": 1,
+  "baseline_date": "2026-10-22",
+  "scope": "Three public and four admitted private sources (JMComic, PicACG, E-Hentai, ExHentai). Representative pinned upstream samples and core local files only; not a complete source archive, SBOM or release proof. EX added 2026-10-24 without tests/build. Historical evidence retained; only reviewed shared-file hashes refreshed. EH/EX tag format support added 2026-10-24; translation dataset is user-provided, not bundled.",
+  "adapters": [
+    {
+      "id": "komga-rest",
+      "source": "komga",
+      "repository": "https://github.com/gotson/komga",
+      "commit": "023ec905c10a35bbb8e29095420d266cd3adad60",
+      "reuse": "protocol-reference",
+      "license_declared": "MIT (upstream server reference only)",
+      "license": {
+        "path": "docs/verification/detail-metadata-local/komga-MIT.txt",
+        "sha256": "0c34b357f56a8d8947e5bf153d8a02ca378611f089d8a3c371667f28c223653f"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/detail-metadata-local/SeriesMetadata.kt",
+          "sha256": "4814d5005ae5067ea4690b23a82d97430c31160be51b35bde0a92789f1c9f0e7",
+          "url": "https://raw.githubusercontent.com/gotson/komga/023ec905c10a35bbb8e29095420d266cd3adad60/komga/src/main/kotlin/org/gotson/komga/domain/model/SeriesMetadata.kt"
+        },
+        {
+          "path": "docs/verification/detail-metadata-local/komga-MIT.txt",
+          "sha256": "0c34b357f56a8d8947e5bf153d8a02ca378611f089d8a3c371667f28c223653f",
+          "url": "https://raw.githubusercontent.com/gotson/komga/023ec905c10a35bbb8e29095420d266cd3adad60/LICENSE"
+        },
+        {
+          "path": "docs/verification/m3-komga-api31-x86_64/openapi.json",
+          "sha256": "66318485a49b50138df5faad11416b61b8fcc3ac41d6424addc617e7f02fe78c",
+          "url": "https://raw.githubusercontent.com/gotson/komga/023ec905c10a35bbb8e29095420d266cd3adad60/komga/docs/openapi.json"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "rust-core/src/komga.rs",
+          "sha256": "8b6dc993fb079fc9312b53fb09e2b5c01a4d3c0fd82966d5b1d246e3d0ecd9f5"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldKomgaSources.kt",
+          "sha256": "8f6334a79d70cf360d9c8fe1fd4144a2e7d090fa34cedc74f0e1425d0a18ce07"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldKomgaAccountNetwork.kt",
+          "sha256": "6e453fc25bfcc849c2e05f34920b66eb8a2917bf01c2bdd56aa3073e394fb874"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/KomgaAccountController.kt",
+          "sha256": "99d702fe062b5c2509f9aabab696431e0bd90c728c489bf248765d86a1c46b22"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m3-komga-account-local/status.md",
+          "sha256": "fc10833b15cc974b963e04ab2bf8a8de48cb3ec2120dd9508d4a5ff1bcdb3b2c"
+        },
+        {
+          "path": "docs/verification/detail-metadata-local/upstream.json",
+          "sha256": "8d102b403854c0638e072a316cfcbcfa163be35e63205c1e55d2a9b4dc30db99"
+        }
+      ],
+      "local_changes": "Official REST/OpenAPI fields mapped to existing Rust DTOs, authorized library/collection/read-list imports and WorldSession; no Komga server implementation bundled.",
+      "limits": "API Key/Basic only; no recommendation API, OAuth2/OIDC or real-service V08 acceptance."
+    },
+    {
+      "id": "copymanga",
+      "source": "copymanga",
+      "repository": "https://github.com/fumiama/copymanga",
+      "commit": "0fdd3f4489c8ec02f41b4a570aba3b11acfb889b",
+      "reuse": "adaptation",
+      "license_declared": "GPL-3.0 (retain upstream declaration)",
+      "license": {
+        "path": "app/src/main/assets/licenses/copymanga-GPL-3.0.txt",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/copymanga-NOTICE.txt",
+        "sha256": "ed8954c9e74fbd93c255e77d3824104e9f0a9f60cb0c67f00ef096a5a36fee67"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/detail-metadata-local/ComicStructure.java",
+          "sha256": "79b434168fe0933e5981005231f3571d3985f145f98770c326fcba6aa07e0087",
+          "url": "https://raw.githubusercontent.com/fumiama/copymanga/0fdd3f4489c8ec02f41b4a570aba3b11acfb889b/app/src/main/java/top/fumiama/copymanga/json/ComicStructure.java"
+        },
+        {
+          "path": "docs/verification/detail-metadata-local/BookInfoStructure.java",
+          "sha256": "177f7fb683773fcae134bdda215faf42f99306161d92eaa4d26904bc603c6771",
+          "url": "https://raw.githubusercontent.com/fumiama/copymanga/0fdd3f4489c8ec02f41b4a570aba3b11acfb889b/app/src/main/java/top/fumiama/copymanga/json/BookInfoStructure.java"
+        },
+        {
+          "path": "docs/verification/detail-metadata-local/ValueDisplayPair.java",
+          "sha256": "ff2530b0d70ddebd4f919db0c609dd59f31384c27d709f067a77e70aa6a4bac4",
+          "url": "https://raw.githubusercontent.com/fumiama/copymanga/0fdd3f4489c8ec02f41b4a570aba3b11acfb889b/app/src/main/java/top/fumiama/copymanga/json/ValueDisplayPair.java"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "rust-core/src/copymanga.rs",
+          "sha256": "3c0ce0571a79ed03b8201e32a1842f541afcf90a5b14e3b49a14808bcf932f50"
+        },
+        {
+          "path": "rust-core/src/copy_account.rs",
+          "sha256": "1f3220039ddcf22f397357edc2d041a1cf859c010cb97968c89629f5af14eba6"
+        },
+        {
+          "path": "rust-core/src/transport.rs",
+          "sha256": "88c37d6b5ae2950cef66bfbab664fbf8bbfd1d21708b25e8af8a2241450f2270"
+        },
+        {
+          "path": "rust-core/src/detail_metadata.rs",
+          "sha256": "a159ba89fb10e3485f08164c9ccecafd411012a515e8ceab3e348e65608af47d"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldCopyMangaSources.kt",
+          "sha256": "962ce633f8b26d238cf6e8119cd0f07c77d52ebf44c7bbe10c8ed85a49265522"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldCopyAccountNetwork.kt",
+          "sha256": "ad2f33840267a13be4eee56faf14c2e0ca08ae26606a8d1e9ec7cbc0479680ff"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/CopyAccountController.kt",
+          "sha256": "0435176a94249c41122ce70ebd8b2f65c2859957aa65bddc2496b6eda4f997e2"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m3-copy-foundation-local/upstream.json",
+          "sha256": "0af8fb2b3094870c4e91dd58ea51d87722cb5e8a7eddb55a115b387e22c53280"
+        },
+        {
+          "path": "docs/verification/m3-copy-cover-chapters-local/upstream.json",
+          "sha256": "a2a0dd1f4b0afa51bdf89c5ce86353277b83c4f9cb111a39506e781cc17ba770"
+        },
+        {
+          "path": "docs/verification/m3-copy-reader-local/upstream.json",
+          "sha256": "741e4c9e5cbb8c2220f1f2dd3a629cb0b9838bac610ebbde570c3faa1a4e2f91"
+        },
+        {
+          "path": "docs/verification/m3-copy-account-local/upstream.json",
+          "sha256": "81359b4dcc1e42bcf5a1343d5328c5b4bc880c95dc1fda600e3e8d7146af2124"
+        },
+        {
+          "path": "docs/verification/rust-diagnostics-local/status.md",
+          "sha256": "a97315b6628fabc465b35542ceb5a27daca618f54706139629078740f2ae3d61"
+        }
+      ],
+      "local_changes": "Endpoint/DTO, anonymous CDN, chapter2 AES and account pagination mapped to existing Rust transport and Kotlin session/import ownership; no upstream UI, global account, proxy or optional binary decoder. NOTICE lists original paths and each adaptation. 2026-10-22 diagnostic maintenance: Private transport credentials grouped; Copy pagination alignment uses is_multiple_of. At that historical revision, all three source regression suites covered the shared transport. 2026-10-24 shared transport gained a dedicated JM profile; its local hash is updated, no tests or builds were run for that change. Dependency and upstream pins remain unchanged. 2026-10-24 shared transport adds a separate PicACG request/image profile and enforces its 4 MiB metadata stream cap; no protocol changes to this adapter and no tests/build in this stage. 2026-10-24 EH integration: shared transport gains dedicated EH metadata/media scope and bounded credential-stripping redirects; private source predicate/root selector now include EH. Existing source protocol unchanged; only reviewed shared-file hashes and the appended shared status evidence are refreshed, without tests/build.",
+      "limits": "Cloud list uses current free_type=1 scope; no completeness claim for changing lists or other list scopes; no real-service V08 acceptance."
+    },
+    {
+      "id": "baozi-anonymous",
+      "source": "baozi",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "commit": "ff521c17bb3e503c01e658e8fac00b60a95829f3",
+      "reuse": "adaptation",
+      "license_declared": "Apache-2.0",
+      "license": {
+        "path": "app/src/main/assets/licenses/baozi-Apache-2.0.txt",
+        "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/baozi-NOTICE.txt",
+        "sha256": "10149cc2887fe154384f141a5e96eedbbf1c72f52d12f3ef37c2d0d081552988"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m3-baozi-foundation-local/upstream/Baozi.kt",
+          "sha256": "f19ba57950349af519d7f87cb25d438edbf585528b03004385cdc6b49f813697",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/baozimanhua/src/eu/kanade/tachiyomi/extension/zh/baozimanhua/Baozi.kt"
+        },
+        {
+          "path": "docs/verification/m3-baozi-foundation-local/upstream/Filters.kt",
+          "sha256": "95f223909afd062329c839b0f2e110148963d9faa38ff172d452b0493a83d3a6",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/baozimanhua/src/eu/kanade/tachiyomi/extension/zh/baozimanhua/Filters.kt"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "app/src/main/java/com/flux/manga/data/BaoziSource.kt",
+          "sha256": "b228f8d2460889db05ce92087c896b779751b78c47d4dcde633e3314569736da"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/BaoziCategories.kt",
+          "sha256": "bc86468a6f00a947ee876871ebd9d6daf64df17380469fcbe96becc39b769537"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/BaoziWorkMetadata.kt",
+          "sha256": "de6f5f601dded5c6a67c8d0fb5c736fc1eb8c1d36c2d906f744416193fe413ac"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldBaoziSources.kt",
+          "sha256": "940eb4e952a1396935359dea037ba65c0dcb2a282c78dbab9fc96dcba037d0c1"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m3-baozi-complete-local/upstream.json",
+          "sha256": "ea1518bbfaa161f79667268e799e4dd22404e360639b1211d3720dcf56d820b5"
+        },
+        {
+          "path": "docs/verification/m3-baozi-cover-chapters-local/upstream.json",
+          "sha256": "c95d67df12184bdba5ae232f608fff22a59bcaba57b8e162d5cdaf83a4da47bf"
+        }
+      ],
+      "local_changes": "DOM selectors, chapter ordering, page references, latest updates and fixed categories mapped to jsoup and existing scoped Rust transport; Android decodes originals; no extension host or banner crop/re-encode.",
+      "limits": "Latest updates are a single bounded batch; anonymous and account protocols remain separate; no real-service V08 acceptance."
+    },
+    {
+      "id": "baozi-account",
+      "source": "baozi",
+      "repository": "https://github.com/skepsun/kototoro-parsers",
+      "commit": "a94b6704997081b0b57544d3404dfc6809c9ae4b",
+      "reuse": "adaptation",
+      "license_declared": "GPL-3.0 (parser repository, not host license)",
+      "license": {
+        "path": "app/src/main/assets/licenses/baozi-account-GPL-3.0.txt",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/baozi-account-NOTICE.txt",
+        "sha256": "e776c9a27dc6dab84d2e87db7bb092431488107f7d6bb01c5da9b32871945714"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m3-baozi-account-local/upstream/Baozimh.kt",
+          "sha256": "90ec8cae85b6a7b7e9d44dfa50def03a88072c3c1e6bac17a2672c24e9fbbdcb",
+          "url": "https://raw.githubusercontent.com/skepsun/kototoro-parsers/a94b6704997081b0b57544d3404dfc6809c9ae4b/src/main/kotlin/org/skepsun/kototoro/parsers/site/zh/Baozimh.kt"
+        },
+        {
+          "path": "docs/verification/m3-baozi-account-local/upstream/LICENSE",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+          "url": "https://raw.githubusercontent.com/skepsun/kototoro-parsers/a94b6704997081b0b57544d3404dfc6809c9ae4b/LICENSE"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "rust-core/src/baozi_account.rs",
+          "sha256": "a75a025b71d2ed5cb6a385446aa38623e718ee95bc39a321f22f750394f5a50a"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/BaoziAccountSource.kt",
+          "sha256": "2f2c2f0984ca0541376f034f41cf00e49d463645d74c7648478f4473c82cc19f"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/BaoziAccountController.kt",
+          "sha256": "df05da23d656ed3c7d7fe6fdd2fef5e6eaed1744490453ac32f7bb5b190de747"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/BaoziAccountStore.kt",
+          "sha256": "28adf83a6ce3c66e132f73c1adefe4eb52950ae1efe53e95ea1a93592cd95549"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldBaoziAccountNetwork.kt",
+          "sha256": "a9b52693013020a9e57c0912ee2c4ab915f4892bc622c4a464c37ec6f02bcaf2"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m3-baozi-account-local/upstream.json",
+          "sha256": "bee31bdb1092428335e59e7ee864eee3b7c0e7ea31e57a95cb66a9750d3aa71b"
+        },
+        {
+          "path": "docs/verification/rust-diagnostics-local/status.md",
+          "sha256": "a97315b6628fabc465b35542ceb5a27daca618f54706139629078740f2ae3d61"
+        }
+      ],
+      "local_changes": "Multipart sign-in, JSON TSID and visible bookshelf selectors adapted; project adds encrypted credentials, selected snapshot imports and interruption recovery. Domain restricted to cn.baozimh.com. 2026-10-22 diagnostic maintenance: Test fixture now accumulates complete HTTP requests before cancellation; fragmented and truncated reads are covered. Production account protocol unchanged. No FFI, dependency or upstream pin changes.",
+      "limits": "No proven pagination, complete cloud-library import, empty-account verification or mirror equivalence; no real-service V08 acceptance."
+    },
+    {
+      "id": "jm-image-transform",
+      "source": "jmcomic",
+      "repository": "https://github.com/hect0x7/JMComic-Crawler-Python",
+      "commit": "303904252f586ef0123f468feac2b890c9cba8d8",
+      "reuse": "adaptation",
+      "license_declared": "MIT",
+      "license": {
+        "path": "app/src/main/assets/licenses/jm-image-MIT.txt",
+        "sha256": "d7334e56d1c00845b66ad4d06f52f19691dae5dfd58a4080b2bdaa554ce4474d"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/jm-image-NOTICE.txt",
+        "sha256": "325eea5b14c2a242263980d759ffd13ca57d71cdb640451af34e38b57132f6b5"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/image-transform-local/upstream/jm_toolkit.py",
+          "sha256": "17c74638f4cdc159d92f465e8176142b19a5ea5a1357a0a3201a88e9bbb4f931",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/303904252f586ef0123f468feac2b890c9cba8d8/src/jmcomic/jm_toolkit.py"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/image-transform-local/upstream/jm_config.py",
+          "sha256": "d325667257ce6374fbfd33da1f275781d3e5dea81d6e8f9f0b18e62b2737f710",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/303904252f586ef0123f468feac2b890c9cba8d8/src/jmcomic/jm_config.py"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/image-transform-local/upstream/LICENSE",
+          "sha256": "933e1ca13c59c6e1b18ac2b75b4d2d8cae7b661dd170c1aaf849db5eb2bbfb10",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/303904252f586ef0123f468feac2b890c9cba8d8/LICENSE"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/image-transform-local/upstream/jm_client_impl.py",
+          "sha256": "015e8e942c29312b0ff52c3c23a4d999cc7b835413dbaa7a128bf0506799ebaa",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/303904252f586ef0123f468feac2b890c9cba8d8/src/jmcomic/jm_client_impl.py"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/image-transform-local/upstream/jm_entity.py",
+          "sha256": "194cc5514d37009fe6bfd00f438c366b83a3179ca0cc4ac8df2f1d784cee747c",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/303904252f586ef0123f468feac2b890c9cba8d8/src/jmcomic/jm_entity.py"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/jm-connectivity-upstream/jm_config.py",
+          "sha256": "9615dcc10e59690f7cd356c108a2d99e036ead3f5f554fad7f9c97f5137b1eb7",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/fd8953025db5b844f1b7f025d063f544e61a2dbd/src/jmcomic/jm_config.py"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/jm-connectivity-upstream/jm_client_impl.py",
+          "sha256": "6c799b734bedd2d58bb35b4a1cdd7d85d4d24847a810adf68fd658178d71c34b",
+          "url": "https://raw.githubusercontent.com/hect0x7/JMComic-Crawler-Python/fd8953025db5b844f1b7f025d063f544e61a2dbd/src/jmcomic/jm_client_impl.py"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-LICENSE",
+          "sha256": "de8f52a96943c342c1d92e79f93820a9f833db23377e6279986b280b549012dc",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/LICENSE"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmApiClient.java",
+          "sha256": "71e1496585ed61661983dcebe67aa8bf443526b89e232122b1c59c9f5ffc1dea",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-core/src/main/java/io/github/jukomu/jmcomic/core/client/impl/JmApiClient.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmPromoteCategory.java",
+          "sha256": "718d996a358fb4611e01f56cf87f559702f3f221894d2678f7f8d15280e8bbff",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-api/src/main/java/io/github/jukomu/jmcomic/api/model/JmPromoteCategory.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmCategoryList.java",
+          "sha256": "63f2499d608d47ddfb18b7c948afe242af814c475da224deacfbcc0144d7fcec",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-api/src/main/java/io/github/jukomu/jmcomic/api/model/JmCategoryList.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmCategoryListItem.java",
+          "sha256": "61761ef923a1629aab03d3c50ce0948510d8a86938b72b572a3c5d86beee3652",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-api/src/main/java/io/github/jukomu/jmcomic/api/model/JmCategoryListItem.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmCategoryBlock.java",
+          "sha256": "903abc413e3d4aefd46599688bff9bde6b4802ee12062f54d5e2d19706025de2",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-api/src/main/java/io/github/jukomu/jmcomic/api/model/JmCategoryBlock.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmCategoryMeta.java",
+          "sha256": "2e2c10ea923fcc55ea018c2a44beefe9a0a14f25d7951a581a201d558703e10b",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-api/src/main/java/io/github/jukomu/jmcomic/api/model/JmCategoryMeta.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-JmConstants.java",
+          "sha256": "fae77ea19839bec16a2f1d8a4f6460ef94d68bce44de1bf79766f8821b41c3ae",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-core/src/main/java/io/github/jukomu/jmcomic/core/constant/JmConstants.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/jm-ApiParser.java",
+          "sha256": "9faccf3614160cd01ae7a10eb64355d14d53bacc16dbedf8819830b6be824650",
+          "url": "https://raw.githubusercontent.com/JUKOMU/JMComic-Api-Java/5a7a4bb4870edb512274dc2adeb4f7c157445321/jmcomic-core/src/main/java/io/github/jukomu/jmcomic/core/parser/ApiParser.java"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "rust-core/src/image_transform.rs",
+          "sha256": "d344aabf312b547fd309044a7b5667fc2106f00ada436d5b3c4dcabd78560d64"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/JmImageRules.kt",
+          "sha256": "19eaaeecb223cb06b0ee6233202aa06aaa764b2dfe252027f02c7f4c539f30cf"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PrivateStripDecoder.kt",
+          "sha256": "4020acfb2af46f3756e992d4ef52a895c4e6978f5711c50010fe0d140fba70b5"
+        },
+        {
+          "path": "rust-core/src/transport.rs",
+          "sha256": "88c37d6b5ae2950cef66bfbab664fbf8bbfd1d21708b25e8af8a2241450f2270"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/JmComic.kt",
+          "sha256": "f55516391028b7d0238c5943966a63cad2609fa913dcc1dfffb8d20cc46410a1"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/JmCover.kt",
+          "sha256": "37c83c03a2f8e0a6b6da01d12af18d54fd3194e0ccff4391051360f3dc21ac6f"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/JmReaderRepository.kt",
+          "sha256": "6cf3e7272eaa52367db085e472684beaec370ef20ad987f3e61eaf983c6f3c91"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/JmPages.kt",
+          "sha256": "a9f27be3317197fec199dff1c1c66da4fdd787c64b89eec71ec7cdbdbadb36a0"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/image-transform-local/reproduce-upstream-vectors.py",
+          "sha256": "06932d62eb1be97bcbb315585d1d6498f3dc8b7407b7c767e3a149f2d2ba4a61"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/jm-connectivity-upstream/upstream.json",
+          "sha256": "95ece5c8c2fee3b9c91a1b8f628e60b39d6f48bcfbfe9bcc1dd7cfc72e27ba10"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/upstream.json",
+          "sha256": "0ca216934e58a2bda410b8caab032f201307e5d822ca904b6f1efdaa2e320362"
+        }
+      ],
+      "local_changes": "Pinned MIT mobile API authentication, AES responses, search/favorites paging, album/chapter mapping and image metadata adapted to Kotlin; existing Rust reqwest profile, encrypted private cache and Android strip decoding. No Python/Pillow or added runtime dependencies. 2026-10-24 shared transport adds a separate PicACG request/image profile and enforces its 4 MiB metadata stream cap; no protocol changes to this adapter and no tests/build in this stage. 2026-10-24 EH integration: shared transport gains dedicated EH metadata/media scope and bounded credential-stripping redirects; private source predicate/root selector now include EH. Existing source protocol unchanged; only reviewed shared-file hashes and the appended shared status evidence are refreshed, without tests/build. Private-offline follow-up: expose bounded encoded page bytes to the existing device-key AES-GCM envelope and AtomicFile storage, preserve JM strip metadata, and keep EH/EX downloads on display quality. Foreground-only chapter selection/queue/resume and network-free reader reuse existing identities/progress. No additional upstream code or runtime dependency. 2026-10-25: reviewed MIT upstream fd8953025db5b844f1b7f025d063f544e61a2dbd; add current published API hosts while retaining legacy settings, version 2.1.12 and host-scoped anonymous setting cookies. No dynamic hosts, automatic credential migration or cross-host login replay. 2026-10-25 homepage discovery: use actual JM promote / PicACG collections previews; add JM categories/blocks with source-preserving tag routes. Fixed MIT references and hashes in discovery-upstream/upstream.json; no new runtime.",
+      "limits": "User explicitly admitted M4 on 2026-10-24. No tests, compilation, APK or live service requests. Pinned app protocol 2.1.7; no recommendations/update feed, full tag directory, remote favorite writes. Encrypted offline code is untested/unbuilt: foreground page only, explicit resume, <=32 MiB/page, <=5000 pages/chapter, <=200 queued chapters. No background service/notification, private-body migration or EH/EX original-quality download. Connectivity follow-up reads public source/configuration only; no account/content requests, tests or build. Current protocol constant is 2.1.12; legacy notes above refer to the original adaptation. Latest follow-up replaces homepage rankings with actual recommendation previews (no global pagination), adds primary category/tag discovery, and has no tests/build/live requests. Earlier no-feed statements describe historical versions; JM second-level categories are not implemented."
+    },
+    {
+      "id": "picacg",
+      "source": "picacg",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "commit": "ff521c17bb3e503c01e658e8fac00b60a95829f3",
+      "reuse": "adaptation",
+      "license_declared": "Apache-2.0 AND MIT",
+      "license": {
+        "path": "app/src/main/assets/licenses/picacg-LICENSES.txt",
+        "sha256": "59dd92b3bed6c2bbbb33fc6f553f96b51b8bbe5099fc0cf311f4b7d696dd455b"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/picacg-NOTICE.txt",
+        "sha256": "f7b86630d4c5997d9d02680104d984c89c3dd7cc3ee804a97292507d4d69d414"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/Picacomic.kt",
+          "sha256": "647a8a1be573410b05c4c4f710944f96110bb3fcb1f8b3877fa0db258471173b",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/picacomic/src/eu/kanade/tachiyomi/extension/zh/picacomic/Picacomic.kt"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/PicaApiSchemas.kt",
+          "sha256": "75f5c532b600b550dc3281db61a18e4f1b6d6422b3ddb0ba30752f21a9d8b8c4",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/picacomic/src/eu/kanade/tachiyomi/extension/zh/picacomic/PicaApiSchemas.kt"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/Filters.kt",
+          "sha256": "5d169bf73b1802cb4417748ef28635b8d00cf4525252712e658c3b8804c02d4b",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/picacomic/src/eu/kanade/tachiyomi/extension/zh/picacomic/Filters.kt"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/HmacSHA256.kt",
+          "sha256": "f91436567a05d57849546aefc5e0849047a63a7e605811a676eb51cd61e84e3d",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/picacomic/src/eu/kanade/tachiyomi/extension/zh/picacomic/HmacSHA256.kt"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/ChannelDns.kt",
+          "sha256": "156892c5777a2e4cd3fc41dfe1260cca2d2a78b236331d86b1384d9c81cc11d5",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/src/zh/picacomic/src/eu/kanade/tachiyomi/extension/zh/picacomic/ChannelDns.kt"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/LICENSE",
+          "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/ff521c17bb3e503c01e658e8fac00b60a95829f3/LICENSE"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/pica-client.go",
+          "sha256": "515d831d93c98a05e270ccdf6bcc925785278d2d381cab21ece6b4d25f9fd99b",
+          "url": "https://raw.githubusercontent.com/niuhuan/pica-go/2c208674152c3031862a6dd0b8b99bb45835f950/client.go"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/pica-dto.go",
+          "sha256": "4d3600cb58e02a76b2da41ed5be19ec4017fd9a0b88a06729512d06ea71537fe",
+          "url": "https://raw.githubusercontent.com/niuhuan/pica-go/2c208674152c3031862a6dd0b8b99bb45835f950/dto.go"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/pica-LICENSE",
+          "sha256": "9a8366760d42159e1be64776e3d4637e78c9bed9da59f53ac341882ca607f9cf",
+          "url": "https://raw.githubusercontent.com/niuhuan/pica-go/2c208674152c3031862a6dd0b8b99bb45835f950/LICENSE"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "app/src/main/java/com/flux/manga/data/Picacg.kt",
+          "sha256": "6b42f6c682d5a36e7ea46ee00728ecb7cc069855534344cd5601c3ca9fdc4c67"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PicaImages.kt",
+          "sha256": "c14f7068a5b344506a1828f5718d8a35fd36437c362ebad1a8fa3c6bba5ddaca"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PicaReaderRepository.kt",
+          "sha256": "a52c35f19da9e230df4da96ed9ac10d38a8be6b9b72b42dc4d3bfb6e15feac6c"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/PicaPages.kt",
+          "sha256": "13f8b55174651db83e05480f4d3a793f96df6f019c9fa1419f72cfda62445342"
+        },
+        {
+          "path": "rust-core/src/transport.rs",
+          "sha256": "88c37d6b5ae2950cef66bfbab664fbf8bbfd1d21708b25e8af8a2241450f2270"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/status.md",
+          "sha256": "9c91d0b369081535dea158f0582e59abcb5f31232a2cf7d6f5cb9e1107857082"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/go-client.go",
+          "sha256": "515d831d93c98a05e270ccdf6bcc925785278d2d381cab21ece6b4d25f9fd99b"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/go-dto.go",
+          "sha256": "4d3600cb58e02a76b2da41ed5be19ec4017fd9a0b88a06729512d06ea71537fe"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/picacg-upstream/go-LICENSE",
+          "sha256": "9a8366760d42159e1be64776e3d4637e78c9bed9da59f53ac341882ca607f9cf"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/discovery-upstream/upstream.json",
+          "sha256": "0ca216934e58a2bda410b8caab032f201307e5d822ca904b6f1efdaa2e320362"
+        }
+      ],
+      "supplemental_upstreams": [
+        {
+          "repository": "https://github.com/niuhuan/pica-go",
+          "commit": "2c208674152c3031862a6dd0b8b99bb45835f950",
+          "license": "MIT",
+          "files": [
+            "client.go",
+            "dto.go",
+            "LICENSE"
+          ]
+        }
+      ],
+      "local_changes": "Pinned login/signature, UID profile, categories/catalog/rank/search/favorites, detail/chapters/pages mapped to Kotlin and existing Rust reqwest. JCA HMAC replaces the inspected helper; no copied hex table. Sequential directory paging sorted by order, explicit cloud-page import preserving existing rows, encrypted private images, source/account isolation and existing reader/library integration. No new runtime dependencies. 2026-10-24 EH integration: shared transport gains dedicated EH metadata/media scope and bounded credential-stripping redirects; private source predicate/root selector now include EH. Existing source protocol unchanged; only reviewed shared-file hashes and the appended shared status evidence are refreshed, without tests/build. Private-offline follow-up: expose bounded encoded page bytes to the existing device-key AES-GCM envelope and AtomicFile storage, preserve JM strip metadata, and keep EH/EX downloads on display quality. Foreground-only chapter selection/queue/resume and network-free reader reuse existing identities/progress. No additional upstream code or runtime dependency. 2026-10-25 homepage discovery: use actual JM promote / PicACG collections previews; add JM categories/blocks with source-preserving tag routes. Fixed MIT references and hashes in discovery-upstream/upstream.json; no new runtime.",
+      "limits": "Standard HTTPS/channel 1 only. No DNS routing, auto login/check-in, registration, remote favorite writes, separately enumerable likes, whole-account snapshot guarantee. User admitted M4; no tests, compilation, bindings generation, packaging or real-service requests in this stage. Encrypted offline code is untested/unbuilt: foreground page only, explicit resume, <=32 MiB/page, <=5000 pages/chapter, <=200 queued chapters. No background service/notification, private-body migration or EH/EX original-quality download. Latest homepage collections adaptation has no tests/build/live requests and no invented global pagination."
+    },
+    {
+      "id": "ehentai",
+      "source": "e-hentai",
+      "repository": "https://github.com/xiaojieonly/Ehviewer_CN_SXJ",
+      "commit": "dfe356244d234c91f2bf65af60903f80b407a838",
+      "reuse": "adaptation",
+      "license_declared": "Apache-2.0 (selected source-file headers; mixed root LICENSE preserved as evidence)",
+      "license": {
+        "path": "app/src/main/assets/licenses/ehentai-Apache-2.0.txt",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/ehentai-NOTICE.txt",
+        "sha256": "c458241e4b5d97e63f13819a061e48c9091536d46dabd24f0bc7808e843e6cbc"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryListParser.java",
+          "sha256": "aad5fd4de50ad30c4a4c8301ac3f880dd109e2bedcc94e7dcbc66b62db3b10a4",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryListParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/FavoritesParser.java",
+          "sha256": "7b1fd3e7012d2f10236337d04915e6b180dda09b8f471b696455bd532c84b33b",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/FavoritesParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryDetailParser.java",
+          "sha256": "6b5116054f3603cdfe520cd024bba971727104041030701c4dc329bf46222706",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryDetailParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryPageParser.java",
+          "sha256": "0858b496392d2b4b5b6c2d6e5e2d0a987ba94c9f4882b38f503fbcfeb23602b1",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryPageParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryPageUrlParser.java",
+          "sha256": "bb2f641a19e7de876834d116e3db5a4dfa364eeb73a8b2868647e184a2b94495",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryPageUrlParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/ForumsParser.java",
+          "sha256": "5358ae9743ce498057d6cef6753a41a1918690981abff6b8ffdac168a060fb2d",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/ForumsParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/ProfileParser.java",
+          "sha256": "fcff626491c5b28f1351a37908266a8cd30750ba0a9fedae13087c3f0d65a179",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/ProfileParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/CookieSignInScene.java",
+          "sha256": "f550209a900288ce9926b0cb031239887859665bd7d34020c7bba77eaf7f8aab",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/ui/scene/sign/CookieSignInScene.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/EhEngine.java",
+          "sha256": "35583f28b28961135ed81f244c070128bb6d3319402737f6f49fc6c9e1b0126d",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/EhEngine.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/EhCookieStore.java",
+          "sha256": "75c1b98a78f4c5275a79795aace00d157861fd1ebbbef153f5bc42bc3eb0ac36",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/EhCookieStore.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/EhUrl.java",
+          "sha256": "8f5b2af55d18db6d7feb22ed125dc9b536243e1e3070d5da50213f3b138b45b5",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/EhUrl.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/LICENSE",
+          "sha256": "84399329b3b161a7684f410c99c256f5c09ce9242727f3c46f7fc1e0eddcaada",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/LICENSE"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GetEditCommentParser.java",
+          "sha256": "82bb3730e8f5d1a0058c177effdb4813bbf97b10730d7637653db0552288c2d2",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GetEditCommentParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/VoteCommentParser.java",
+          "sha256": "64875a5597831b11a473bd754ab8f9bc54c027fe8300cbb490bde3297bb5794d",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/VoteCommentParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/SignInParser.java",
+          "sha256": "4acd849d7044fd4fe223e677b691a3c93072bc56d3bb7e6a69968107ec914d3c",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/SignInParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/SignInScene.java",
+          "sha256": "ccf4f1114686b21fe9e9c4f4450fe8238ced2d09d0b60910e63c04c6eff712f6",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/ui/scene/sign/SignInScene.java"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "app/src/main/java/com/flux/manga/data/Ehentai.kt",
+          "sha256": "9cf70b9dc43d51ecba6af47943f0deafd2f2ea08153a569e296c616c5582098f"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/EhReaderRepository.kt",
+          "sha256": "813481b57b15b2883fa1514aeb2a0058447672c6a1f1ff7771256d9fea48a6a7"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/EhPages.kt",
+          "sha256": "c12e3fa4f25400bd4e09692b7070b80ea87539062c21340098d5fc30ff91cb26"
+        },
+        {
+          "path": "rust-core/src/transport.rs",
+          "sha256": "88c37d6b5ae2950cef66bfbab664fbf8bbfd1d21708b25e8af8a2241450f2270"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/EhInteractionPage.kt",
+          "sha256": "3d92fff0d114748c6c165b952383f3b007392a838d2aae02d1dfe5dfe8e8c6c6"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/EhPasswordLogin.kt",
+          "sha256": "4054a478bf32548ead05c0a42d084d6ef1349b6437a0d3c9ce16d1113456cac0"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/status.md",
+          "sha256": "9c91d0b369081535dea158f0582e59abcb5f31232a2cf7d6f5cb9e1107857082"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/Apache-2.0.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ],
+      "supplemental_upstreams": [
+        {
+          "repository": "https://github.com/seven332/EhViewer",
+          "commit": "ba6d41b91f53b0835f73fb2903b5c4ff1259786c",
+          "files": [
+            "LICENSE"
+          ],
+          "purpose": "Complete original Apache-2.0 text for explicit source headers; project distribution remains GPL-3.0-only."
+        }
+      ],
+      "local_changes": "Ported gallery, favorites/category/cursor, forum identity and page selectors to Kotlin/jsoup. Explicit sealed Cookie identity, current-batch import preserving records, sequential page references, on-demand images, separate display/original cache keys, existing reader/library integration. Rust bounded HTTPS metadata and media requests with at most three credential-stripping media redirects. No new runtime dependency, WebView cookie store or database. EX follow-up shares the explicit-site core; EH source/settings identity is retained and shared-file fingerprints were refreshed, without new runtime validation. 2026-10-24 site-interaction follow-up: separate remote-favorite form/draft, explicit confirmation, preflight comparison, one non-retried native POST and GET reconciliation; local records untouched. Read-only comment parsing, expand-all, filtering and private navigation. Comment-actions follow-up: confirmed posting, raw-text editing with preflight comparison, permission-scoped voting and actual receipt values; uncertain writes require re-reading and explicit review, never automatic replay. Dedicated site-scoped non-retried form/API methods, memory-only drafts and leave confirmation; no new dependency or migration. Password-login follow-up: fixed forum form/SignInParser contract, temporary site-labeled authentication session, response-only identity cookies parsed by platform HttpCookie; existing site verification before sealing credentials. Memory-only password input cleared on submit/background, no replay or new dependency. EX requires user-provided igneous and independent EX index/favorites success. Private-offline follow-up: expose bounded encoded page bytes to the existing device-key AES-GCM envelope and AtomicFile storage, preserve JM strip metadata, and keep EH/EX downloads on display quality. Foreground-only chapter selection/queue/resume and network-free reader reuse existing identities/progress. No additional upstream code or runtime dependency.",
+      "limits": "No tests, compilation, binding generation, packaging or real-service requests. Password login and manual Cookie plus external browser; no embedded WebView, bundled Chinese tag dataset, EX fallback. HTTPS/public hostname/default port only. Original image requires an explicit option and server link; no challenge/quota bypass. Website favorite form must expose recognized category and note fields; unknown structure blocks writes. No live-service compatibility claim. Process restart reads state before any new confirmed submission. Comment drafts are not durable. No delete-comment or cancel-vote action. Posting/editing/voting uses fixed upstream contracts with no live compatibility claim; a changed server representation can require manual result review. Input limit 10,000 characters is a client boundary, not a claimed service quota. No automatic igneous acquisition or challenge bypass. Password-login protocol was not exercised; redirects/unknown success pages/missing identity cookies fail without replacing saved account records. Encrypted offline code is untested/unbuilt: foreground page only, explicit resume, <=32 MiB/page, <=5000 pages/chapter, <=200 queued chapters. No background service/notification, private-body migration or EH/EX original-quality download."
+    },
+    {
+      "id": "exhentai",
+      "source": "exhentai",
+      "repository": "https://github.com/xiaojieonly/Ehviewer_CN_SXJ",
+      "commit": "dfe356244d234c91f2bf65af60903f80b407a838",
+      "reuse": "adaptation",
+      "license_declared": "Apache-2.0 (selected source-file headers; mixed root LICENSE preserved as evidence)",
+      "license": {
+        "path": "app/src/main/assets/licenses/ehentai-Apache-2.0.txt",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/exhentai-NOTICE.txt",
+        "sha256": "f019f6ce3e4357662268b7c3a1f9e36eb9b68a76509c9313648534ff1e1589f4"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryListParser.java",
+          "sha256": "aad5fd4de50ad30c4a4c8301ac3f880dd109e2bedcc94e7dcbc66b62db3b10a4",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryListParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/FavoritesParser.java",
+          "sha256": "7b1fd3e7012d2f10236337d04915e6b180dda09b8f471b696455bd532c84b33b",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/FavoritesParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryDetailParser.java",
+          "sha256": "6b5116054f3603cdfe520cd024bba971727104041030701c4dc329bf46222706",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryDetailParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryPageParser.java",
+          "sha256": "0858b496392d2b4b5b6c2d6e5e2d0a987ba94c9f4882b38f503fbcfeb23602b1",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryPageParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GalleryPageUrlParser.java",
+          "sha256": "bb2f641a19e7de876834d116e3db5a4dfa364eeb73a8b2868647e184a2b94495",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GalleryPageUrlParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/ForumsParser.java",
+          "sha256": "5358ae9743ce498057d6cef6753a41a1918690981abff6b8ffdac168a060fb2d",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/ForumsParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/ProfileParser.java",
+          "sha256": "fcff626491c5b28f1351a37908266a8cd30750ba0a9fedae13087c3f0d65a179",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/ProfileParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/CookieSignInScene.java",
+          "sha256": "f550209a900288ce9926b0cb031239887859665bd7d34020c7bba77eaf7f8aab",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/ui/scene/sign/CookieSignInScene.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/EhEngine.java",
+          "sha256": "35583f28b28961135ed81f244c070128bb6d3319402737f6f49fc6c9e1b0126d",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/EhEngine.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/EhCookieStore.java",
+          "sha256": "75c1b98a78f4c5275a79795aace00d157861fd1ebbbef153f5bc42bc3eb0ac36",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/EhCookieStore.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/EhUrl.java",
+          "sha256": "8f5b2af55d18db6d7feb22ed125dc9b536243e1e3070d5da50213f3b138b45b5",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/EhUrl.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/LICENSE",
+          "sha256": "84399329b3b161a7684f410c99c256f5c09ce9242727f3c46f7fc1e0eddcaada",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/LICENSE"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/GetEditCommentParser.java",
+          "sha256": "82bb3730e8f5d1a0058c177effdb4813bbf97b10730d7637653db0552288c2d2",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/GetEditCommentParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/VoteCommentParser.java",
+          "sha256": "64875a5597831b11a473bd754ab8f9bc54c027fe8300cbb490bde3297bb5794d",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/VoteCommentParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/SignInParser.java",
+          "sha256": "4acd849d7044fd4fe223e677b691a3c93072bc56d3bb7e6a69968107ec914d3c",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/client/parser/SignInParser.java"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/SignInScene.java",
+          "sha256": "ccf4f1114686b21fe9e9c4f4450fe8238ced2d09d0b60910e63c04c6eff712f6",
+          "url": "https://raw.githubusercontent.com/xiaojieonly/Ehviewer_CN_SXJ/dfe356244d234c91f2bf65af60903f80b407a838/app/src/main/java/com/hippo/ehviewer/ui/scene/sign/SignInScene.java"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "app/src/main/java/com/flux/manga/data/Ehentai.kt",
+          "sha256": "9cf70b9dc43d51ecba6af47943f0deafd2f2ea08153a569e296c616c5582098f"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/EhReaderRepository.kt",
+          "sha256": "813481b57b15b2883fa1514aeb2a0058447672c6a1f1ff7771256d9fea48a6a7"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/EhPages.kt",
+          "sha256": "c12e3fa4f25400bd4e09692b7070b80ea87539062c21340098d5fc30ff91cb26"
+        },
+        {
+          "path": "rust-core/src/transport.rs",
+          "sha256": "88c37d6b5ae2950cef66bfbab664fbf8bbfd1d21708b25e8af8a2241450f2270"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/EhInteractionPage.kt",
+          "sha256": "3d92fff0d114748c6c165b952383f3b007392a838d2aae02d1dfe5dfe8e8c6c6"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/EhPasswordLogin.kt",
+          "sha256": "4054a478bf32548ead05c0a42d084d6ef1349b6437a0d3c9ce16d1113456cac0"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/status.md",
+          "sha256": "9c91d0b369081535dea158f0582e59abcb5f31232a2cf7d6f5cb9e1107857082"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/eh-upstream/Apache-2.0.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ],
+      "supplemental_upstreams": [
+        {
+          "repository": "https://github.com/seven332/EhViewer",
+          "commit": "ba6d41b91f53b0835f73fb2903b5c4ff1259786c",
+          "files": [
+            "LICENSE"
+          ],
+          "purpose": "Complete original Apache-2.0 text for explicit source headers; project distribution remains GPL-3.0-only."
+        }
+      ],
+      "local_changes": "Shared explicit-site gallery core with independent sealed EX settings, user-entered identity/igneous, forum plus EX index/favorites access proof, EX source/cache/progress ownership and library/routes. EX favorite overlap preview does not merge EH records. Scoped EX metadata, fullimg and /t/ cookies; no igneous to forums, no credentials to external media or EH fallback. Existing runtime/dependencies only. 2026-10-24 site-interaction follow-up: separate remote-favorite form/draft, explicit confirmation, preflight comparison, one non-retried native POST and GET reconciliation; local records untouched. Read-only comment parsing, expand-all, filtering and private navigation. Comment-actions follow-up: confirmed posting, raw-text editing with preflight comparison, permission-scoped voting and actual receipt values; uncertain writes require re-reading and explicit review, never automatic replay. Dedicated site-scoped non-retried form/API methods, memory-only drafts and leave confirmation; no new dependency or migration. Password-login follow-up: fixed forum form/SignInParser contract, temporary site-labeled authentication session, response-only identity cookies parsed by platform HttpCookie; existing site verification before sealing credentials. Memory-only password input cleared on submit/background, no replay or new dependency. EX requires user-provided igneous and independent EX index/favorites success. Private-offline follow-up: expose bounded encoded page bytes to the existing device-key AES-GCM envelope and AtomicFile storage, preserve JM strip metadata, and keep EH/EX downloads on display quality. Foreground-only chapter selection/queue/resume and network-free reader reuse existing identities/progress. No additional upstream code or runtime dependency.",
+      "limits": "No tests, compilation, binding generation, packaging or live-service requests. EX requires independent password login or manual identity Cookie, user-provided igneous and successful site responses; saved identity does not prove continuing access. No embedded WebView login, bundled Chinese tag dataset. HTTPS only; no challenge/quota bypass. Display/original caches and progress remain site-scoped. Website favorite form must expose recognized category and note fields; unknown structure blocks writes. No live-service compatibility claim. Process restart reads state before any new confirmed submission. Comment drafts are not durable. No delete-comment or cancel-vote action. Posting/editing/voting uses fixed upstream contracts with no live compatibility claim; a changed server representation can require manual result review. Input limit 10,000 characters is a client boundary, not a claimed service quota. No automatic igneous acquisition or challenge bypass. Password-login protocol was not exercised; redirects/unknown success pages/missing identity cookies fail without replacing saved account records. Encrypted offline code is untested/unbuilt: foreground page only, explicit resume, <=32 MiB/page, <=5000 pages/chapter, <=200 queued chapters. No background service/notification, private-body migration or EH/EX original-quality download."
+    },
+    {
+      "id": "ehtag-format",
+      "source": "eh-ex-tags",
+      "repository": "https://github.com/EhTagTranslation/Database",
+      "commit": "6c228f5ac76ca415e897dcc074f7e77c2afa14c2",
+      "reuse": "protocol-reference",
+      "license_declared": "CC-BY-NC-SA-3.0-CN (user-selected data; no complete dataset or upstream executable code bundled)",
+      "license": {
+        "path": "app/src/main/assets/licenses/eh-tags-CC-BY-NC-SA-3.0-CN.txt",
+        "sha256": "b6c4452f59b6c8d4bdae7011c6554c49d1aa2b22a340488edf32b8974c9b2b70"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/eh-tags-NOTICE.txt",
+        "sha256": "2b9bc3a3459b8dd76b85bf4436942804b1781071664ab0ea441602a645b3e315"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/ehtag-upstream/README.md",
+          "sha256": "1a629cd881fb229e7df7616b163fd1a79202de1a952acccccfc132f07003a64f",
+          "url": "https://raw.githubusercontent.com/EhTagTranslation/Database/6c228f5ac76ca415e897dcc074f7e77c2afa14c2/README.md"
+        },
+        {
+          "path": "docs/verification/m4-storage-foundation-local/ehtag-upstream/LICENSE.md",
+          "sha256": "b6c4452f59b6c8d4bdae7011c6554c49d1aa2b22a340488edf32b8974c9b2b70",
+          "url": "https://raw.githubusercontent.com/EhTagTranslation/Database/6c228f5ac76ca415e897dcc074f7e77c2afa14c2/LICENSE.md"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "app/src/main/java/com/flux/manga/data/GalleryTags.kt",
+          "sha256": "a49de18d27ad7c8b6c41623c12e645284e346b553212877da2f19f02e7bd6df6"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/ui/pages/GalleryTagsPage.kt",
+          "sha256": "ea76f3eeeb7e3f9ee24ad813d88f04a6c09ef9f32a0018701d7375b240f1a93e"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/GalleryTagsPicker.kt",
+          "sha256": "2e10dfb2dd1fc55d3cdbc74ab7f3ba81da4dde3ef32e5718a935529fef41744c"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldDataStore.kt",
+          "sha256": "2ef7ca8e761e23b617edb3e422a8168188dee2826ca0f01a4163897fcde14f64"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/verification/m4-storage-foundation-local/status.md",
+          "sha256": "9c91d0b369081535dea158f0582e59abcb5f31232a2cf7d6f5cb9e1107857082"
+        }
+      ],
+      "local_changes": "v7 db.text.json format reader; explicit system-file preview and replacement with revision/digest/count; encrypted AtomicFile name index, manual replacement/update/removal, translated labels and namespace-filtered candidate search using original source tokens. Reuses JSON, crypto, lifecycle and navigation. No automatic network updates or full database bundling.",
+      "limits": "No tests, build, packaging or devices. Inspected release v7.29288.1 (4,289,468 bytes); input format v7 only, <=16 MiB and <=100,000 entries. File revision is self-declared, digest is not a signature. No descriptions/images/scripts, no backup migration, no new runtime. Upstream requests downstream-use registration; no issue/message sent. Future data distribution requires separate license/release preparation."
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+E-Hentai protocol adaptation for FluxManga, 2026-10-24
+
+Selected upstream: xiaojieonly/Ehviewer_CN_SXJ
+https://github.com/xiaojieonly/Ehviewer_CN_SXJ
+Commit: dfe356244d234c91f2bf65af60903f80b407a838
+Selected Java source files carry explicit Apache License 2.0 headers:
+Copyright 2016 Hippo Seven
+Additional modifications remain attributed to the upstream contributors.
+
+Protocol references / adapted selectors:
+app/src/main/java/com/hippo/ehviewer/client/parser/
+  GalleryListParser.java, FavoritesParser.java, GalleryDetailParser.java,
+  GalleryPageParser.java, GalleryPageUrlParser.java, ForumsParser.java,
+  ProfileParser.java, GetEditCommentParser.java, VoteCommentParser.java
+app/src/main/java/com/hippo/ehviewer/ui/scene/sign/CookieSignInScene.java
+EhEngine.java, EhCookieStore.java and EhUrl.java were inspected for request,
+Cookie and endpoint contracts; their host, networking and storage are not copied.
+
+The upstream root LICENSE interleaves GPL and Apache text and GitHub reports
+NOASSERTION. FluxManga relies on the explicit Apache-2.0 declarations in the
+selected files, not that classifier or a claim that the whole upstream is Apache.
+The untouched root LICENSE remains with the cached public source evidence.
+The complete Apache-2.0 text in ehentai-Apache-2.0.txt is from the original
+seven332/EhViewer@ba6d41b91f53b0835f73fb2903b5c4ff1259786c/LICENSE:
+https://github.com/seven332/EhViewer
+FluxManga's overall distribution remains GPL-3.0-only.
+
+Local modifications:
+- Ported HTML contracts to existing Kotlin/jsoup repositories and Compose pages.
+- Explicit member ID/pass hash inputs; verify current forum identity and gallery
+  favorites access before sealing credentials in the private world's storage.
+- Stable account/gallery identity, server-provided list links, separate favorites
+  categories, explicit current-batch import preserving existing records.
+- Gallery pages collected sequentially; individual image-page HTML resolved on
+  demand. Display/original caches are distinct. Original image access requires
+  an explicit setting and the server-provided fullimg link.
+- Existing Rust transport handles bounded HTTPS responses and limited media
+  redirects, removing cookies at external destinations. No EX fallback, shared
+  WebView cookie store, new database, downloader, Cronet or runtime dependency.
+- Existing encrypted image pipeline, Android region decoding, four reading modes,
+  progress, statistics, library groups and navigation are retained.
+
+No tests, compilation, packaging, live account or gallery requests were performed
+for this stage. Source evidence is under
+docs/verification/m4-storage-foundation-local/eh-upstream and indexed in
+docs/third-party/source-adapters.json.
+
+2026-10-24 follow-up: adapted the same pinned EhEngine.addFavorites and
+EhUrl addfav/hc=1 contracts, and GalleryDetailParser comment selectors. Separate
+website-favorite drafts and confirmation, pre-write state comparison, one POST
+without retry, and post-write GET reconciliation; local favorites unchanged.
+Read-only plain-text comments with expand-all and local filtering. No comment
+posting/editing/voting, HTML execution, new runtime or live-service requests.
+
+2026-10-24 comment-actions follow-up: the same fixed Apache-2.0 EhEngine,
+GalleryDetailParser, GetEditCommentParser and VoteCommentParser contracts now
+support confirmed comment posting, raw-text editing and voting. Adapted to
+Kotlin/jsoup and dedicated, non-retried Rust requests with site-scoped Cookie
+and API credentials. Preserve original editing text, detect pre-write changes,
+reconcile uncertain submissions and display actual vote receipts. No durable
+outbox, automatic replay, comment HTML execution or new runtime dependency.
+No tests, compilation, packaging or live comments/votes were performed.
+
+2026-10-24 password-login follow-up: same fixed EhEngine.signIn / EhUrl form
+contract and SignInParser.java (Copyright 2016 Hippo Seven, Apache-2.0), with
+SignInScene.java inspected as workflow reference. Adapted to isolated temporary
+Rust authentication sessions and Kotlin/jsoup/platform HttpCookie parsing.
+No global cookie jar, WebView, database or runtime dependency added. Passwords
+are not persisted; account credentials are sealed only after site verification.
+EX still requires user-provided igneous and independent EX access confirmation.
+No tests, build, packaging or live authentication requests were performed.

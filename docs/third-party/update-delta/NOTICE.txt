@@ -1,0 +1,22 @@
+FluxManga BSDIFF40 adaptation (2026-10-24)
+
+Reference: FreeBSD src 725a9f47324d42037db93c27ceb40d4956872f3e
+usr.bin/bsdiff/bspatch/bspatch.c and usr.bin/bsdiff/bsdiff/bsdiff.c
+Copyright 2003-2005 Colin Percival. BSD-2-Clause; see bsdiff-LICENSE.txt.
+
+BsdiffPatch.kt adapts the BSDIFF40 layout, sign-magnitude offsets and
+control/diff/extra application to Kotlin, retaining old-file overlap behavior.
+Changes: bounded section streams, random-access read-only base APK, fixed-size
+output buffers, coroutine checkpoints, signed target length, exact arithmetic,
+independent output file, and final hash/package/signature checks in the caller.
+No FreeBSD executable, native libbzip2 or entire upstream application is bundled.
+
+BZip2 decompression uses Apache Commons Compress 1.28.0 with its declared
+Commons IO 2.20.0, Commons Lang 3.18.0 and Commons Codec 1.19.0 dependencies.
+Original Apache LICENSE and NOTICE documents are retained beside this file.
+This source-level dependency addition has not been built or measured.
+
+The release helper invokes a separately supplied BSDIFF40 generator and records
+its SHA-256; a format/header check does not prove that executable was compiled
+from the reference commit. The release operator supplies the trusted tool.
+Neither bsdiff4 nor jbsdiff is a project runtime or release-helper dependency.

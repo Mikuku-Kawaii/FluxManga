@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original FluxManga decorative scene; runtime tint follows WorldColors. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="200dp" android:height="144dp" android:viewportWidth="200" android:viewportHeight="144">
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.18" android:pathData="M40,106 L85,25 L120,79 L149,13 L200,103 L200,144 L40,144 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.38" android:pathData="M60,124 L111,39 L146,98 L171,51 L200,102 L200,144 L60,144 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.75" android:pathData="M94,67 L111,39 L128,68 L112,61 Z M135,38 L149,13 L164,40 L149,32 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.55" android:pathData="M72,144 Q131,107 132,94 Q124,78 145,73 Q136,88 146,94 Q160,109 108,144 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.8" android:pathData="M159,144 L164,122 L169,144 Z M154,125 L164,103 L174,125 Z M151,115 L164,89 L177,115 Z M181,144 L185,127 L189,144 Z M175,128 L185,106 L195,128 Z" />
+</vector>

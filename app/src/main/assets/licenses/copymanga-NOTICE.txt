@@ -1,0 +1,74 @@
+CopyManga protocol adaptation for FluxManga (modified 2026-10-21)
+Upstream: fumiama and copymanga contributors
+Repository: https://github.com/fumiama/copymanga
+Commit: 0fdd3f4489c8ec02f41b4a570aba3b11acfb889b
+License: GNU GPL version 3; full text: copymanga-GPL-3.0.txt
+
+Adapted endpoint/field mappings from app/src/main/res/values/strings.xml,
+ui/cardflow/recommend/RecFragment.kt, json/{TypeBookListStructure,
+TypeBookStructure,BookListStructure,BookInfoStructure,ComicStructure}.java,
+and anonymous request profile from net/DownloadTools.kt.
+Paths above are under app/src/main/java/top/fumiama/copymanga unless specified.
+
+Local changes: Rust/serde typed parsing, strict pagination and identity checks,
+existing scoped reqwest transport and cancellation, Compose entry-owned UI.
+No upstream UI, globals, account tokens, proxy, downloader or binary components imported.
+Corresponding modified source: rust-core/src/copymanga.rs and transport.rs;
+Android integration: app/src/main/java/com/flux/manga/{data/WorldCopyMangaSources.kt,
+ui/pages/CopyMangaPages.kt,ui/pages/CopyMangaModel.kt}.
+Retain this attribution/license and provide corresponding source under GPL-3.0
+when distributing derived binaries. This local build is not an upstream release.
+
+2026-10-21 cover/chapter adaptation:
+Additional references: api/manga/{Book,Volume}.kt, api/Config.kt,
+json/{ThemeStructure,VolumeStructure,ChapterStructure}.java (same commit/license).
+Added scoped anonymous CDN transport (no API credentials, redirects or proxy),
+bounded metadata cover references and temporary image ownership, Android sampled
+decode, group-aware lazy chapter pagination and independent cancellation/errors.
+No upstream whole-book preloading, count=0 rewriting, chapter binary decoder or
+persistent title-named file cache imported.
+
+2026-10-21 body/reader adaptation:
+Additional references at the same commit/license: api/network/Api.kt,
+api/manga/Book.kt, net/Proxy.kt, lib/Comancry.kt and lib/template/LazyLibrary.kt,
+json/{Chapter2Return,ChapterWithContent,UUIDUrlPair}.java,
+ui/vm/{VMHandler,ViewMangaActivity}.kt and api/manga/Downloader.kt.
+Adapted direct chapter/chapter2 selection and contents/words page ordering.
+Added strict source/work/chapter/ordinal checks and bounded opaque page references;
+reused scoped anonymous image-file transport and Android OnlineReaderRepository /
+OnlineReaderPage for decoding, navigation and existing durable reading progress.
+No JNA, dynamically downloaded Comancry/Comandy binaries, proxy decryption,
+whole-book downloader or upstream global reading state is included.
+
+2026-10-21 tags update: adapted ComicStructure.theme, ThemeStructure name/path_word,
+FilterStructure.theme and strings.xml filterIndex/caption request semantics at the same
+pinned commit. Added native typed themes and encoded per-theme paging; no upstream UI runtime.
+
+2026-10-21 account / cloud collection adaptation:
+Additional references at the same pinned commit/license: api/user/Member.kt,
+LoginActivity.kt, ui/cardflow/shelf/ShelfFragment.kt,
+view/template/cardflow/InfoCardLoader.kt, json/{LoginInfoStructure,ShelfStructure,
+HistoryComicStructure,InfoBase,ReturnBase}.java and strings.xml.
+Adapted password-salt Base64 login, independent member/info identity check,
+Token authorization and collect/comics paging (limit=21, free_type=1).
+Local changes: no-wrap UTF-8 Base64, correctly encoded form fields, no automatic
+login replay, strict response/page validation, anonymous CDN client separation,
+account-scoped source keys, encrypted token storage and atomic import checkpoints.
+Only the evidenced filtered collection range is supported; no invented folders,
+remote reading-progress sync, global Config, upstream UI or embedded credentials.
+Modified sources: rust-core/src/copy_account.rs, copymanga.rs, transport.rs;
+app/src/main/java/com/flux/manga/data/{CopyAccountStore,CopyAccountController,
+WorldCopyAccountNetwork,WorldCopyMangaSources}.kt and ui/pages/CopyAccountPage.kt.
+
+2026-10-22 detail metadata extension:
+Referenced ComicStructure.author / status.display / datetime_updated and ValueDisplayPair
+at the same fixed commit. Added bounded optional detail-only mapping to
+rust-core/src/detail_metadata.rs and the shared SourceDetail metadata record.
+Preserves original status display; missing/malformed optional fields do not invent values
+or discard a readable work. No new request, dependency or upstream UI imported.
+
+2026-10-26 recent-updates adaptation:
+Same pinned commit/license: ui/cardflow/newest/NewestFragment.kt,
+json/TypeBookListStructure.java and TypeBookStructure.java, and newestApiUrl in strings.xml.
+Added update/newest pagination via the existing Rust source, scoped transport and
+Compose mixed discovery/cache; no upstream UI or additional runtime imported.

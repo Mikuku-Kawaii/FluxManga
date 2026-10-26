@@ -1,0 +1,19 @@
+* text=auto
+*.kt text eol=lf
+*.kts text eol=lf
+*.rs text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.properties text eol=lf
+*.ps1 text eol=lf
+*.py text eol=lf
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.jar binary
+*.png binary
+*.webp binary
+# Preserve upstream license and evidence bytes used by the in-app catalogue.
+docs/third-party/** -text
+app/src/main/assets/licenses/** -text
+docs/verification/detail-metadata-local/komga-MIT.txt -text

@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/freebsd/freebsd-src",
+  "files": [
+    "usr.bin/bsdiff/bspatch/bspatch.c",
+    "usr.bin/bsdiff/bsdiff/bsdiff.c"
+  ],
+  "commit": "725a9f47324d42037db93c27ceb40d4956872f3e"
+}

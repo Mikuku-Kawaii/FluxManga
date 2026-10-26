@@ -1,0 +1,5 @@
+[bindings.kotlin]
+package_name = "com.flux.manga.core"
+cdylib_name = "flux_manga_core"
+android = true
+generate_immutable_records = true

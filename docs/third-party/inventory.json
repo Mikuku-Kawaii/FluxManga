@@ -1,0 +1,4597 @@
+{
+  "generated": "2026-10-21",
+  "scopeNotes": [
+    "Android entries are resolved release runtime components; metadata variants can have no binary of their own.",
+    "Cargo entries include the entire lockfile, not just packages linked into an Android ABI.",
+    "Notices copied verbatim from local published archives / crate source or pinned upstream license.",
+    "This is a source and dependency snapshot, not verification of a new signed APK."
+  ],
+  "androidRuntime": [
+    {
+      "coordinate": "androidx.activity:activity:1.12.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/activity#1.12.0",
+      "pom": "maven-metadata/androidx.activity-activity-1.12.0.pom",
+      "pomSha256": "5ba79bfe4e5fc34c99a269a004d8fa0d04e2ca647c0b338db9755be1cac001e1",
+      "notices": [
+        "maven-notices/androidx.activity-activity-1.12.0/activity-1.12.0.aar/META-INF/androidx/activity/activity/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "activity-1.12.0.aar",
+          "sha256": "1af72f689de924143a03fe5b6f698a7170d7aea842f71307746e8d1db8bbfeeb"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.activity:activity-compose:1.12.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/activity#1.12.0",
+      "pom": "maven-metadata/androidx.activity-activity-compose-1.12.0.pom",
+      "pomSha256": "c62cbaed822616410fe9f45970688b23b5cf0a29a81cfbffabdf783058b67aee",
+      "notices": [
+        "maven-notices/androidx.activity-activity-compose-1.12.0/activity-compose-1.12.0.aar/META-INF/androidx/activity/activity-compose/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "activity-compose-1.12.0.aar",
+          "sha256": "056a0700aa7e7cf5f7be1eebb32a70534b63a662c1b7408c1f2b099d75a0d13f"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.activity:activity-ktx:1.12.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/activity#1.12.0",
+      "pom": "maven-metadata/androidx.activity-activity-ktx-1.12.0.pom",
+      "pomSha256": "78eb47039010b0c45db1f9e66fe708e9694ffb0dbb3a7ead83881bee67a253cc",
+      "notices": [
+        "maven-notices/androidx.activity-activity-ktx-1.12.0/activity-ktx-1.12.0.aar/META-INF/androidx/activity/activity-ktx/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "activity-ktx-1.12.0.aar",
+          "sha256": "bdff4d2b8c6f28fb488e99635bd740ef3237e4d02e860cbb583c76c29b9eec8d"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.annotation:annotation:1.9.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/annotation#1.9.1",
+      "pom": "maven-metadata/androidx.annotation-annotation-1.9.1.pom",
+      "pomSha256": "c733881c2e17d5f7c8661cc02a9159cb160b7b2094a27d593916c87d3e250636",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.annotation:annotation-experimental:1.5.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/annotation#1.5.0",
+      "pom": "maven-metadata/androidx.annotation-annotation-experimental-1.5.0.pom",
+      "pomSha256": "7a94595399931c25a49f9af93daa4e977dc2d375458e4e74bb8d35ebcb51848d",
+      "notices": [
+        "maven-notices/androidx.annotation-annotation-experimental-1.5.0/annotation-experimental-1.5.0.aar/META-INF/androidx/annotation/annotation-experimental/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "annotation-experimental-1.5.0.aar",
+          "sha256": "02b0a4256618f85386c92e5cec166dc7f300820888a290227a3c0c65b82cbb36"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.annotation:annotation-jvm:1.9.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/annotation#1.9.1",
+      "pom": "maven-metadata/androidx.annotation-annotation-jvm-1.9.1.pom",
+      "pomSha256": "89b99c218d60019316b50aab79816707bc21696c896a030e1b1ae038961bcb8e",
+      "notices": [
+        "maven-notices/androidx.annotation-annotation-jvm-1.9.1/annotation-jvm-1.9.1.jar/META-INF/androidx/annotation/annotation/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "annotation-jvm-1.9.1.jar",
+          "sha256": "1e343917ebf27ba96fe4dc52b1cad7fd32b738fbc6355bb6cd5b3b305d7212d0"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.arch.core:core-common:2.2.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/arch-core#2.2.0",
+      "pom": "maven-metadata/androidx.arch.core-core-common-2.2.0.pom",
+      "pomSha256": "1e17d4af8d6425be2a69f8af4d654a87e0456259a9eef1542869bcb023547e28",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "core-common-2.2.0.jar",
+          "sha256": "65308a06b1c00ee186cb9e19321383f043b993813f1522c47f4a3e3303bdba41"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.arch.core:core-runtime:2.2.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/arch-core#2.2.0",
+      "pom": "maven-metadata/androidx.arch.core-core-runtime-2.2.0.pom",
+      "pomSha256": "0f953706598140d9d8735cdd5aeb1fa35933f4e2f31c0bf3eb81a053a4c8c1a5",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "core-runtime-2.2.0.aar",
+          "sha256": "a1be5e0caa2b07623862af6ae21b3ab0718123245184d0e30dea81b53f990a47"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.autofill:autofill:1.0.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx",
+      "pom": "maven-metadata/androidx.autofill-autofill-1.0.0.pom",
+      "pomSha256": "3677abead5d4e06cf76cbacb954151e051779c2274494451fb424e375aa9e450",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "autofill-1.0.0.aar",
+          "sha256": "c9468f56e05006ea151a426c54957cd0799b8b83a579d2846dd22061f33e5ecd"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.collection:collection:1.5.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/collection#1.5.0",
+      "pom": "maven-metadata/androidx.collection-collection-1.5.0.pom",
+      "pomSha256": "2d65c8d0b36d4b4faadc44aff9bade23d871d7159eedf2b3f02d802b34b77a57",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.collection:collection-jvm:1.5.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/collection#1.5.0",
+      "pom": "maven-metadata/androidx.collection-collection-jvm-1.5.0.pom",
+      "pomSha256": "11c415864d3402f61d426e67210158dce1b04680412526a994f1823ecd3cb388",
+      "notices": [
+        "maven-notices/androidx.collection-collection-jvm-1.5.0/collection-jvm-1.5.0.jar/META-INF/androidx/collection/collection/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "collection-jvm-1.5.0.jar",
+          "sha256": "70b35924e4babcdffa37d0e575ee039c56a2d97123342624c48b603233704341"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.collection:collection-ktx:1.5.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/collection#1.5.0",
+      "pom": "maven-metadata/androidx.collection-collection-ktx-1.5.0.pom",
+      "pomSha256": "983f8d0630d072d5bfcd166a498ac7213f3a44a98c09051004ce96429d867cea",
+      "notices": [
+        "maven-notices/androidx.collection-collection-ktx-1.5.0/collection-ktx-1.5.0.jar/META-INF/androidx/collection/collection-ktx/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "collection-ktx-1.5.0.jar",
+          "sha256": "939b4a8697640e77d83e4e8b4c4a9d18f8130198c5961194af8dd9db9dc7c353"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose:compose-bom:2025.11.01",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack",
+      "pom": "maven-metadata/androidx.compose-compose-bom-2025.11.01.pom",
+      "pomSha256": "0448725f666e9eb33661489f01b1ec833a36b904f368b5e8cf57ccd7617f6c2c",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.animation:animation:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.animation-animation-1.9.5.pom",
+      "pomSha256": "097f9104946a224944875214642279ff98aa8e939c74b6078d96623cd053c1e6",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.animation:animation-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.animation-animation-android-1.9.5.pom",
+      "pomSha256": "ad3b7bf110de0adf65b75a9ec181d0fbbd2d73f535f683fe145e00d8d78c3e46",
+      "notices": [
+        "maven-notices/androidx.compose.animation-animation-android-1.9.5/animation.aar/META-INF/androidx/compose/animation/animation/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "animation.aar",
+          "sha256": "1dad7cf0ff0e984d6056ccd39ee12582e26f122ee8c8e3cd1d978727add1c5d2"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.animation:animation-core:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.animation-animation-core-1.9.5.pom",
+      "pomSha256": "0dfd1c87b3287ad7aa71c4f0ae00a46df2e197c46d1947a7ed447129fbc81b96",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.animation:animation-core-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.animation-animation-core-android-1.9.5.pom",
+      "pomSha256": "b5ce111517c8524cab1b258c005f1b51e0e2ca490bb69c7922ab976d126daecf",
+      "notices": [
+        "maven-notices/androidx.compose.animation-animation-core-android-1.9.5/animation-core.aar/META-INF/androidx/compose/animation/animation-core/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "animation-core.aar",
+          "sha256": "cc65ccacd272502297fbaf4e967fb397d86f6d831f1fb75bddc97e957c2357e5"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.foundation:foundation:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.foundation-foundation-1.9.5.pom",
+      "pomSha256": "52ad1da29c526f53bed25ef025640e8306ac4e73ba02ccf2f62252a7227b2459",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.foundation:foundation-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.foundation-foundation-android-1.9.5.pom",
+      "pomSha256": "4d04eb9c924ee9981a00ee386389b2836a84161169bb80135bafbf02f58af25d",
+      "notices": [
+        "maven-notices/androidx.compose.foundation-foundation-android-1.9.5/foundation-release.aar/META-INF/androidx/compose/foundation/foundation/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "foundation-release.aar",
+          "sha256": "b5e162ff62eb28bace5653dba31ca93a923c40228ad5570e4288ddf7efcd7d4e"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.foundation:foundation-layout:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.foundation-foundation-layout-1.9.5.pom",
+      "pomSha256": "7755fff3748773b29135e5c53c42005f12a9ad5a7a48a681b4b0baa3e776642b",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.foundation:foundation-layout-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.9.5",
+      "pom": "maven-metadata/androidx.compose.foundation-foundation-layout-android-1.9.5.pom",
+      "pomSha256": "63e7792d4f1459abff2547e8ccb5e057bdb37334fe696fcb5f16febd1af99618",
+      "notices": [
+        "maven-notices/androidx.compose.foundation-foundation-layout-android-1.9.5/foundation-layout.aar/META-INF/androidx/compose/foundation/foundation-layout/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "foundation-layout.aar",
+          "sha256": "08d5217d3605dac73347ee7a2dfb52ad9136696e92a838a71eacd2e1fbc8a5d3"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.material:material-ripple:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.9.5",
+      "pom": "maven-metadata/androidx.compose.material-material-ripple-1.9.5.pom",
+      "pomSha256": "6bac89a385cdb36773e894f05ceb5d36ff2ffc7a8d057906b572c7a3f21ca3b2",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.material:material-ripple-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.9.5",
+      "pom": "maven-metadata/androidx.compose.material-material-ripple-android-1.9.5.pom",
+      "pomSha256": "4e86986dbaaa8e25507321d3f15b44e05a12ad5586efb19f4e98cbcc1442d90b",
+      "notices": [
+        "maven-notices/androidx.compose.material-material-ripple-android-1.9.5/material-ripple.aar/META-INF/androidx/compose/material/material-ripple/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "material-ripple.aar",
+          "sha256": "da6202f3d68b84f74597762ac245b1e88a2055fe059512799347b3b4d27ab333"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.material3:material3:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.4.0",
+      "pom": "maven-metadata/androidx.compose.material3-material3-1.4.0.pom",
+      "pomSha256": "672b431f59c8e0a8522690b2f46f1b7966710638893c60c31c5f19f8472d62cc",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.material3:material3-android:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.4.0",
+      "pom": "maven-metadata/androidx.compose.material3-material3-android-1.4.0.pom",
+      "pomSha256": "cc0362653240708a010de50fee8caf884a610fbb10b6013e86694d77c43febc7",
+      "notices": [
+        "maven-notices/androidx.compose.material3-material3-android-1.4.0/material3.aar/META-INF/androidx/compose/material3/material3/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "material3.aar",
+          "sha256": "3a37e8b36df3822fe1e6059f0f9fafda8800388860477624ac1b9422c418a36e"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.runtime:runtime:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.9.5",
+      "pom": "maven-metadata/androidx.compose.runtime-runtime-1.9.5.pom",
+      "pomSha256": "51e5d4670cd10ad8c60bdbc3ddc307305a3b97e9a1fa7b405c8e764096ba0b15",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.runtime:runtime-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.9.5",
+      "pom": "maven-metadata/androidx.compose.runtime-runtime-android-1.9.5.pom",
+      "pomSha256": "28504055ccecef91294ba2ac37f5f896173e49ab37e7f181b7f47717e802b4e9",
+      "notices": [
+        "maven-notices/androidx.compose.runtime-runtime-android-1.9.5/runtime.aar/META-INF/androidx/compose/runtime/runtime/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "runtime.aar",
+          "sha256": "7333211c5a84e9b09159b018d52a81c8a7cd6acd64b267b1af95858ac62f7e00"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.runtime:runtime-annotation:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.9.5",
+      "pom": "maven-metadata/androidx.compose.runtime-runtime-annotation-1.9.5.pom",
+      "pomSha256": "ab14bed4d5619af5ca59d7edc8f6a7a988463d1e61b3502f9179a1d9394b3aef",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.runtime:runtime-annotation-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.9.5",
+      "pom": "maven-metadata/androidx.compose.runtime-runtime-annotation-android-1.9.5.pom",
+      "pomSha256": "b58e6b8e7af79bd762449763631c7ce14be4e68b69c50ffb952f271536b80e2a",
+      "notices": [
+        "maven-notices/androidx.compose.runtime-runtime-annotation-android-1.9.5/runtime-annotation.aar/META-INF/androidx/compose/runtime/runtime-annotation/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "runtime-annotation.aar",
+          "sha256": "5cb52631cdc1e5f7632e0e4e3ca0bd602df17eda096636e77bb0b805bd5b8afa"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.runtime:runtime-saveable:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.9.5",
+      "pom": "maven-metadata/androidx.compose.runtime-runtime-saveable-1.9.5.pom",
+      "pomSha256": "24f2da58c4e6f868f99da17f6d84101d4710fc90940c82fc272e103e0ee94675",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.runtime:runtime-saveable-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.9.5",
+      "pom": "maven-metadata/androidx.compose.runtime-runtime-saveable-android-1.9.5.pom",
+      "pomSha256": "6c21a00adaafa080321368ca4c91839e24f90e2af4cb0062b51d0047b4d1061e",
+      "notices": [
+        "maven-notices/androidx.compose.runtime-runtime-saveable-android-1.9.5/runtime-saveable.aar/META-INF/androidx/compose/runtime/runtime-saveable/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "runtime-saveable.aar",
+          "sha256": "8b4237ab9919a1b2e829909735652057538970c39db42612a2963f70abd11a89"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-1.9.5.pom",
+      "pomSha256": "c2da4e26f22857e05f020a7cf6988e9d23f247b112ea6c9e6178f77772bcfdd0",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-android-1.9.5.pom",
+      "pomSha256": "6264876442d7b0e8ff1f2236df099f1071e4b463563db76474b0368c10ba8456",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-android-1.9.5/ui-release.aar/META-INF/androidx/compose/ui/ui/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-release.aar",
+          "sha256": "d972b219d5a08046c9e6af8a6a616b86e1c87a54aaa9effa78552f05729f456c"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-geometry:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-geometry-1.9.5.pom",
+      "pomSha256": "98c523e9843d259ddc3832ee34f136d12424dfb2b67172d0dedf7911fdf5bb27",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-geometry-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-geometry-android-1.9.5.pom",
+      "pomSha256": "3739fce5fbf1305b49471e513b618d2de01ad9701f555c8b88ce9ac4519b021a",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-geometry-android-1.9.5/ui-geometry.aar/META-INF/androidx/compose/ui/ui-geometry/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-geometry.aar",
+          "sha256": "baa21c336bfc9a7daf5ad32d50c5d436c92a8ac3492210d53900a1b395af4e3d"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-graphics:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-graphics-1.9.5.pom",
+      "pomSha256": "45ca667670235d47dbd3db4a62af00ba36e53bfea48fe977d70103c8e1293af8",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-graphics-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-graphics-android-1.9.5.pom",
+      "pomSha256": "d5f9d0a834aeb82747d575b66a44ce97940fb7e87d024ba5fb4c61870ed311c2",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-graphics-android-1.9.5/ui-graphics-release.aar/META-INF/androidx/compose/ui/ui-graphics/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-graphics-release.aar",
+          "sha256": "b4eae7278c94936e3965697b1d607c1e81c06e7a91311446d023a668b2d1c256"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-text:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-text-1.9.5.pom",
+      "pomSha256": "38664eca46a2f3fd6114dc33bf10d88363250d99dc2c5da24229d5cac9380821",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-text-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-text-android-1.9.5.pom",
+      "pomSha256": "7bdcd3b74db8948673d33fe2c834cc78a6d7974231abffd0c564faac612d0f9e",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-text-android-1.9.5/ui-text.aar/META-INF/androidx/compose/ui/ui-text/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-text.aar",
+          "sha256": "8137d89f93cb3e7b4f645c5f8f87195bd11c4f6d95e9e8c7e51d50447b431c77"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-tooling-preview:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-tooling-preview-1.9.5.pom",
+      "pomSha256": "c29c8c8b3ad54ffba7cb5b38bb3eeadbf09c93786819f05ca2bde03421c246aa",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-tooling-preview-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-tooling-preview-android-1.9.5.pom",
+      "pomSha256": "549036edee5c00ba566d4f977bfbe59afd0e1dd99733295744a5b47ed9267e4c",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-tooling-preview-android-1.9.5/ui-tooling-preview.aar/META-INF/androidx/compose/ui/ui-tooling-preview/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-tooling-preview.aar",
+          "sha256": "64e6e6fb831b701241e9e19a743686f49c897ac806f122341d3051b6b82c84e8"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-unit:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-unit-1.9.5.pom",
+      "pomSha256": "0d5606b30eb05947509b4c3db6408731b78e40410205a3c8c73b2efa3e171714",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-unit-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-unit-android-1.9.5.pom",
+      "pomSha256": "8ffeeb078d6775c2bd4ada8fa6dcff9755c83d8ceda6255f5b16e1fe5541138c",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-unit-android-1.9.5/ui-unit.aar/META-INF/androidx/compose/ui/ui-unit/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-unit.aar",
+          "sha256": "389a3c21d1ca0f89679d09e054db3aac72aa10630b2d2d2d4b46a81340020a23"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-util:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-util-1.9.5.pom",
+      "pomSha256": "77c156c2dc9c57fe81ee0b5dda7b11242b665ab29dbaabf316882dfc0c74e7d7",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui-util-android:1.9.5",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.9.5",
+      "pom": "maven-metadata/androidx.compose.ui-ui-util-android-1.9.5.pom",
+      "pomSha256": "de2e29576910938d95f8790ef012d40f4d7a9d86aa2f0b20507e67f077cb8099",
+      "notices": [
+        "maven-notices/androidx.compose.ui-ui-util-android-1.9.5/ui-util.aar/META-INF/androidx/compose/ui/ui-util/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "ui-util.aar",
+          "sha256": "f9c618151e2a553ca2dfb56afde63fede54fb639ae8f579c257d8907dcd6c87f"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.concurrent:concurrent-futures:1.1.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/topic/libraries/architecture/index.html",
+      "pom": "maven-metadata/androidx.concurrent-concurrent-futures-1.1.0.pom",
+      "pomSha256": "748a34eb5d13d19d187adecaea82667fded5f1b0b98a655e13ed2e4a8b3d8ae6",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "concurrent-futures-1.1.0.jar",
+          "sha256": "0ce067c514a0d1049d1bebdf709e344ed3266fe9744275682937cdcb13334e9e"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.core:core:1.16.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/core#1.16.0",
+      "pom": "maven-metadata/androidx.core-core-1.16.0.pom",
+      "pomSha256": "074974a1550221af7aa85ded6903c3d84c9bdedf9e6b4ff3b0cb471329b5ac77",
+      "notices": [
+        "maven-notices/androidx.core-core-1.16.0/core-1.16.0.aar/META-INF/androidx/core/core/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "core-1.16.0.aar",
+          "sha256": "6bf03d39dbe3744acce227d3b697374c3625aae1025fbec8ad9fd7bd58bce431"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.core:core-ktx:1.16.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/core#1.16.0",
+      "pom": "maven-metadata/androidx.core-core-ktx-1.16.0.pom",
+      "pomSha256": "4660cfb606ed89828ba3e10f79b29809ffb677ee5d2346fe9bcb03dfc4b9b645",
+      "notices": [
+        "maven-notices/androidx.core-core-ktx-1.16.0/core-ktx-1.16.0.aar/META-INF/androidx/core/core-ktx/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "core-ktx-1.16.0.aar",
+          "sha256": "1766dbd82f64a12dcd359ecb6f15f3cf35db4d66d22961a7c51b2ffc6468314c"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.core:core-viewtree:1.0.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/core#1.0.0",
+      "pom": "maven-metadata/androidx.core-core-viewtree-1.0.0.pom",
+      "pomSha256": "d4f2ed1176fa8c5612b80f74c952a8799142a9ed36022a1a238fde5b140580d9",
+      "notices": [
+        "maven-notices/androidx.core-core-viewtree-1.0.0/core-viewtree-1.0.0.aar/META-INF/androidx/core/core-viewtree/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "core-viewtree-1.0.0.aar",
+          "sha256": "dc1b678d58ebcf2bfa1587be68ff826694ce3d221251b9ef30d4d4b36297e6de"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.customview:customview-poolingcontainer:1.0.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/customview#1.0.0",
+      "pom": "maven-metadata/androidx.customview-customview-poolingcontainer-1.0.0.pom",
+      "pomSha256": "9fa62196c4c4e79b6a58dbb38a8c022bef8db21989d7dae2da0f6f5b66289a9c",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "customview-poolingcontainer-1.0.0.aar",
+          "sha256": "3584102fc49bf399c56e3b7be4bfe12000c46112320cd8cf85cc0a8f93f3e752"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.emoji2:emoji2:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/emoji2#1.4.0",
+      "pom": "maven-metadata/androidx.emoji2-emoji2-1.4.0.pom",
+      "pomSha256": "1f67221484f7d1260eb6e2b490cd4e7046bf5cb536276d79f972ad3f198b474d",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "emoji2-1.4.0.aar",
+          "sha256": "433febd3434a45667176c76a64f3f205ca6335a6b544c5b5d57f25a38a375242"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.graphics:graphics-path:1.0.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/graphics#1.0.1",
+      "pom": "maven-metadata/androidx.graphics-graphics-path-1.0.1.pom",
+      "pomSha256": "866fb357c7146f5f7678ad44e4bc6c2823d568defce1ed2805bb6c899606b228",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "graphics-path-1.0.1.aar",
+          "sha256": "8ca4032b6d79b351f0b59ad4b580eddbb9423e1652f7c958830687f1eee2ec03"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.interpolator:interpolator:1.0.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "http://developer.android.com/tools/extras/support-library.html",
+      "pom": "maven-metadata/androidx.interpolator-interpolator-1.0.0.pom",
+      "pomSha256": "0ddc07cc39699f48ecd9ec894b5830c0f09e22e82959294edf37217224c88b7b",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "interpolator-1.0.0.aar",
+          "sha256": "33193135a64fe21fa2c35eec6688f1a76e512606c0fc83dc1b689e37add7732a"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-common:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-common-2.10.0.pom",
+      "pomSha256": "1004f4df05118b13c2a909846badc66646ed277944706a604e4dd8284d53548b",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-common-java8:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-common-java8-2.10.0.pom",
+      "pomSha256": "afaa5d85193a6b108a25f6fa8a8ae3e7b2b0b2b2b7cf53597f72bcb4f5942718",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-common-java8-2.10.0/lifecycle-common-java8-2.10.0.jar/META-INF/androidx/lifecycle/lifecycle-common-java8/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-common-java8-2.10.0.jar",
+          "sha256": "497dd84de9f2fd46324f25f9a3af032d3a23d087e87af515c4b19435f6d6a651"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-common-jvm:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-common-jvm-2.10.0.pom",
+      "pomSha256": "ca062b9abb0298b0d40ae10c2d1ca06d4129f5f60efdc5e8c44c6c2b3375d15b",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-common-jvm-2.10.0/lifecycle-common-jvm-2.10.0.jar/META-INF/androidx/lifecycle/lifecycle-common/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-common-jvm-2.10.0.jar",
+          "sha256": "15943082d87bcd78830398fa377f2c8b12643de290d0906ed8e49a2d335ddb54"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-livedata-core:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-livedata-core-2.10.0.pom",
+      "pomSha256": "4bed5e91cd2a7c01558320b6a176dbb867fca3c4c697db948e203be45f910d64",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-livedata-core-2.10.0/lifecycle-livedata-core-2.10.0.aar/META-INF/androidx/lifecycle/lifecycle-livedata-core/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-livedata-core-2.10.0.aar",
+          "sha256": "12dd61a9843ccebb4547d3ebe2f6d030ca8f6988d22f8fad19c0af93b4a97e95"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-process:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-process-2.10.0.pom",
+      "pomSha256": "a2c3062320873f9ac29ded1d9ca4a2415529c2e4568d53b5f2b813ec52adc664",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-process-2.10.0/lifecycle-process-2.10.0.aar/META-INF/androidx/lifecycle/lifecycle-process/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-process-2.10.0.aar",
+          "sha256": "10bb5bb12773dca11d8343c014cfd17dfb40967d6ece37e8f15d04d8ceb0775c"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-runtime-2.10.0.pom",
+      "pomSha256": "4a8b5eec54d5ecdf099ea53b2e4e9f24db2967ea5d393097b6a6c549ed69308d",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-runtime-android-2.10.0.pom",
+      "pomSha256": "e97ee01daf6f4dccb900bdb7672baab5ad3c7c25c45491fdccf5eba33b6eafff",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-runtime-android-2.10.0/lifecycle-runtime.aar/META-INF/androidx/lifecycle/lifecycle-runtime/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-runtime.aar",
+          "sha256": "2193a1573d623f37b20c7d27d1a8f903a72f651cc6f32e5794f85dda744fee75"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime-compose:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-runtime-compose-2.10.0.pom",
+      "pomSha256": "0f790ce151911010d537cd20452675017ff25fdff1fb5cdf499bf3a05ad42caa",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime-compose-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-runtime-compose-android-2.10.0.pom",
+      "pomSha256": "807830efa27130649286b0061c972ad9dc0b1a61d1bfc2d71a2e8ddf71f62bc5",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-runtime-compose-android-2.10.0/lifecycle-runtime-compose.aar/META-INF/androidx/lifecycle/lifecycle-runtime-compose/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-runtime-compose.aar",
+          "sha256": "46e996d526829596f6db4626169a967f056fde7103507ff596bcd177b73c3675"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime-ktx:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-runtime-ktx-2.10.0.pom",
+      "pomSha256": "060ad1753381e7af9d7a5b89829f394ef6fd47f77e31ba4c812462bc37bda618",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-runtime-ktx-android-2.10.0.pom",
+      "pomSha256": "5c1a269dd0f0ace87f22832883b898bd7b4252d6a87f04c17347d83e3128660e",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-runtime-ktx-android-2.10.0/lifecycle-runtime-ktx.aar/META-INF/androidx/lifecycle/lifecycle-runtime-ktx/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-runtime-ktx.aar",
+          "sha256": "871883703339f87284d232cb436e317c6f4af5612d92b43f27c6b13b92109fa7"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-2.10.0.pom",
+      "pomSha256": "1d860aff0ca598d48e8e83da3f4e6769078498574a18d3b889ec2b8c4090b198",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-android-2.10.0.pom",
+      "pomSha256": "0aa171a50f50a85c90687ad82dcd37f31afdd1bfd2463c215d1322960e51e228",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-viewmodel-android-2.10.0/lifecycle-viewmodel.aar/META-INF/androidx/lifecycle/lifecycle-viewmodel/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-viewmodel.aar",
+          "sha256": "9303287030027ca0b8cf98a748ddeb121ec1bfa1312c0069428e4765bbabce78"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-compose-2.10.0.pom",
+      "pomSha256": "480b70b66c935a1f492742ef5ae16df974d7b4957a011f2795002072d5ed5259",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-compose-android-2.10.0.pom",
+      "pomSha256": "363387a71f0f312517514becd9a401ec8589fbcb8d0934a1cac3c5f05eb00c8a",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-viewmodel-compose-android-2.10.0/lifecycle-viewmodel-compose.aar/META-INF/androidx/lifecycle/lifecycle-viewmodel-compose/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-viewmodel-compose.aar",
+          "sha256": "225904e54ad5154768630471e108b98e143c261df0c08380ff43ea7e832dad7e"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-ktx-2.10.0.pom",
+      "pomSha256": "e139dbb1a00ce08aaed86557aa968eec7151d6d4b304c324e2e572275aacd908",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-viewmodel-ktx-2.10.0/lifecycle-viewmodel-ktx-2.10.0.aar/META-INF/androidx/lifecycle/lifecycle-viewmodel-ktx/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-viewmodel-ktx-2.10.0.aar",
+          "sha256": "54295ac86b67886dc0613e38f621c531995d0662005fc763e340e19a90994f84"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-navigation3-2.10.0.pom",
+      "pomSha256": "92cbf61095edf700bf1e246f2a297ab44585c37168e6f4bb2886cb334008892b",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-navigation3-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-navigation3-android-2.10.0.pom",
+      "pomSha256": "d757c187baf5d7d0ef99f1b75e40e8849d682da8077618d1c0b24ca9f1839663",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-viewmodel-navigation3-android-2.10.0/lifecycle-viewmodel-navigation3.aar/META-INF/androidx/lifecycle/lifecycle-viewmodel-navigation3/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-viewmodel-navigation3.aar",
+          "sha256": "a4e0e66288a40659d927938c605fee060acdbad610b041fbf8984866318cb5ed"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-savedstate-2.10.0.pom",
+      "pomSha256": "59656ffcae1e0e147043b0d6d89966a5f96752f05291ebfa028406ed94444dd1",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.10.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.10.0",
+      "pom": "maven-metadata/androidx.lifecycle-lifecycle-viewmodel-savedstate-android-2.10.0.pom",
+      "pomSha256": "5fcd429ba57e1dde1b438534e53c23d6274d234e33c748963f6faa9f81933c87",
+      "notices": [
+        "maven-notices/androidx.lifecycle-lifecycle-viewmodel-savedstate-android-2.10.0/lifecycle-viewmodel-savedstate.aar/META-INF/androidx/lifecycle/lifecycle-viewmodel-savedstate/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "lifecycle-viewmodel-savedstate.aar",
+          "sha256": "19404239fa584322c2f81e9659e162bc011b746d29dc950a11d260624d83225e"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigation3:navigation3-runtime:1.0.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigation3#1.0.1",
+      "pom": "maven-metadata/androidx.navigation3-navigation3-runtime-1.0.1.pom",
+      "pomSha256": "6cab8f26b4a08dea6b33a17dcfdaea2fb7e6c93d4dfc17e75f5716e8bdaf1933",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigation3:navigation3-runtime-android:1.0.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigation3#1.0.1",
+      "pom": "maven-metadata/androidx.navigation3-navigation3-runtime-android-1.0.1.pom",
+      "pomSha256": "ab570d4a704a086dff41acfab47cbd4e033e71328a6ea46e408d580c1801fa3e",
+      "notices": [
+        "maven-notices/androidx.navigation3-navigation3-runtime-android-1.0.1/navigation3-runtime.aar/META-INF/androidx/navigation3/navigation3-runtime/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "navigation3-runtime.aar",
+          "sha256": "0a9963328acbde74dd8695534faed2df3a72b69a9ff74c7a7b0a33c4333d4716"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigation3:navigation3-ui:1.0.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigation3#1.0.1",
+      "pom": "maven-metadata/androidx.navigation3-navigation3-ui-1.0.1.pom",
+      "pomSha256": "df0a8384b3d96d78daf1d9b476520acbc2f41393cdcb21ef9313cf74f6a0451d",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigation3:navigation3-ui-android:1.0.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigation3#1.0.1",
+      "pom": "maven-metadata/androidx.navigation3-navigation3-ui-android-1.0.1.pom",
+      "pomSha256": "678189fa362d865dd79688b748cac58e5f6291938ae9536c6c3d8bce92c34722",
+      "notices": [
+        "maven-notices/androidx.navigation3-navigation3-ui-android-1.0.1/navigation3-ui.aar/META-INF/androidx/navigation3/navigation3-ui/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "navigation3-ui.aar",
+          "sha256": "55f3b7e93532d2f17ec490d3b3f284a230b3e450c03f6bc219856fd972d7d26e"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigationevent:navigationevent:1.0.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.0.2",
+      "pom": "maven-metadata/androidx.navigationevent-navigationevent-1.0.2.pom",
+      "pomSha256": "1b042a07aa22d54f06685c37f093dea4f26d9efae5b2010394b0c6584e888143",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigationevent:navigationevent-android:1.0.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.0.2",
+      "pom": "maven-metadata/androidx.navigationevent-navigationevent-android-1.0.2.pom",
+      "pomSha256": "ea1c8f593b94772d6a953af6a3734690ef928bdf41f6385c3ede0b2cae7637d3",
+      "notices": [
+        "maven-notices/androidx.navigationevent-navigationevent-android-1.0.2/navigationevent.aar/META-INF/androidx/navigationevent/navigationevent/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "navigationevent.aar",
+          "sha256": "3fa191e3da2f6b601e944fb03a09a12278e49418dd1a9b22cd6b99f66e4283fd"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigationevent:navigationevent-compose:1.0.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.0.2",
+      "pom": "maven-metadata/androidx.navigationevent-navigationevent-compose-1.0.2.pom",
+      "pomSha256": "0a584cb25afe0de10b8ade9a0d514f7af53a2469f32300a7629ace160638e308",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.navigationevent:navigationevent-compose-android:1.0.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.0.2",
+      "pom": "maven-metadata/androidx.navigationevent-navigationevent-compose-android-1.0.2.pom",
+      "pomSha256": "1f880fadcc77d281ebb1cbca9a7d4cf242d81a89afd334feebb4d43135b326c5",
+      "notices": [
+        "maven-notices/androidx.navigationevent-navigationevent-compose-android-1.0.2/navigationevent-compose.aar/META-INF/androidx/navigationevent/navigationevent-compose/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "navigationevent-compose.aar",
+          "sha256": "6064ee738c2f3c99e1754f6aa380aabb57bf1ba973a4566276a3ecbbd2eaa3d0"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.profileinstaller:profileinstaller:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/profileinstaller#1.4.0",
+      "pom": "maven-metadata/androidx.profileinstaller-profileinstaller-1.4.0.pom",
+      "pomSha256": "d5fe39981a3b4b7c39585130da0bfc93835054c834a438d3e63e065e5f78be55",
+      "notices": [
+        "maven-notices/androidx.profileinstaller-profileinstaller-1.4.0/profileinstaller-1.4.0.aar/META-INF/androidx/profileinstaller/profileinstaller/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "profileinstaller-1.4.0.aar",
+          "sha256": "d502141fcce902430f62b674c32aecd0f75262e7ee2cd15c74adb617cd13130a"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.room:room-common:2.8.4",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/room#2.8.4",
+      "pom": "maven-metadata/androidx.room-room-common-2.8.4.pom",
+      "pomSha256": "681e3f6fd5308843aefbbb474dd3638ffd685d1ad8f7fa96b8559e5ea5ef202c",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.room:room-common-jvm:2.8.4",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/room#2.8.4",
+      "pom": "maven-metadata/androidx.room-room-common-jvm-2.8.4.pom",
+      "pomSha256": "1c8f5bd00eacfc4be791390ad0d953aaee07644a91425490de790245d36a73b7",
+      "notices": [
+        "maven-notices/androidx.room-room-common-jvm-2.8.4/room-common-jvm-2.8.4.jar/META-INF/androidx/room/room-common/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "room-common-jvm-2.8.4.jar",
+          "sha256": "dc7b4e1a75a790f29c97afd5516b8bf8002d9b6e83e295bc569b33566f3b1ec0"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.room:room-runtime:2.8.4",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/room#2.8.4",
+      "pom": "maven-metadata/androidx.room-room-runtime-2.8.4.pom",
+      "pomSha256": "61b13fd132369dd7c3fb9d0b3076ceefa8e57ec699a8e03fb87aecb81cedd99b",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.room:room-runtime-android:2.8.4",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/room#2.8.4",
+      "pom": "maven-metadata/androidx.room-room-runtime-android-2.8.4.pom",
+      "pomSha256": "80a198f43bb65bd7b0edfa19ee2c26e144bf379141c30be3a071a47a157b65e7",
+      "notices": [
+        "maven-notices/androidx.room-room-runtime-android-2.8.4/room-runtime.aar/META-INF/androidx/room/room-runtime/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "room-runtime.aar",
+          "sha256": "3293575082024fa0a92b081c4e2d0609f14b5c109635ec227bc509db141a4e20"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.savedstate:savedstate:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0",
+      "pom": "maven-metadata/androidx.savedstate-savedstate-1.4.0.pom",
+      "pomSha256": "d2b68a2d0cc76f23cebc6d4ea9bbf2d63fb536ffd94e05514ad9da6c5f530492",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.savedstate:savedstate-android:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0",
+      "pom": "maven-metadata/androidx.savedstate-savedstate-android-1.4.0.pom",
+      "pomSha256": "b44b215b4cce24ca64b5faa58ff463f4b91abc02af95ba405ade488828f4f779",
+      "notices": [
+        "maven-notices/androidx.savedstate-savedstate-android-1.4.0/savedstate.aar/META-INF/androidx/savedstate/savedstate/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "savedstate.aar",
+          "sha256": "1656ce62cd233d488bdbbd42e533b80b22435b7a690acae6dbe7302392512c14"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.savedstate:savedstate-compose:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0",
+      "pom": "maven-metadata/androidx.savedstate-savedstate-compose-1.4.0.pom",
+      "pomSha256": "b15f47b42585442c9b6a9d416afc30782c69dbf9a5760a2c37175f0024f0d17e",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.savedstate:savedstate-compose-android:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0",
+      "pom": "maven-metadata/androidx.savedstate-savedstate-compose-android-1.4.0.pom",
+      "pomSha256": "de19831dabb84a4d0e120e86dceb08cf62c08606b5d99e91a8f8e6b4a4658883",
+      "notices": [
+        "maven-notices/androidx.savedstate-savedstate-compose-android-1.4.0/savedstate-compose.aar/META-INF/androidx/savedstate/savedstate-compose/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "savedstate-compose.aar",
+          "sha256": "0f0ae3032d6c6eea834ee22179c8976160d09d841d30e47f53f56b1b3438774b"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.savedstate:savedstate-ktx:1.4.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0",
+      "pom": "maven-metadata/androidx.savedstate-savedstate-ktx-1.4.0.pom",
+      "pomSha256": "b085af7cc4bb297ed0f25ca85d3629613ab253c0b532684c6cf77c2aee7471c5",
+      "notices": [
+        "maven-notices/androidx.savedstate-savedstate-ktx-1.4.0/savedstate-ktx-1.4.0.aar/META-INF/androidx/savedstate/savedstate-ktx/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "savedstate-ktx-1.4.0.aar",
+          "sha256": "23593939446bc5a154a1e35fddd87b82f19e2adf072207f115bf29a8b431c1d3"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.sqlite:sqlite:2.6.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/sqlite#2.6.2",
+      "pom": "maven-metadata/androidx.sqlite-sqlite-2.6.2.pom",
+      "pomSha256": "ed8ff01ea1ae7c9903126a8217e6b0d849cfc2cdf198d0ee93513d96b700f41c",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.sqlite:sqlite-android:2.6.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/sqlite#2.6.2",
+      "pom": "maven-metadata/androidx.sqlite-sqlite-android-2.6.2.pom",
+      "pomSha256": "1407cf53cb40a813434903fee252420f32c109f88560ac8adc771858260d7a3c",
+      "notices": [
+        "maven-notices/androidx.sqlite-sqlite-android-2.6.2/sqlite.aar/META-INF/androidx/sqlite/sqlite/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "sqlite.aar",
+          "sha256": "514f8de4f7bdba2fa8d748d2b22fdcdfb623bd3770a667bf0adc0ad259f03ed2"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.sqlite:sqlite-framework:2.6.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/sqlite#2.6.2",
+      "pom": "maven-metadata/androidx.sqlite-sqlite-framework-2.6.2.pom",
+      "pomSha256": "90fbc4507a16d2969558d9e9f14f1a11898c6eda789b703f49a79d77b5a297b2",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.sqlite:sqlite-framework-android:2.6.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/sqlite#2.6.2",
+      "pom": "maven-metadata/androidx.sqlite-sqlite-framework-android-2.6.2.pom",
+      "pomSha256": "2618a352ec57009a207575830c11bd6013cd5548df472a0dba678c64821c0446",
+      "notices": [
+        "maven-notices/androidx.sqlite-sqlite-framework-android-2.6.2/sqlite-framework.aar/META-INF/androidx/sqlite/sqlite-framework/LICENSE.txt"
+      ],
+      "artifacts": [
+        {
+          "name": "sqlite-framework.aar",
+          "sha256": "b19125c7fff34222e0f380361fc179ab214e4d82e1a50b0c068ca26c851a6231"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.startup:startup-runtime:1.1.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/startup#1.1.1",
+      "pom": "maven-metadata/androidx.startup-startup-runtime-1.1.1.pom",
+      "pomSha256": "f4114b5c6859bb1bc3caf281cb6d6f25998fa7f7292c64ceaea74a93210e746b",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "startup-runtime-1.1.1.aar",
+          "sha256": "e0a6329a371262fe4c450372b70fdaf33b769ef6917094723787cfce896b1dd3"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.tracing:tracing:1.2.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://developer.android.com/jetpack/androidx/releases/tracing#1.2.0",
+      "pom": "maven-metadata/androidx.tracing-tracing-1.2.0.pom",
+      "pomSha256": "f34bec4eb58871d31002901377108aaa1ebfe77fa6d882b8b86200b158e26ea1",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "tracing-1.2.0.aar",
+          "sha256": "6faa90390d1fdbf0adb9a99bf99de67b94c6c6f35aea9510593a9d17973736a2"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "androidx.versionedparcelable:versionedparcelable:1.1.1",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "http://developer.android.com/tools/extras/support-library.html",
+      "pom": "maven-metadata/androidx.versionedparcelable-versionedparcelable-1.1.1.pom",
+      "pomSha256": "5f51e65873ca612de3838fa90d2ee95b8d040efd31b9c390a19bf94d615cdb2f",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "versionedparcelable-1.1.1.aar",
+          "sha256": "57e8d93260d18d5b9007c9eed3c64ad159de90c8609ebfc74a347cbd514535a4"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "com.google.guava:listenablefuture:1.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": null,
+      "pom": "maven-metadata/com.google.guava-listenablefuture-1.0.pom",
+      "pomSha256": "53873caf26bc1ed8a567ea6c939ab2aaa3f47a5e32d5cade95ddf5080d23238a",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "listenablefuture-1.0.jar",
+          "sha256": "e4ad7607e5c0477c6f890ef26a49cb8d1bb4dffb650bab4502afee64644e3069"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "net.java.dev.jna:jna:5.17.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "LGPL-2.1-or-later",
+          "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1"
+        },
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/java-native-access/jna",
+      "pom": "maven-metadata/net.java.dev.jna-jna-5.17.0.pom",
+      "pomSha256": "501a0ff05d84a4ad10f6de25be94f49398b70a31be8f3a0ed9f4c6b44fbefee4",
+      "notices": [
+        "maven-notices/net.java.dev.jna-jna-5.17.0/jna-5.17.0.aar-classes/META-INF/LICENSE"
+      ],
+      "artifacts": [
+        {
+          "name": "jna-5.17.0.aar",
+          "sha256": "4dbeffffa665d97ad5aa7eee297531d3c841a86716ab7f774fd6956422b3cf38"
+        }
+      ],
+      "licenseText": "licenses/jna-AL2.0"
+    },
+    {
+      "coordinate": "net.zetetic:sqlcipher-android:4.9.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": null,
+          "url": "https://www.zetetic.net/sqlcipher/license/"
+        }
+      ],
+      "project": "https://www.zetetic.net/sqlcipher",
+      "pom": "maven-metadata/net.zetetic-sqlcipher-android-4.9.0.pom",
+      "pomSha256": "742f005af6bdbd7321ff47bd425d0e73be8e5734ac6f4d1e51eef4a6b4f84a00",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "sqlcipher-android-4.9.0.aar",
+          "sha256": "54654692913a00047c6536845d5085ebf3bc7d29a2f9f6e351e1675b7fd5c0cc"
+        }
+      ],
+      "licenseText": "licenses/sqlcipher-android-LICENSE"
+    },
+    {
+      "coordinate": "org.jetbrains:annotations:23.0.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache Software License, Version 2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/JetBrains/java-annotations",
+      "pom": "maven-metadata/org.jetbrains-annotations-23.0.0.pom",
+      "pomSha256": "c9490f655132328df2cfbcfdf743f53fc3916d6c1d10437175a6ca6e3a67771c",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "annotations-23.0.0.jar",
+          "sha256": "7b0f19724082cbfcbc66e5abea2b9bc92cf08a1ea11e191933ed43801eb3cd05"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlin:kotlin-stdlib:2.2.20",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://kotlinlang.org/",
+      "pom": "maven-metadata/org.jetbrains.kotlin-kotlin-stdlib-2.2.20.pom",
+      "pomSha256": "4a8b086e6431bcf623637f52b2ff192e1adb913838742e5c0eea70a8dee429c4",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "kotlin-stdlib-2.2.20.jar",
+          "sha256": "8836ccffd3585fadda9901244b20d42901d2f3cd581058d8434e2ffabcf3a3e7"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlin:kotlin-stdlib-common:2.2.20",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://kotlinlang.org/",
+      "pom": "maven-metadata/org.jetbrains.kotlin-kotlin-stdlib-common-2.2.20.pom",
+      "pomSha256": "fd789cb32e2410ecc683b8739f7b75003d09da33330c3f8a65c269db6b2f6c75",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.coroutines",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-coroutines-android-1.10.2.pom",
+      "pomSha256": "b92d3672e7f9e8f4c4e2ab187c3e31fecc506496396f4a5f27ee1c957a42b319",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "kotlinx-coroutines-android-1.10.2.jar",
+          "sha256": "e713f1f874244115a07571065cffa0f24f5e78300e9720fea16de3af1d75fd41"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.coroutines",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-coroutines-bom-1.10.2.pom",
+      "pomSha256": "faf0c6538e53ddc0499a63664d8e763c216580b2e18e722ccbdf1b431a6afe26",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.coroutines",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-coroutines-core-1.10.2.pom",
+      "pomSha256": "519da5400096f3462a4dae80783ad050413d4bc81ec7ae53fae76aef0ccbed4c",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.coroutines",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-coroutines-core-jvm-1.10.2.pom",
+      "pomSha256": "658f576b96c832e7382406adb197d64d8e2e97de10e96dfa3700decfa2a60def",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "kotlinx-coroutines-core-jvm-1.10.2.jar",
+          "sha256": "5ca175b38df331fd64155b35cd8cae1251fa9ee369709b36d42e0a288ccce3fd"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-bom:1.9.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.serialization",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-serialization-bom-1.9.0.pom",
+      "pomSha256": "6d7ff365c0ef1cd376fb54b1a16c80a21ed58feb46c33f3450b6cf22e2b1353d",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-core:1.9.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.serialization",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-serialization-core-1.9.0.pom",
+      "pomSha256": "953b760dcb363a8aa0cfe5f918c3ddd124668785d918ac3f400b191996acac9d",
+      "notices": [],
+      "artifacts": [],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.9.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "Apache-2.0",
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "https://github.com/Kotlin/kotlinx.serialization",
+      "pom": "maven-metadata/org.jetbrains.kotlinx-kotlinx-serialization-core-jvm-1.9.0.pom",
+      "pomSha256": "87190d434e6272fed605af0fced15f6bc082d8a55040c5198e6d4b2d6a2fcac2",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "kotlinx-serialization-core-jvm-1.9.0.jar",
+          "sha256": "1f0afa172110e45a7231ef1b44ae8fd84c1ebaff96f3fc3ad68ef8c48120b59c"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    },
+    {
+      "coordinate": "org.jsoup:jsoup:1.21.2",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The MIT License",
+          "url": "https://jsoup.org/license"
+        }
+      ],
+      "project": "https://jsoup.org/",
+      "pom": "maven-metadata/org.jsoup-jsoup-1.21.2.pom",
+      "pomSha256": "4bbe2d2528a90f997c40aef3b62b519fd373c56057b54ffb086cc2bef01ef446",
+      "notices": [
+        "maven-notices/org.jsoup-jsoup-1.21.2/jsoup-1.21.2.jar/META-INF/jsoup/LICENSE"
+      ],
+      "artifacts": [
+        {
+          "name": "jsoup-1.21.2.jar",
+          "sha256": "f05496e255734759f0d4b5632da7b24f81313147c78c69e90ad045d096191344"
+        }
+      ],
+      "licenseText": "../../app/src/main/assets/licenses/jsoup-MIT.txt"
+    },
+    {
+      "coordinate": "org.jspecify:jspecify:1.0.0",
+      "scope": "releaseRuntimeClasspath",
+      "licenses": [
+        {
+          "name": "The Apache License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "project": "http://jspecify.org/",
+      "pom": "maven-metadata/org.jspecify-jspecify-1.0.0.pom",
+      "pomSha256": "cdab929a3b95211f43d2090c5e2d0dfe8465960e378bc32b35841dab324433a6",
+      "notices": [],
+      "artifacts": [
+        {
+          "name": "jspecify-1.0.0.jar",
+          "sha256": "1fad6e6be7557781e4d33729d49ae1cdc8fdda6fe477bb0cc68ce351eafdfbab"
+        }
+      ],
+      "licenseText": "licenses/Apache-2.0.txt"
+    }
+  ],
+  "cargoLock": [
+    {
+      "name": "anstyle",
+      "version": "1.0.14",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-cli/anstyle.git",
+      "registryChecksum": "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000",
+      "manifestSha256": "1464191f3d9cdcddee83a73a16c7cee7e48dba818248b3fd4273757fbed4407e",
+      "notices": [
+        "rust-licenses/anstyle-1.0.14/LICENSE-APACHE",
+        "rust-licenses/anstyle-1.0.14/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "anyhow",
+      "version": "1.0.104",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/anyhow",
+      "registryChecksum": "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470",
+      "manifestSha256": "249789761ff37004dda628765f0c9e60a61fa43cbbd2d364789dca0c789eeb59",
+      "notices": [
+        "rust-licenses/anyhow-1.0.104/LICENSE-APACHE",
+        "rust-licenses/anyhow-1.0.104/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "askama",
+      "version": "0.13.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/askama-rs/askama",
+      "registryChecksum": "5d4744ed2eef2645831b441d8f5459689ade2ab27c854488fbab1fbe94fce1a7",
+      "manifestSha256": "5ebc58027a0fd606bd36036295f375c358d0b21f8cad26d777e95840bfdfb24e",
+      "notices": [
+        "rust-licenses/askama-0.13.1/LICENSE-APACHE",
+        "rust-licenses/askama-0.13.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "askama_derive",
+      "version": "0.13.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/askama-rs/askama",
+      "registryChecksum": "d661e0f57be36a5c14c48f78d09011e67e0cb618f269cca9f2fd8d15b68c46ac",
+      "manifestSha256": "82346a11579069448d1e1d80d0ace534961ec3614a5b1cf08ef26e9120a3373d",
+      "notices": [
+        "rust-licenses/askama_derive-0.13.1/LICENSE-APACHE",
+        "rust-licenses/askama_derive-0.13.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "askama_parser",
+      "version": "0.13.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/askama-rs/askama",
+      "registryChecksum": "cf315ce6524c857bb129ff794935cf6d42c82a6cff60526fe2a63593de4d0d4f",
+      "manifestSha256": "c24d9b8953af7ad1763bfe09ae00274d02f1bd3ef9e0ed199583c2708712777d",
+      "notices": [
+        "rust-licenses/askama_parser-0.13.0/benches/librustdoc/LICENSE.md",
+        "rust-licenses/askama_parser-0.13.0/LICENSE-APACHE",
+        "rust-licenses/askama_parser-0.13.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "atomic-waker",
+      "version": "1.1.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/smol-rs/atomic-waker",
+      "registryChecksum": "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0",
+      "manifestSha256": "0bcc14ea808935bf632dfaa6746dce30e4fdfc0902e1320df8ab36763dc76250",
+      "notices": [
+        "rust-licenses/atomic-waker-1.1.2/LICENSE-APACHE",
+        "rust-licenses/atomic-waker-1.1.2/LICENSE-MIT",
+        "rust-licenses/atomic-waker-1.1.2/LICENSE-THIRD-PARTY"
+      ]
+    },
+    {
+      "name": "autocfg",
+      "version": "1.5.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/cuviper/autocfg",
+      "registryChecksum": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53",
+      "manifestSha256": "ed7c832b4250c3be736e040d68688c2b83a5b164a93ef533e61532cbe0d44e99",
+      "notices": [
+        "rust-licenses/autocfg-1.5.1/LICENSE-APACHE",
+        "rust-licenses/autocfg-1.5.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "base64",
+      "version": "0.22.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/marshallpierce/rust-base64",
+      "registryChecksum": "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6",
+      "manifestSha256": "52bee6a418e14918d37058fd15fccfd0f417a06fe4f9668b6f97866bf7f991e3",
+      "notices": [
+        "rust-licenses/base64-0.22.1/LICENSE-APACHE",
+        "rust-licenses/base64-0.22.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "base64",
+      "version": "0.23.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/marshallpierce/rust-base64",
+      "registryChecksum": "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5",
+      "manifestSha256": "3951a99756ac9b339501a149c547ce0e24248287a10830298ea319c006090790",
+      "notices": [
+        "rust-licenses/base64-0.23.1/LICENSE-APACHE",
+        "rust-licenses/base64-0.23.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "basic-toml",
+      "version": "0.1.10",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/basic-toml",
+      "registryChecksum": "ba62675e8242a4c4e806d12f11d136e626e6c8361d6b829310732241652a178a",
+      "manifestSha256": "b3308bdf41b05098e30cd18a45acacbbe4a92e0c6e1405898615978a1c61e5f7",
+      "notices": [
+        "rust-licenses/basic-toml-0.1.10/LICENSE-APACHE",
+        "rust-licenses/basic-toml-0.1.10/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/bitflags/bitflags",
+      "registryChecksum": "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06",
+      "manifestSha256": "562e660adbb084de042fc9ecc5ac7ba32b5f565d53188823bab9159a027b2b44",
+      "notices": [
+        "rust-licenses/bitflags-2.13.2/LICENSE-APACHE",
+        "rust-licenses/bitflags-2.13.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "bumpalo",
+      "version": "3.20.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/fitzgen/bumpalo",
+      "registryChecksum": "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649",
+      "manifestSha256": "a6d2d81f09f1c739f738032bbcb5ecf4d3ce56d2f75e2e8bae9c753b09a6db4c",
+      "notices": [
+        "rust-licenses/bumpalo-3.20.3/LICENSE-APACHE",
+        "rust-licenses/bumpalo-3.20.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "bytes",
+      "version": "1.12.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/bytes",
+      "registryChecksum": "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04",
+      "manifestSha256": "dc260d0d04b58aea819f8d6762c2feb51e66f8edd77e4e64cc1eac6f447a8143",
+      "notices": [
+        "rust-licenses/bytes-1.12.1/LICENSE"
+      ]
+    },
+    {
+      "name": "camino",
+      "version": "1.2.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/camino-rs/camino",
+      "registryChecksum": "bbbad30e4b4c14a39e3cc8aed085a12a327257c316619c93581e017bc52be591",
+      "manifestSha256": "16d7cce4843b2cd32a6a32cf949eef51acafd6d9cfd29cbfd2128a9b87131853",
+      "notices": [
+        "rust-licenses/camino-1.2.6/LICENSE-APACHE",
+        "rust-licenses/camino-1.2.6/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "cargo-platform",
+      "version": "0.1.9",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/cargo",
+      "registryChecksum": "e35af189006b9c0f00a064685c727031e3ed2d8020f7ba284d78cc2671bd36ea",
+      "manifestSha256": "487e38835c445664eac2bf0d70b4171b2b3ed4f1f82ee076b4489095ebe04fb2",
+      "notices": [
+        "rust-licenses/cargo-platform-0.1.9/LICENSE-APACHE",
+        "rust-licenses/cargo-platform-0.1.9/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "cargo_metadata",
+      "version": "0.19.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/oli-obk/cargo_metadata",
+      "registryChecksum": "dd5eb614ed4c27c5d706420e4320fbe3216ab31fa1c33cd8246ac36dae4479ba",
+      "manifestSha256": "69b8d90a5855062a89a81138122eca95bb0ba67280a3eccf17e5972f89921727",
+      "notices": [
+        "rust-licenses/cargo_metadata-0.19.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "cc",
+      "version": "1.9.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/cc-rs",
+      "registryChecksum": "877bf67ac8e52449eb2f9e98a344ea163beb70dd1f9eebe3cc5357dcfeaee4df",
+      "manifestSha256": "f59165fc03a7b37b3caa6e810c9c1bbd2f92743faa56fd44caee15e7ee1b19fd",
+      "notices": [
+        "rust-licenses/cc-1.9.0/LICENSE-APACHE",
+        "rust-licenses/cc-1.9.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.5",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/cfg-if",
+      "registryChecksum": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+      "manifestSha256": "d646663ec1bd4e8e795bd6a386cff9c374880d6237bbfa36bbac08b7f26ce65c",
+      "notices": [
+        "rust-licenses/cfg-if-1.0.5/LICENSE-APACHE",
+        "rust-licenses/cfg-if-1.0.5/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "cfg_aliases",
+      "version": "0.2.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/katharostech/cfg_aliases",
+      "registryChecksum": "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527",
+      "manifestSha256": "714317efebb5635660abe816709d2a7e5831cd9496bc169d2f898c4bbcf470c1",
+      "notices": [
+        "rust-licenses/cfg_aliases-0.2.2/LICENSE"
+      ]
+    },
+    {
+      "name": "chacha20",
+      "version": "0.10.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/RustCrypto/stream-ciphers",
+      "registryChecksum": "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06",
+      "manifestSha256": "b48970318446b5a41b06b1e27f2e691b6fc9245ee82beabde925f0a0889d58ba",
+      "notices": [
+        "rust-licenses/chacha20-0.10.2/LICENSE-APACHE",
+        "rust-licenses/chacha20-0.10.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "clap",
+      "version": "4.6.7",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/clap-rs/clap",
+      "registryChecksum": "aa8876b300ab35ba921adea3dfd70157a46249b33f95c9084ae5709785478946",
+      "manifestSha256": "4c4829a1a916d2c47e3299ca4c3e607721fc62998d2d3628afc10a85f0a8169a",
+      "notices": [
+        "rust-licenses/clap-4.6.7/LICENSE-APACHE",
+        "rust-licenses/clap-4.6.7/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "clap_builder",
+      "version": "4.6.7",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/clap-rs/clap",
+      "registryChecksum": "ec0797fb7aeb1406c84efac526901f7ec3ead2124f946b494e72879d4b54704d",
+      "manifestSha256": "6713390509693d70b80f30cecf55b09b4cc79d536dbd3252d2cacfb1abca9727",
+      "notices": [
+        "rust-licenses/clap_builder-4.6.7/LICENSE-APACHE",
+        "rust-licenses/clap_builder-4.6.7/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "clap_derive",
+      "version": "4.6.7",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/clap-rs/clap",
+      "registryChecksum": "f9c751b79415d4e559e3d1fcf128e09e720eb673a06d26cf6f392d37d75b66e0",
+      "manifestSha256": "6055bb6c6476792910d3e50a1edd321fda0bf4ae48e0a2d3cb07e89e4736a676",
+      "notices": [
+        "rust-licenses/clap_derive-4.6.7/LICENSE-APACHE",
+        "rust-licenses/clap_derive-4.6.7/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "clap_lex",
+      "version": "1.1.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/clap-rs/clap",
+      "registryChecksum": "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486",
+      "manifestSha256": "0fba3575d7ecb08dd83b5b0020c017e8f774d19021fb922775675f66ae4c4874",
+      "notices": [
+        "rust-licenses/clap_lex-1.1.1/LICENSE-APACHE",
+        "rust-licenses/clap_lex-1.1.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.3.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/RustCrypto/utils",
+      "registryChecksum": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+      "manifestSha256": "2e82ee61a94e8ef99197ca59723e9794d0f08363f28bacab680292af6ccdde61",
+      "notices": [
+        "rust-licenses/cpufeatures-0.3.1/LICENSE-APACHE",
+        "rust-licenses/cpufeatures-0.3.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "displaydoc",
+      "version": "0.2.7",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/yaahc/displaydoc",
+      "registryChecksum": "c6232dd377dcc64799954cbd3a9bb882e9cdc1308ccd87b1c098f1fb2eaf82a8",
+      "manifestSha256": "76473a3a2f0227263f6b6dbf575516c75e4eeaf2d8eb26c6f40f4107983b70da",
+      "notices": [
+        "rust-licenses/displaydoc-0.2.7/LICENSE-APACHE",
+        "rust-licenses/displaydoc-0.2.7/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/indexmap-rs/equivalent",
+      "registryChecksum": "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826",
+      "manifestSha256": "e7ef6daa56f849a07bb27bdb5ad7c9634bc9899976dd4e5a6d93ef859e5759d3",
+      "notices": [
+        "rust-licenses/equivalent-1.0.3/LICENSE-APACHE",
+        "rust-licenses/equivalent-1.0.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "errno",
+      "version": "0.3.14",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/lambda-fairy/rust-errno",
+      "registryChecksum": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb",
+      "manifestSha256": "a25f16ccaa127602fc0cc9d1c80186619a0b8f42331a27b6f04b6bfa4aa29de2",
+      "notices": [
+        "rust-licenses/errno-0.3.14/LICENSE-APACHE",
+        "rust-licenses/errno-0.3.14/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "fastrand",
+      "version": "2.5.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/smol-rs/fastrand",
+      "registryChecksum": "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223",
+      "manifestSha256": "3f01725ad91d1a1705762821e9231ea15ddfa62648143516e68d64021ae31e08",
+      "notices": [
+        "rust-licenses/fastrand-2.5.0/LICENSE-APACHE",
+        "rust-licenses/fastrand-2.5.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "find-msvc-tools",
+      "version": "0.1.15",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/cc-rs",
+      "registryChecksum": "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48",
+      "manifestSha256": "d71ae71febecc514eaacb932c7ffecd9dce4ba3a935dce5c619dbb7114793625",
+      "notices": [
+        "rust-licenses/find-msvc-tools-0.1.15/LICENSE-APACHE",
+        "rust-licenses/find-msvc-tools-0.1.15/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "form_urlencoded",
+      "version": "1.2.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/servo/rust-url",
+      "registryChecksum": "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf",
+      "manifestSha256": "118b1d87e862ea329b8bc84b389085a2f8e049d4c0b8b3c38ac2bffbe3501928",
+      "notices": [
+        "rust-licenses/form_urlencoded-1.2.2/LICENSE-APACHE",
+        "rust-licenses/form_urlencoded-1.2.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "fs-err",
+      "version": "2.11.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT/Apache-2.0",
+      "project": "https://github.com/andrewhickman/fs-err",
+      "registryChecksum": "88a41f105fe1d5b6b34b2055e3dc59bb79b46b48b2040b9e6c7b4b5de097aa41",
+      "manifestSha256": "e5c911a423edc6acbe06979b3a1c91a81a33aca3ba19be638c5a121729552725",
+      "notices": [
+        "rust-licenses/fs-err-2.11.0/LICENSE-APACHE",
+        "rust-licenses/fs-err-2.11.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "futures-channel",
+      "version": "0.3.34",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/futures-rs",
+      "registryChecksum": "b1f9e3d69d39e4862ffed03ed071a76f9a13ba1d9109d355b0f0aa6b15e393c4",
+      "manifestSha256": "df27c9b8846e1c63057ae3b753328aa37c8c6a8b79c02beb12b6e6e375e780ee",
+      "notices": [
+        "rust-licenses/futures-channel-0.3.34/LICENSE-APACHE",
+        "rust-licenses/futures-channel-0.3.34/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "futures-core",
+      "version": "0.3.34",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/futures-rs",
+      "registryChecksum": "92d699e522242e69e3003b94ecc1f960f3a5e015aa7c5d7486e65ad01dd94f5e",
+      "manifestSha256": "fa88cec6d0c527df4ff51ad034de09d3c552f6174ab8e4aa83cfaeacc36c4c7d",
+      "notices": [
+        "rust-licenses/futures-core-0.3.34/LICENSE-APACHE",
+        "rust-licenses/futures-core-0.3.34/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "futures-task",
+      "version": "0.3.34",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/futures-rs",
+      "registryChecksum": "cd417de3d1d015fc3bfd2b1ea46dfc7bab72ef86f1cc7cc9c78e728b34a6d1fd",
+      "manifestSha256": "7d9159735fa6a29df379bfff623f6cece41584334ca022ebd34ef56152637fa8",
+      "notices": [
+        "rust-licenses/futures-task-0.3.34/LICENSE-APACHE",
+        "rust-licenses/futures-task-0.3.34/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "futures-util",
+      "version": "0.3.34",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/futures-rs",
+      "registryChecksum": "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc",
+      "manifestSha256": "7e672d306e8de25359ed9c452e7cdc115121dc7e985008af31c85a36b70ac835",
+      "notices": [
+        "rust-licenses/futures-util-0.3.34/LICENSE-APACHE",
+        "rust-licenses/futures-util-0.3.34/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "getrandom",
+      "version": "0.2.17",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-random/getrandom",
+      "registryChecksum": "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0",
+      "manifestSha256": "032d84ffe843860402ec2339ae4179be20fd6f432109e595a3fa83be54893ec7",
+      "notices": [
+        "rust-licenses/getrandom-0.2.17/LICENSE-APACHE",
+        "rust-licenses/getrandom-0.2.17/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "getrandom",
+      "version": "0.4.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-random/getrandom",
+      "registryChecksum": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099",
+      "manifestSha256": "4f107fe4ceacee71d0068cfbbc69554b3d8523a1fcbb99b17e9fa0d008961ff9",
+      "notices": [
+        "rust-licenses/getrandom-0.4.3/LICENSE-APACHE",
+        "rust-licenses/getrandom-0.4.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "glob",
+      "version": "0.3.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/glob",
+      "registryChecksum": "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b",
+      "manifestSha256": "c4b859bffbea146e2d1fd20743653e1447299169fc259430d6a59dd291e00aa1",
+      "notices": [
+        "rust-licenses/glob-0.3.4/LICENSE-APACHE",
+        "rust-licenses/glob-0.3.4/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "goblin",
+      "version": "0.8.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/m4b/goblin",
+      "registryChecksum": "1b363a30c165f666402fe6a3024d3bec7ebc898f96a4a23bd1c99f8dbf3f4f47",
+      "manifestSha256": "f57048482755f5bddc3ed3a06b469ebec4923b647df060ae53f3a349932ddf76",
+      "notices": [
+        "rust-licenses/goblin-0.8.2/LICENSE"
+      ]
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/hashbrown",
+      "registryChecksum": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a",
+      "manifestSha256": "afcb0e62d498f756bd4ddf69785c8282d01ee4fa40016158c7eac12ceb302f8c",
+      "notices": [
+        "rust-licenses/hashbrown-0.17.1/LICENSE-APACHE",
+        "rust-licenses/hashbrown-0.17.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "heck",
+      "version": "0.5.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/withoutboats/heck",
+      "registryChecksum": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea",
+      "manifestSha256": "db0e63b72de157a2f5194458b73b6542c3f4e17e33ab34a71d0260bfc035467e",
+      "notices": [
+        "rust-licenses/heck-0.5.0/LICENSE-APACHE",
+        "rust-licenses/heck-0.5.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "http",
+      "version": "1.5.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/hyperium/http",
+      "registryChecksum": "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0",
+      "manifestSha256": "a949b1afc8b7fe334e9f6038b88d987e6a83b41b10cc852ad11dad1ead3c296d",
+      "notices": [
+        "rust-licenses/http-1.5.0/LICENSE-APACHE",
+        "rust-licenses/http-1.5.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "http-body",
+      "version": "1.1.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/hyperium/http-body",
+      "registryChecksum": "ca2a8f2913ee65f60facd6a5905613afaa448497a0230cc41ce022d93290bc2c",
+      "manifestSha256": "87911167224d2c0bd1d92650330e39ff1bada6ebd0ab7add8a4e10309eb8d0f1",
+      "notices": [
+        "rust-licenses/http-body-1.1.0/LICENSE"
+      ]
+    },
+    {
+      "name": "http-body-util",
+      "version": "0.1.5",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/hyperium/http-body",
+      "registryChecksum": "23169fe34a5fbcdd3f3862e78fb9b6fccd5f02a6dc6f732547005d45631ce71c",
+      "manifestSha256": "9802a7455d684d313cca788e7fc76d71978f29f50587f4487b8b1c0a04e2ca84",
+      "notices": [
+        "rust-licenses/http-body-util-0.1.5/LICENSE"
+      ]
+    },
+    {
+      "name": "httparse",
+      "version": "1.10.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/seanmonstar/httparse",
+      "registryChecksum": "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87",
+      "manifestSha256": "067da5f6334526ce5f080909e5c271dd0968ab4198a65eea51d93b242febb48a",
+      "notices": [
+        "rust-licenses/httparse-1.10.1/LICENSE-APACHE",
+        "rust-licenses/httparse-1.10.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "httpdate",
+      "version": "1.0.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/pyfisch/httpdate",
+      "registryChecksum": "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9",
+      "manifestSha256": "d1adbc974f706b302bc844ce7b6d6323d30a1689b9e3bf53ab78ba0bb09a9ed9",
+      "notices": [
+        "rust-licenses/httpdate-1.0.3/LICENSE-APACHE",
+        "rust-licenses/httpdate-1.0.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "hyper",
+      "version": "1.12.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/hyperium/hyper",
+      "registryChecksum": "2c3e324da4c95177d6291d4c8730197c0d1822f8a9766814a4a44fa5ab797c9c",
+      "manifestSha256": "dda7caddb7df155f479d2bd4764f201c57311f04969a0e7c893362765857161a",
+      "notices": [
+        "rust-licenses/hyper-1.12.0/LICENSE"
+      ]
+    },
+    {
+      "name": "hyper-rustls",
+      "version": "0.27.10",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR ISC OR MIT",
+      "project": "https://github.com/rustls/hyper-rustls",
+      "registryChecksum": "dfa8e654703247911e29c23fbeaa261834bd9bb74efba2f9acddc37bfb127f53",
+      "manifestSha256": "ea73618088153351ec214a8bf7f5fa26a358f636a7cbe79b99a91961dc95a8fe",
+      "notices": [
+        "rust-licenses/hyper-rustls-0.27.10/LICENSE-APACHE",
+        "rust-licenses/hyper-rustls-0.27.10/LICENSE-ISC",
+        "rust-licenses/hyper-rustls-0.27.10/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "hyper-util",
+      "version": "0.1.21",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/hyperium/hyper-util",
+      "registryChecksum": "ddc03d96684f9226b8a787cdb71488417b53ab5ea8fdb1dac946cb9431cc8bff",
+      "manifestSha256": "be68258b960525839b23a699362c550c7c5e73934cabd9dfe1b2a3fdebb37a2e",
+      "notices": [
+        "rust-licenses/hyper-util-0.1.21/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_collections",
+      "version": "2.3.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "fa68d21081c4a05d5a901a1c62add574c77048b6a1c67be3b50ce0b60d4ca513",
+      "manifestSha256": "eb60eb645a6c36df23200ec8694c58e030eb2f4ef70a76152e5522080388432f",
+      "notices": [
+        "rust-licenses/icu_collections-2.3.0/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_locale_core",
+      "version": "2.3.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "d56e28588da92eee5c3201a6eff33fabdd49b62269c8938d4ff050ce4d900deb",
+      "manifestSha256": "cd218a4f3330c50ee39f51802480889c8a4a3f96b3e52556f6da6b74e53f7119",
+      "notices": [
+        "rust-licenses/icu_locale_core-2.3.0/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_normalizer",
+      "version": "2.3.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "12f9cf5f235641ed274641dd81c3f28d870e276763d0797aeeab72317b1c646f",
+      "manifestSha256": "11cf0b1e76f8fa54533106c3bcac78e76a657a4f5ea235c475eed7345d09d897",
+      "notices": [
+        "rust-licenses/icu_normalizer-2.3.0/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_normalizer_data",
+      "version": "2.3.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "1563da1ed3e0b3bf3d74c9b85917ac9c56464d2f57242270c09c9e752f8021a0",
+      "manifestSha256": "c9bd42cf03d21ec7be29781dbb11387ffc4e1671aebe47bfa792621be794c651",
+      "notices": [
+        "rust-licenses/icu_normalizer_data-2.3.0/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_properties",
+      "version": "2.3.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "7e7ca276ad3145661a65914e6daf131ca5120cd3dcee8f8f3214b8875184a148",
+      "manifestSha256": "4123f8c99535526157f3e7b58c9aa2fbe8b10d88e28407886c76f3c1169a104e",
+      "notices": [
+        "rust-licenses/icu_properties-2.3.0/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_properties_data",
+      "version": "2.3.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "e590f038c1464a96894fd6d10127e90a8be4509f56ff7ecef851b15cee0b7caa",
+      "manifestSha256": "a1daca899288d4f0b78ba1ae2d78d6d754ff6fd906558761908e7b2421de2895",
+      "notices": [
+        "rust-licenses/icu_properties_data-2.3.0/LICENSE"
+      ]
+    },
+    {
+      "name": "icu_provider",
+      "version": "2.3.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "d27bbb9d3abbefac45d55f647c9de1d44aafcd1186eb91879afef17c396c3e73",
+      "manifestSha256": "51999be87b06d1b086d911242dabfc0647f0fc1ba2be05cb87c19a1d668b1e73",
+      "notices": [
+        "rust-licenses/icu_provider-2.3.1/LICENSE"
+      ]
+    },
+    {
+      "name": "idna",
+      "version": "1.1.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/servo/rust-url/",
+      "registryChecksum": "3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de",
+      "manifestSha256": "f24a386a071c661e10acc366022adc8278d4f2ca8899d3b50b83e965d3933d00",
+      "notices": [
+        "rust-licenses/idna-1.1.0/LICENSE-APACHE",
+        "rust-licenses/idna-1.1.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "idna_adapter",
+      "version": "1.2.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/hsivonen/idna_adapter",
+      "registryChecksum": "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714",
+      "manifestSha256": "a5be3efe6b6b3ee7823820c9a3d47f318234f6a5fd48ab878d33cac9bc3ee573",
+      "notices": [
+        "rust-licenses/idna_adapter-1.2.2/LICENSE-APACHE",
+        "rust-licenses/idna_adapter-1.2.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "indexmap",
+      "version": "2.14.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/indexmap-rs/indexmap",
+      "registryChecksum": "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855",
+      "manifestSha256": "7b2aec83d5afb43fa5788bda468ce1d65df9dd8f406058e2eada3546ef906ea1",
+      "notices": [
+        "rust-licenses/indexmap-2.14.2/LICENSE-APACHE",
+        "rust-licenses/indexmap-2.14.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "ipnet",
+      "version": "2.12.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/krisprice/ipnet",
+      "registryChecksum": "791930b43c0d5973160d90a8f3894509f2b273430f5c5c73b668636d0287c5c0",
+      "manifestSha256": "bdea4abbfc8d54f3b1ef43530abb5facd0bba113eee702a6a45439ad2cb23a07",
+      "notices": [
+        "rust-licenses/ipnet-2.12.2/LICENSE-APACHE",
+        "rust-licenses/ipnet-2.12.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/itoa",
+      "registryChecksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+      "manifestSha256": "894c215e4e7e973b556b0e9627bf9b6a719a043fac9b5af9838660816392a09f",
+      "notices": [
+        "rust-licenses/itoa-1.0.18/LICENSE-APACHE",
+        "rust-licenses/itoa-1.0.18/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "js-sys",
+      "version": "0.3.106",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys",
+      "registryChecksum": "7883d941dae510fb2d978fc3fe018c71c9e2892fd38854de3e8b92c2e5ad9cc5",
+      "manifestSha256": "cdd44598eabfed5a9ada1ab03c32445c2f895389997454e3f9901d4bb05db9c2",
+      "notices": [
+        "rust-licenses/js-sys-0.3.106/LICENSE-APACHE",
+        "rust-licenses/js-sys-0.3.106/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "libc",
+      "version": "0.2.190",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/libc",
+      "registryChecksum": "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78",
+      "manifestSha256": "5d410962aefee7ac5916c9cdd915a717228576dbe3c8a09460fd58c4ec751e2c",
+      "notices": [
+        "rust-licenses/libc-0.2.190/LICENSE-APACHE",
+        "rust-licenses/libc-0.2.190/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "linux-raw-sys",
+      "version": "0.12.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "project": "https://github.com/sunfishcode/linux-raw-sys",
+      "registryChecksum": "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53",
+      "manifestSha256": "1d24fe227d87b23fc5220ddf2ca4708e5e0d794a3f77961b71cd8140bf33faa5",
+      "notices": [
+        "rust-licenses/linux-raw-sys-0.12.1/COPYRIGHT",
+        "rust-licenses/linux-raw-sys-0.12.1/LICENSE-APACHE",
+        "rust-licenses/linux-raw-sys-0.12.1/LICENSE-Apache-2.0_WITH_LLVM-exception",
+        "rust-licenses/linux-raw-sys-0.12.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "litemap",
+      "version": "0.8.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae",
+      "manifestSha256": "0cc7f82691b669873f759afd43bc2c9387088bfb973ad6037decce4d94f31fe3",
+      "notices": [
+        "rust-licenses/litemap-0.8.3/LICENSE"
+      ]
+    },
+    {
+      "name": "log",
+      "version": "0.4.34",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/log",
+      "registryChecksum": "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6",
+      "manifestSha256": "a6b553a374b237960e65d91de04e102a1755a7a20ff21f2c1ef6ba74b9d0ab76",
+      "notices": [
+        "rust-licenses/log-0.4.34/LICENSE-APACHE",
+        "rust-licenses/log-0.4.34/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "lru-slab",
+      "version": "0.1.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0 OR Zlib",
+      "project": "https://github.com/Ralith/lru-slab",
+      "registryChecksum": "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f",
+      "manifestSha256": "711d681f18a64b63afcc0c4f86e32cf1880d40c6be498c72e8537a3f8ec797a8",
+      "notices": [
+        "rust-licenses/lru-slab-0.1.3/LICENSE-APACHE",
+        "rust-licenses/lru-slab-0.1.3/LICENSE-MIT",
+        "rust-licenses/lru-slab-0.1.3/LICENSE-ZLIB"
+      ]
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unlicense OR MIT",
+      "project": "https://github.com/BurntSushi/memchr",
+      "registryChecksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+      "manifestSha256": "a14f68b8fa55f15fd03b15dced37bcf66a0a628f568eedc82817cdb7f9281951",
+      "notices": [
+        "rust-licenses/memchr-2.8.3/COPYING",
+        "rust-licenses/memchr-2.8.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "minimal-lexical",
+      "version": "0.2.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT/Apache-2.0",
+      "project": "https://github.com/Alexhuszagh/minimal-lexical",
+      "registryChecksum": "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a",
+      "manifestSha256": "6c485fa605a0d3de6ec0af125b67c55224515354034f990334b1a1a86988c632",
+      "notices": [
+        "rust-licenses/minimal-lexical-0.2.1/LICENSE-APACHE",
+        "rust-licenses/minimal-lexical-0.2.1/LICENSE-MIT",
+        "rust-licenses/minimal-lexical-0.2.1/LICENSE.md"
+      ]
+    },
+    {
+      "name": "mio",
+      "version": "1.2.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/mio",
+      "registryChecksum": "1788edb87fdc09c7e26304471e2f5be8cdefb1b6930d6e3985fc02ff53bf86ee",
+      "manifestSha256": "a8842f7fd53967d0f6b3faa359c4354c60ad6fd2927a5e0c4894933fdca55768",
+      "notices": [
+        "rust-licenses/mio-1.2.4/LICENSE"
+      ]
+    },
+    {
+      "name": "nom",
+      "version": "7.1.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/Geal/nom",
+      "registryChecksum": "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a",
+      "manifestSha256": "9d07fd5cc339d8f7c0c164b2568164b808dee1d441b17631cb7b7d44d39ed778",
+      "notices": [
+        "rust-licenses/nom-7.1.3/LICENSE"
+      ]
+    },
+    {
+      "name": "once_cell",
+      "version": "1.21.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/matklad/once_cell",
+      "registryChecksum": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50",
+      "manifestSha256": "87e5b7ee438abdef12e46386e86370f54ad70cabdcf949556b9ef012a9da9587",
+      "notices": [
+        "rust-licenses/once_cell-1.21.4/LICENSE-APACHE",
+        "rust-licenses/once_cell-1.21.4/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "percent-encoding",
+      "version": "2.3.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/servo/rust-url/",
+      "registryChecksum": "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220",
+      "manifestSha256": "e4ea043c47bbd5551fc5fcf8151eab94428b4be6f2337834a0f9020a4392fb19",
+      "notices": [
+        "rust-licenses/percent-encoding-2.3.2/LICENSE-APACHE",
+        "rust-licenses/percent-encoding-2.3.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/taiki-e/pin-project-lite",
+      "registryChecksum": "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd",
+      "manifestSha256": "473f9cfe9738986d0d1c46e306bd11ad3e36bca8f1eab5bbe9f7297313fb33f4",
+      "notices": [
+        "rust-licenses/pin-project-lite-0.2.17/LICENSE-APACHE",
+        "rust-licenses/pin-project-lite-0.2.17/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "plain",
+      "version": "0.2.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT/Apache-2.0",
+      "project": "https://github.com/randomites/plain",
+      "registryChecksum": "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6",
+      "manifestSha256": "7ca9f28917559a3066a55570c2af18d3d76656537d6826aeaea03b9b53703f03",
+      "notices": [
+        "rust-licenses/plain-0.2.3/LICENSE-APACHE",
+        "rust-licenses/plain-0.2.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "potential_utf",
+      "version": "0.1.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "d83eb9bc6d8e5cf568e7a1101d60ee05e81ed50ea106026f3d18deeb046d7661",
+      "manifestSha256": "62824fe5126abde181302cc0e4054ab6939355645ab8f12dd939ca1105604560",
+      "notices": [
+        "rust-licenses/potential_utf-0.1.6/LICENSE"
+      ]
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/proc-macro2",
+      "registryChecksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+      "manifestSha256": "6bdbe54a7f052e552dcfca90351764476e2767237ec3f954df8bd9f602861056",
+      "notices": [
+        "rust-licenses/proc-macro2-1.0.107/LICENSE-APACHE",
+        "rust-licenses/proc-macro2-1.0.107/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "quinn",
+      "version": "0.11.12",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/quinn-rs/quinn",
+      "registryChecksum": "4051e23e9185c255a7e33ef59cdbca87a22d359052eecd22fc6b901fb37d9d11",
+      "manifestSha256": "dc852465e70040708a87a31b71b62b80e5d5d9be39ee6eacfc924007bdef9eb9",
+      "notices": [
+        "rust-licenses/quinn-0.11.12/LICENSE-APACHE",
+        "rust-licenses/quinn-0.11.12/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "quinn-proto",
+      "version": "0.11.19",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/quinn-rs/quinn",
+      "registryChecksum": "0e750cca55fe4f0439a15d0bb529da9651e79993e8e72c61a899a36d462befbe",
+      "manifestSha256": "95aaf88c74814dd46a53d07ca82c0ec90bcb7275c57a739336d287a7478feb58",
+      "notices": [
+        "rust-licenses/quinn-proto-0.11.19/LICENSE-APACHE",
+        "rust-licenses/quinn-proto-0.11.19/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "quinn-udp",
+      "version": "0.5.16",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/quinn-rs/quinn",
+      "registryChecksum": "af66907df18639dcf4db56ca65490cabc4b27a97dbadd96f2926cca73298f016",
+      "manifestSha256": "9d69f5f0c3781f22d1e4287ea1427875bea2a119ff0de668d982dd8ead87b967",
+      "notices": [
+        "rust-licenses/quinn-udp-0.5.16/LICENSE-APACHE",
+        "rust-licenses/quinn-udp-0.5.16/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/quote",
+      "registryChecksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+      "manifestSha256": "13d8c50837f14aff48cd622349f98fb2c46350b7a0c08fd574cf7de4def27d06",
+      "notices": [
+        "rust-licenses/quote-1.0.47/LICENSE-APACHE",
+        "rust-licenses/quote-1.0.47/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "r-efi",
+      "version": "6.0.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0 OR LGPL-2.1-or-later",
+      "project": "https://github.com/r-efi/r-efi",
+      "registryChecksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
+      "manifestSha256": "a021f9fb0645cc5de5770cf7f41594c1deff4b388eca933b289752aa52666829",
+      "notices": [
+        "rust-licenses/r-efi-6.0.0/AUTHORS"
+      ]
+    },
+    {
+      "name": "rand",
+      "version": "0.10.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-random/rand",
+      "registryChecksum": "65c9fb96cbc91e3478eaae79a69fcd3f1ae4ad052e471fe6732fff548984b4af",
+      "manifestSha256": "9d9a2f6f49bb8d49ef1761e183d0d4fd4ad66dfd225b77815ba83775cf48de67",
+      "notices": [
+        "rust-licenses/rand-0.10.3/COPYRIGHT",
+        "rust-licenses/rand-0.10.3/LICENSE-APACHE",
+        "rust-licenses/rand-0.10.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "rand_core",
+      "version": "0.10.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-random/rand_core",
+      "registryChecksum": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69",
+      "manifestSha256": "4ff4becbb9ef65154f4840262f8d0cffa97d97a265b994b9d53f53925bdd3578",
+      "notices": [
+        "rust-licenses/rand_core-0.10.1/COPYRIGHT",
+        "rust-licenses/rand_core-0.10.1/LICENSE-APACHE",
+        "rust-licenses/rand_core-0.10.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "rand_pcg",
+      "version": "0.10.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-random/rngs",
+      "registryChecksum": "caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a",
+      "manifestSha256": "7244a51b7bdf719aeecf8a06f6c65913d347bb0800373129ac41ea77cbadf655",
+      "notices": [
+        "rust-licenses/rand_pcg-0.10.2/COPYRIGHT",
+        "rust-licenses/rand_pcg-0.10.2/LICENSE-APACHE",
+        "rust-licenses/rand_pcg-0.10.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "reqwest",
+      "version": "0.12.28",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/seanmonstar/reqwest",
+      "registryChecksum": "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147",
+      "manifestSha256": "23c8a0827aaac74059965a182c6873990e75aa550e8079d3b51bb95092871205",
+      "notices": [
+        "rust-licenses/reqwest-0.12.28/LICENSE-APACHE",
+        "rust-licenses/reqwest-0.12.28/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "ring",
+      "version": "0.17.14",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 AND ISC",
+      "project": "https://github.com/briansmith/ring",
+      "registryChecksum": "a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7",
+      "manifestSha256": "b81a19b27cc744410b056eb1d1195ecd41e25a163acadfca3c6457e96b797d3f",
+      "notices": [
+        "rust-licenses/ring-0.17.14/LICENSE",
+        "rust-licenses/ring-0.17.14/LICENSE-BoringSSL",
+        "rust-licenses/ring-0.17.14/LICENSE-other-bits",
+        "rust-licenses/ring-0.17.14/src/polyfill/once_cell/LICENSE-APACHE",
+        "rust-licenses/ring-0.17.14/src/polyfill/once_cell/LICENSE-MIT",
+        "rust-licenses/ring-0.17.14/third_party/fiat/LICENSE"
+      ]
+    },
+    {
+      "name": "rustc-hash",
+      "version": "2.1.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/rust-lang/rustc-hash",
+      "registryChecksum": "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d",
+      "manifestSha256": "7e6727beb038213a2aa02f90cbbfb1d6651a9fda56f241dd95110a0cb287efc9",
+      "notices": [
+        "rust-licenses/rustc-hash-2.1.3/LICENSE-APACHE",
+        "rust-licenses/rustc-hash-2.1.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "rustix",
+      "version": "1.1.5",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "project": "https://github.com/bytecodealliance/rustix",
+      "registryChecksum": "891efababe418670775f199f0d233d84843c227a0949a883ce15b37c78d6629d",
+      "manifestSha256": "f57824af546c008210d8d6d63bc0fe866a3887d06100469448de3432ffa108ec",
+      "notices": [
+        "rust-licenses/rustix-1.1.5/COPYRIGHT",
+        "rust-licenses/rustix-1.1.5/LICENSE-APACHE",
+        "rust-licenses/rustix-1.1.5/LICENSE-Apache-2.0_WITH_LLVM-exception",
+        "rust-licenses/rustix-1.1.5/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "rustls",
+      "version": "0.23.46",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR ISC OR MIT",
+      "project": "https://github.com/rustls/rustls",
+      "registryChecksum": "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf",
+      "manifestSha256": "ef983ace35d7ad699e22682ee0ee45211f805b074fc9e84190b62f200259070f",
+      "notices": [
+        "rust-licenses/rustls-0.23.46/LICENSE-APACHE",
+        "rust-licenses/rustls-0.23.46/LICENSE-ISC",
+        "rust-licenses/rustls-0.23.46/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "rustls-pki-types",
+      "version": "1.15.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rustls/pki-types",
+      "registryChecksum": "2f4925028c7eb5d1fcdaf196971378ed9d2c1c4efc7dc5d011256f76c99c0a96",
+      "manifestSha256": "f47414e4c62453298a6f39b38d612289b035e2ad8300125c998bfeb4eaa69c8a",
+      "notices": [
+        "rust-licenses/rustls-pki-types-1.15.1/LICENSE-APACHE",
+        "rust-licenses/rustls-pki-types-1.15.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "rustls-webpki",
+      "version": "0.103.15",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "ISC",
+      "project": "https://github.com/rustls/webpki",
+      "registryChecksum": "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2",
+      "manifestSha256": "828ab5e8a7973ba0eef93956128a41ac135479367ed10ddaeaec44616d395355",
+      "notices": [
+        "rust-licenses/rustls-webpki-0.103.15/LICENSE"
+      ]
+    },
+    {
+      "name": "rustversion",
+      "version": "1.0.23",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/rustversion",
+      "registryChecksum": "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f",
+      "manifestSha256": "fc211ccd64d3ad59a0715c1a6f8cbfbbd83045f644194394595d16646eee9947",
+      "notices": [
+        "rust-licenses/rustversion-1.0.23/LICENSE-APACHE",
+        "rust-licenses/rustversion-1.0.23/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "ryu",
+      "version": "1.0.23",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR BSL-1.0",
+      "project": "https://github.com/dtolnay/ryu",
+      "registryChecksum": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f",
+      "manifestSha256": "410de3eae58a75b9d2558d0a4e3ed43c2c8317781ffbd30a7cbe4aebaa833e1a",
+      "notices": [
+        "rust-licenses/ryu-1.0.23/LICENSE-APACHE",
+        "rust-licenses/ryu-1.0.23/LICENSE-BOOST"
+      ]
+    },
+    {
+      "name": "scroll",
+      "version": "0.12.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/m4b/scroll",
+      "registryChecksum": "6ab8598aa408498679922eff7fa985c25d58a90771bd6be794434c5277eab1a6",
+      "manifestSha256": "c9242ab52e0b3ba02d9557c3ef2070bc173dfbef05870c3c4831937233de38c0",
+      "notices": [
+        "rust-licenses/scroll-0.12.0/LICENSE"
+      ]
+    },
+    {
+      "name": "scroll_derive",
+      "version": "0.12.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/m4b/scroll",
+      "registryChecksum": "1783eabc414609e28a5ba76aee5ddd52199f7107a0b24c2e9746a1ecc34a683d",
+      "manifestSha256": "998cd825592d2c5a6801f09610cc7e4a0576f6b85d394e068399502f3b5e0f26",
+      "notices": [
+        "rust-licenses/scroll_derive-0.12.1/LICENSE"
+      ]
+    },
+    {
+      "name": "semver",
+      "version": "1.0.28",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/semver",
+      "registryChecksum": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd",
+      "manifestSha256": "cf7fb84578260eec81ce5af4bdb176ec590d45fdcb78f06710f0aa13e3078761",
+      "notices": [
+        "rust-licenses/semver-1.0.28/LICENSE-APACHE",
+        "rust-licenses/semver-1.0.28/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "serde",
+      "version": "1.0.229",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/serde-rs/serde",
+      "registryChecksum": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba",
+      "manifestSha256": "6883caefd46e86eb15d22d3a6d274ad304c5e7934ab70eb58d81b7c4a29ef9db",
+      "notices": [
+        "rust-licenses/serde-1.0.229/LICENSE-APACHE",
+        "rust-licenses/serde-1.0.229/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.229",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/serde-rs/serde",
+      "registryChecksum": "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48",
+      "manifestSha256": "c6049e170e4f7c2b48749fefab59db583bfac4e466cde6d0c53e4f49bc5044f7",
+      "notices": [
+        "rust-licenses/serde_core-1.0.229/LICENSE-APACHE",
+        "rust-licenses/serde_core-1.0.229/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.229",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/serde-rs/serde",
+      "registryChecksum": "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348",
+      "manifestSha256": "d2581160ffa61baa386f882e08b0db20051dc3c782a82268d6473998b61c926e",
+      "notices": [
+        "rust-licenses/serde_derive-1.0.229/LICENSE-APACHE",
+        "rust-licenses/serde_derive-1.0.229/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.154",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/serde-rs/json",
+      "registryChecksum": "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6",
+      "manifestSha256": "548aafeb7c702b69b9de950033f10b59f70baf38592d275d8ca8cff19f7750c3",
+      "notices": [
+        "rust-licenses/serde_json-1.0.154/LICENSE-APACHE",
+        "rust-licenses/serde_json-1.0.154/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "serde_urlencoded",
+      "version": "0.7.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT/Apache-2.0",
+      "project": "https://github.com/nox/serde_urlencoded",
+      "registryChecksum": "d3491c14715ca2294c4d6a88f15e84739788c1d030eed8c110436aafdaa2f3fd",
+      "manifestSha256": "776416273e0e2004aaf8869df552bd0ff39858184730540604dad69e4dd17873",
+      "notices": [
+        "rust-licenses/serde_urlencoded-0.7.1/LICENSE-APACHE",
+        "rust-licenses/serde_urlencoded-0.7.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "shlex",
+      "version": "2.0.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/comex/rust-shlex",
+      "registryChecksum": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba",
+      "manifestSha256": "b6ead6cf404555ced33f7574c6c11413e29e7bcd5eb0ceeb59452830a46675ed",
+      "notices": [
+        "rust-licenses/shlex-2.0.1/LICENSE-APACHE",
+        "rust-licenses/shlex-2.0.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "siphasher",
+      "version": "0.3.11",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT/Apache-2.0",
+      "project": "https://github.com/jedisct1/rust-siphash",
+      "registryChecksum": "38b58827f4464d87d377d175e90bf58eb00fd8716ff0a62f80356b5e61555d0d",
+      "manifestSha256": "4a13fe4e2662d4cbca295faf32cd0a627856fb6f92d524d04e244c5831e0ebc6",
+      "notices": [
+        "rust-licenses/siphasher-0.3.11/COPYING"
+      ]
+    },
+    {
+      "name": "slab",
+      "version": "0.4.12",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/slab",
+      "registryChecksum": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5",
+      "manifestSha256": "11f31284be0c30b612f4e2c2e46aa14494a81639b12661f01f07394e270c0070",
+      "notices": [
+        "rust-licenses/slab-0.4.12/LICENSE"
+      ]
+    },
+    {
+      "name": "smallvec",
+      "version": "1.16.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/servo/rust-smallvec",
+      "registryChecksum": "5b3dc8af474f516a851ff4bd12db780f948b9250ad37211e4eec0bccea54e01b",
+      "manifestSha256": "9783b4b8e7ddd67127e76640f29ee694045d48c09eb7ca3c3ed0f153684c05df",
+      "notices": [
+        "rust-licenses/smallvec-1.16.3/LICENSE-APACHE",
+        "rust-licenses/smallvec-1.16.3/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "smawk",
+      "version": "0.3.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/mgeisler/smawk",
+      "registryChecksum": "e8e2fb0f499abb4d162f2bedad68f5ef91a1682b5a03596ddb67efd37768d100",
+      "manifestSha256": "9e421cba7d7de5f80058882ecd722983c3acf97b66b805d5233650ab969b1b49",
+      "notices": [
+        "rust-licenses/smawk-0.3.3/LICENSE"
+      ]
+    },
+    {
+      "name": "socket2",
+      "version": "0.6.5",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rust-lang/socket2",
+      "registryChecksum": "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4",
+      "manifestSha256": "e66848b959431828ed8acf12d5232c586bb6fe044f55d6f14ab7705ea3fff7a4",
+      "notices": [
+        "rust-licenses/socket2-0.6.5/LICENSE-APACHE",
+        "rust-licenses/socket2-0.6.5/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "stable_deref_trait",
+      "version": "1.2.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/storyyeller/stable_deref_trait",
+      "registryChecksum": "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596",
+      "manifestSha256": "5cddd84a243940e60e772ecba2f05b28b00cbd825d341d9e0b0881dcae7847dc",
+      "notices": [
+        "rust-licenses/stable_deref_trait-1.2.1/LICENSE-APACHE",
+        "rust-licenses/stable_deref_trait-1.2.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "static_assertions",
+      "version": "1.1.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/nvzqz/static-assertions-rs",
+      "registryChecksum": "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f",
+      "manifestSha256": "6531dbe3d557e427f9e3510e50cdf3de751a319eece11c9a937b35cfab8744c4",
+      "notices": [
+        "rust-licenses/static_assertions-1.1.0/LICENSE-APACHE",
+        "rust-licenses/static_assertions-1.1.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "strsim",
+      "version": "0.11.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/rapidfuzz/strsim-rs",
+      "registryChecksum": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f",
+      "manifestSha256": "e74cc8f9ab1f8680c26aebab519e3fbda7521eebd1e8fdcebdfc2e1bf138a875",
+      "notices": [
+        "rust-licenses/strsim-0.11.1/LICENSE"
+      ]
+    },
+    {
+      "name": "subtle",
+      "version": "2.6.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "BSD-3-Clause",
+      "project": "https://github.com/dalek-cryptography/subtle",
+      "registryChecksum": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292",
+      "manifestSha256": "a3b9aefa358b0cd742de62e880ea080414ead838847a95892acaa58575dfc4cf",
+      "notices": [
+        "rust-licenses/subtle-2.6.1/LICENSE"
+      ]
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/syn",
+      "registryChecksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+      "manifestSha256": "da8b83ac2c66a7b404dc55d88ae42592f70714823251f51b620ae349b246a18f",
+      "notices": [
+        "rust-licenses/syn-2.0.119/LICENSE-APACHE",
+        "rust-licenses/syn-2.0.119/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "syn",
+      "version": "3.0.9",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/syn",
+      "registryChecksum": "d78c8dee4c7bf0e14673097256fed6142ce9d3b85a408189d07482442145823b",
+      "manifestSha256": "b6f7f6069d92142d3e294f84855a68049bebc5b886c557ed4ae980ddbc866e1c",
+      "notices": [
+        "rust-licenses/syn-3.0.9/LICENSE-APACHE",
+        "rust-licenses/syn-3.0.9/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "sync_wrapper",
+      "version": "1.0.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0",
+      "project": "https://github.com/Actyx/sync_wrapper",
+      "registryChecksum": "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263",
+      "manifestSha256": "d6523f082d2ac59ffcdb22683a13b5804543141be28764e7d7a30063000767f9",
+      "notices": [
+        "rust-licenses/sync_wrapper-1.0.2/LICENSE"
+      ]
+    },
+    {
+      "name": "synstructure",
+      "version": "0.14.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/mystor/synstructure",
+      "registryChecksum": "901704edd0dfe137f1987838ee4f259e4e063c31371bdb423f7ae38ec6f77f02",
+      "manifestSha256": "dd0a548424e191ce36d03a6cc7b91fffe22b80fac2c7e4896b5ef6909f5ce51d",
+      "notices": [
+        "rust-licenses/synstructure-0.14.0/LICENSE"
+      ]
+    },
+    {
+      "name": "tempfile",
+      "version": "3.27.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/Stebalien/tempfile",
+      "registryChecksum": "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd",
+      "manifestSha256": "4ffd8ce684ce8f34075633101c8e627761387b5e66e5efe95010b0aa1414bf1b",
+      "notices": [
+        "rust-licenses/tempfile-3.27.0/LICENSE-APACHE",
+        "rust-licenses/tempfile-3.27.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "textwrap",
+      "version": "0.16.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/mgeisler/textwrap",
+      "registryChecksum": "6ecfad6c3abc80a577f2b91c1e412ee57e7a060d430b553c1b0c940974ebcd49",
+      "manifestSha256": "e61938b8104de5dacbfac7cbcb5af659bfac137bacb4c11843d6c9a679dd671e",
+      "notices": [
+        "rust-licenses/textwrap-0.16.4/LICENSE"
+      ]
+    },
+    {
+      "name": "thiserror",
+      "version": "2.0.21",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/thiserror",
+      "registryChecksum": "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e",
+      "manifestSha256": "4ab1fdd3cba041dbaa5b813dff268978a93b1542dcc31935fb903772cc700a47",
+      "notices": [
+        "rust-licenses/thiserror-2.0.21/LICENSE-APACHE",
+        "rust-licenses/thiserror-2.0.21/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "thiserror-impl",
+      "version": "2.0.21",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/dtolnay/thiserror",
+      "registryChecksum": "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524",
+      "manifestSha256": "cc5e3660d65270da1302d5b24cbefb50b4993b258d344a9ac9b4b69a612aa27f",
+      "notices": [
+        "rust-licenses/thiserror-impl-2.0.21/LICENSE-APACHE",
+        "rust-licenses/thiserror-impl-2.0.21/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "tinystr",
+      "version": "0.8.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "b1e27c91459209c2986af3dcf603a5a74a4368754ce37414f59acc971167f643",
+      "manifestSha256": "1ec97910b7a311b0fae11af824cfff9ff935b82db4d08d37b3f1c927171f90ff",
+      "notices": [
+        "rust-licenses/tinystr-0.8.4/LICENSE"
+      ]
+    },
+    {
+      "name": "tinyvec",
+      "version": "1.13.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Zlib OR Apache-2.0 OR MIT",
+      "project": "https://github.com/Lokathor/tinyvec",
+      "registryChecksum": "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee",
+      "manifestSha256": "431976069fdb12e129521aa4c5c09d225d80a84afe678130d41bdd51ec361688",
+      "notices": [
+        "rust-licenses/tinyvec-1.13.3/LICENSE-APACHE.md",
+        "rust-licenses/tinyvec-1.13.3/LICENSE-MIT.md",
+        "rust-licenses/tinyvec-1.13.3/LICENSE-ZLIB.md"
+      ]
+    },
+    {
+      "name": "tokio",
+      "version": "1.48.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/tokio",
+      "registryChecksum": "ff360e02eab121e0bc37a2d3b4d4dc622e6eda3a8e5253d5435ecf5bd4c68408",
+      "manifestSha256": "2eef6ac07430e7a7d320dd92089232e6c0326335ca518bd21b025a497c38b6ac",
+      "notices": [
+        "rust-licenses/tokio-1.48.0/LICENSE"
+      ]
+    },
+    {
+      "name": "tokio-macros",
+      "version": "2.6.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/tokio",
+      "registryChecksum": "5c55a2eff8b69ce66c84f85e1da1c233edc36ceb85a2058d11b0d6a3c7e7569c",
+      "manifestSha256": "1285cf7f991961fabdd709b47351809114d9f8d6bfac98591b74507a972c1a2c",
+      "notices": [
+        "rust-licenses/tokio-macros-2.6.1/LICENSE"
+      ]
+    },
+    {
+      "name": "tokio-rustls",
+      "version": "0.26.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/rustls/tokio-rustls",
+      "registryChecksum": "c9cc2678c2cdd569ef8215e2afd7954ada2ae20b4fdd2c5fe6139a3b02d105db",
+      "manifestSha256": "ad124b109caa4315c0a45dabb5211f272bf913462914ddeedb4c9aa9f6e19e41",
+      "notices": [
+        "rust-licenses/tokio-rustls-0.26.6/LICENSE-APACHE",
+        "rust-licenses/tokio-rustls-0.26.6/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "toml",
+      "version": "0.5.11",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT/Apache-2.0",
+      "project": "https://github.com/toml-rs/toml",
+      "registryChecksum": "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234",
+      "manifestSha256": "c26985583d0c680bafc99c11b4a99f5c8e63942c63a33c17588a5e9d3b101ef4",
+      "notices": [
+        "rust-licenses/toml-0.5.11/LICENSE-APACHE",
+        "rust-licenses/toml-0.5.11/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "tower",
+      "version": "0.5.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tower-rs/tower",
+      "registryChecksum": "ebe5ef63511595f1344e2d5cfa636d973292adc0eec1f0ad45fae9f0851ab1d4",
+      "manifestSha256": "04763d65eff9423b77055a24a9778f7a2459017a470c723cab8850936c6e5f1b",
+      "notices": [
+        "rust-licenses/tower-0.5.3/LICENSE"
+      ]
+    },
+    {
+      "name": "tower-http",
+      "version": "0.6.11",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tower-rs/tower-http",
+      "registryChecksum": "4cfcf7e2740e6fc6d4d688b4ef00650406bb94adf4731e43c096c3a19fe40840",
+      "manifestSha256": "b005c4ea79f240e38150bc6c8928342f18ba1c002ec735283fd03437a7a8eedd",
+      "notices": [
+        "rust-licenses/tower-http-0.6.11/LICENSE"
+      ]
+    },
+    {
+      "name": "tower-layer",
+      "version": "0.3.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tower-rs/tower",
+      "registryChecksum": "121c2a6cda46980bb0fcd1647ffaf6cd3fc79a013de288782836f6df9c48780e",
+      "manifestSha256": "294873d3652f2c23fd4839dffec4edfc3372345a2dd2cec898da4a9fb0b0c1c5",
+      "notices": [
+        "rust-licenses/tower-layer-0.3.3/LICENSE"
+      ]
+    },
+    {
+      "name": "tower-service",
+      "version": "0.3.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tower-rs/tower",
+      "registryChecksum": "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3",
+      "manifestSha256": "98a29ed09a717054bacd7ae7515e59000303932d04c5da5d5af0f4828f40453d",
+      "notices": [
+        "rust-licenses/tower-service-0.3.3/LICENSE"
+      ]
+    },
+    {
+      "name": "tracing",
+      "version": "0.1.44",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/tracing",
+      "registryChecksum": "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100",
+      "manifestSha256": "b7e201be4f3872fe25da1fa45aa404c8751a661755d4883fdbb5c0c558303e6d",
+      "notices": [
+        "rust-licenses/tracing-0.1.44/LICENSE"
+      ]
+    },
+    {
+      "name": "tracing-core",
+      "version": "0.1.36",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/tokio-rs/tracing",
+      "registryChecksum": "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a",
+      "manifestSha256": "610cf318865f1d349164f4420b53b49b2b3662b6938c2e730873371eb92e050e",
+      "notices": [
+        "rust-licenses/tracing-core-0.1.36/LICENSE",
+        "rust-licenses/tracing-core-0.1.36/src/spin/LICENSE"
+      ]
+    },
+    {
+      "name": "try-lock",
+      "version": "0.2.5",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/seanmonstar/try-lock",
+      "registryChecksum": "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b",
+      "manifestSha256": "b929e378a4dd54a76870264bb0b25d059c8a12ec1dda78a8017d7dbba96260fc",
+      "notices": [
+        "rust-licenses/try-lock-0.2.5/LICENSE"
+      ]
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "project": "https://github.com/dtolnay/unicode-ident",
+      "registryChecksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+      "manifestSha256": "c0e96a9c7ee62f5f9ab12de69e0ad44826ad753911d47638f605c936f7ea2c1c",
+      "notices": [
+        "rust-licenses/unicode-ident-1.0.27/LICENSE-APACHE",
+        "rust-licenses/unicode-ident-1.0.27/LICENSE-MIT",
+        "rust-licenses/unicode-ident-1.0.27/LICENSE-UNICODE"
+      ]
+    },
+    {
+      "name": "unicode-width",
+      "version": "0.2.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/unicode-rs/unicode-width",
+      "registryChecksum": "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254",
+      "manifestSha256": "dbf0a72e293238d87afd46f58ba597408f40c86e372a1d0b271c89fb4c3639c4",
+      "notices": [
+        "rust-licenses/unicode-width-0.2.2/COPYRIGHT",
+        "rust-licenses/unicode-width-0.2.2/LICENSE-APACHE",
+        "rust-licenses/unicode-width-0.2.2/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "uniffi",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "c6d968cb62160c11f2573e6be724ef8b1b18a277aededd17033f8a912d73e2b4",
+      "manifestSha256": "6675a0138394ea835314f84bbd04d088f0ffdf98840983f2a8a964a96f3dbdbf",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_bindgen",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "f6b39ef1acbe1467d5d210f274fae344cb6f8766339330cb4c9688752899bf6b",
+      "manifestSha256": "65340bfabfe5a7d60a48349831e8c396c52213a214947303ca392fc3207b1b66",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_core",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "c2d990b553d6b9a7ee9c3ae71134674739913d52350b56152b0e613595bb5a6f",
+      "manifestSha256": "5e63d8bcd31393703315fea6458cdc391b5c77eaa43148dca320cb7801c46bb2",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_internal_macros",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "04f4f224becf14885c10e6e400b95cc4d1985738140cb194ccc2044563f8a56b",
+      "manifestSha256": "f82f163c37ce54aa19e7e073341c9ecca0e64d4b044690ebd356f7de59a61c34",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_macros",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "b481d385af334871d70904e6a5f129be7cd38c18fcf8dd8fd1f646b426a56d58",
+      "manifestSha256": "971ff673301c6dd66ec0a6eafa5206a67b284b4a1982a91bc5bc20d8f7ac5083",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_meta",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "10f817868a3b171bb7bf259e882138d104deafde65684689b4694c846d322491",
+      "manifestSha256": "fc71bd5557b97a71d9aaaa30eee5ae0b0b5f5876090e081b51c57eeaebb1bea0",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_pipeline",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "4b147e133ad7824e32426b90bc41fda584363563f2ba747f590eca1fd6fd14e6",
+      "manifestSha256": "109ce96a221c0cab2f11b20570a23e04a9a7bc7cc3e42bed77321080d61b4a22",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "uniffi_udl",
+      "version": "0.29.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MPL-2.0",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "caed654fb73da5abbc7a7e9c741532284532ba4762d6fe5071372df22a41730a",
+      "manifestSha256": "45d52b9ef873439b8b8660cbfdf0fbda51db0e10b6642e9ab8f9ed1aaf3e13a0",
+      "notices": [
+        "licenses/UniFFI-LICENSE"
+      ]
+    },
+    {
+      "name": "untrusted",
+      "version": "0.9.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "ISC",
+      "project": "https://github.com/briansmith/untrusted",
+      "registryChecksum": "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1",
+      "manifestSha256": "25efda62e6e0a7e3cf463ff88bd9d9321befb22de7660cd63b2a0a195d70aed6",
+      "notices": [
+        "rust-licenses/untrusted-0.9.0/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "url",
+      "version": "2.5.8",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/servo/rust-url",
+      "registryChecksum": "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed",
+      "manifestSha256": "7003e5562b5ab8454b9d78376303151af79011f5dd684c1891e0f46bc9112016",
+      "notices": [
+        "rust-licenses/url-2.5.8/LICENSE-APACHE",
+        "rust-licenses/url-2.5.8/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "utf8_iter",
+      "version": "1.0.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/hsivonen/utf8_iter",
+      "registryChecksum": "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be",
+      "manifestSha256": "df82c17a094e56a7c66d9aba1f68a1c3647518694c25326f09c5634a9012f21e",
+      "notices": [
+        "rust-licenses/utf8_iter-1.0.4/COPYRIGHT",
+        "rust-licenses/utf8_iter-1.0.4/LICENSE-APACHE",
+        "rust-licenses/utf8_iter-1.0.4/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "want",
+      "version": "0.3.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/seanmonstar/want",
+      "registryChecksum": "ec4cdd0dd910afe868b7ef477227d8d538b46b3075031afee8a9f2acb0a2ed0b",
+      "manifestSha256": "0c927cd8eafad73bbcbedd78694f629ee836e04fbd090b94af0366125b0188ed",
+      "notices": [
+        "rust-licenses/want-0.3.2/LICENSE"
+      ]
+    },
+    {
+      "name": "wasi",
+      "version": "0.11.1+wasi-snapshot-preview1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "project": "https://github.com/bytecodealliance/wasi",
+      "registryChecksum": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b",
+      "manifestSha256": "25915be68a3057b798a4a6d4e5ceef36047e03bf0353d3f2a99236cd23e410db",
+      "notices": [
+        "rust-licenses/wasi-0.11.1+wasi-snapshot-preview1/LICENSE-APACHE",
+        "rust-licenses/wasi-0.11.1+wasi-snapshot-preview1/LICENSE-Apache-2.0_WITH_LLVM-exception",
+        "rust-licenses/wasi-0.11.1+wasi-snapshot-preview1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "wasm-bindgen",
+      "version": "0.2.129",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen",
+      "registryChecksum": "9bb54f33acc68fd454578d9820b0bde1a1a3d17aa17bb7b6595806d02886d409",
+      "manifestSha256": "96843908592c36f81e731f634488401256cc45e23edbf6543895b2bd79813b32",
+      "notices": [
+        "rust-licenses/wasm-bindgen-0.2.129/LICENSE-APACHE",
+        "rust-licenses/wasm-bindgen-0.2.129/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "wasm-bindgen-futures",
+      "version": "0.4.79",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures",
+      "registryChecksum": "3cbab34de2d982e9b48e18d216d04c4a6f641066ff19ffb699980f591ee3610e",
+      "manifestSha256": "b3ad8cff9fe068a9a483c74c1c085c9733c8d70f35b4a2bedd5c4fa70373d69d",
+      "notices": [
+        "rust-licenses/wasm-bindgen-futures-0.4.79/LICENSE-APACHE",
+        "rust-licenses/wasm-bindgen-futures-0.4.79/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "wasm-bindgen-macro",
+      "version": "0.2.129",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro",
+      "registryChecksum": "2e29d0c35b16e224a7eeb5cd2d25e3e1968fbd65604117b44d3b789d00ee8535",
+      "manifestSha256": "a5d61198c3fc14bdf36f57f0e6bffedc824570358329cd4059693471cff958f8",
+      "notices": [
+        "rust-licenses/wasm-bindgen-macro-0.2.129/LICENSE-APACHE",
+        "rust-licenses/wasm-bindgen-macro-0.2.129/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "wasm-bindgen-macro-support",
+      "version": "0.2.129",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support",
+      "registryChecksum": "6f501a8bc3719dba86ef8ae4728879c08001bea749eb1333ac5b91e040e2a6b7",
+      "manifestSha256": "c17f86106f0dd0d2afb678740fccee4b867f62dd1a4fdd3bf22d1f25eadfe11c",
+      "notices": [
+        "rust-licenses/wasm-bindgen-macro-support-0.2.129/LICENSE-APACHE",
+        "rust-licenses/wasm-bindgen-macro-support-0.2.129/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "wasm-bindgen-shared",
+      "version": "0.2.129",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared",
+      "registryChecksum": "23f0c9c52aa7cd7d77769a4cfe2a9adb1b331f489a41d912ce14513d5ab995c6",
+      "manifestSha256": "0c881c48b419371c15f715f2909ed2e5291601e33e9fd87a356a3d9eb998e611",
+      "notices": [
+        "rust-licenses/wasm-bindgen-shared-0.2.129/LICENSE-APACHE",
+        "rust-licenses/wasm-bindgen-shared-0.2.129/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "web-sys",
+      "version": "0.3.106",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys",
+      "registryChecksum": "88261b9deccee56594c11a3460c462c41f58d148598fe70ad77070126a68aba4",
+      "manifestSha256": "96caa0cf134f76c41d8f473b2a85276b896616baf14c298dcc588fbc83f31b8a",
+      "notices": [
+        "rust-licenses/web-sys-0.3.106/LICENSE-APACHE",
+        "rust-licenses/web-sys-0.3.106/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "web-time",
+      "version": "1.1.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/daxpedda/web-time",
+      "registryChecksum": "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb",
+      "manifestSha256": "9198de3124f782282d83fb54569440c3ccd660fe02a291376a1f935d6563ea9d",
+      "notices": [
+        "rust-licenses/web-time-1.1.0/LICENSE-APACHE",
+        "rust-licenses/web-time-1.1.0/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "webpki-roots",
+      "version": "1.0.9",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "CDLA-Permissive-2.0",
+      "project": "https://github.com/rustls/webpki-roots",
+      "registryChecksum": "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a",
+      "manifestSha256": "c065fa807b0670e11a766526477abf5af99074821f2fe9d6117770229884ccff",
+      "notices": [
+        "rust-licenses/webpki-roots-1.0.9/LICENSE"
+      ]
+    },
+    {
+      "name": "weedle2",
+      "version": "5.0.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/mozilla/uniffi-rs",
+      "registryChecksum": "998d2c24ec099a87daf9467808859f9d82b61f1d9c9701251aea037f514eae0e",
+      "manifestSha256": "cd75893e67b7ed5e1ee200efddc874a7d235a7275b3d9bbadd728d47a5d5b8c6",
+      "notices": [
+        "rust-licenses/weedle2-5.0.0/LICENSE.md"
+      ]
+    },
+    {
+      "name": "windows-link",
+      "version": "0.2.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5",
+      "manifestSha256": "abf0b74b168ec7d7c600f44eb90502c47e44480a199b9adc9ec74ea990605707",
+      "notices": [
+        "rust-licenses/windows-link-0.2.1/license-apache-2.0",
+        "rust-licenses/windows-link-0.2.1/license-mit"
+      ]
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.52.0",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d",
+      "manifestSha256": "ff53899cc9a441f18f66fd21c4784716a0aab5020a21cba5764ac8ee1e1f34cd",
+      "notices": [
+        "rust-licenses/windows-sys-0.52.0/license-apache-2.0",
+        "rust-licenses/windows-sys-0.52.0/license-mit"
+      ]
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.61.2",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc",
+      "manifestSha256": "1adbc955d5460fa64dc16e6c8198b25672e8d4b97d45ecfb262eb2693ce08422",
+      "notices": [
+        "rust-licenses/windows-sys-0.61.2/license-apache-2.0",
+        "rust-licenses/windows-sys-0.61.2/license-mit"
+      ]
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973",
+      "manifestSha256": "315c2609b517bc97f1ddb62ecdadfc66f44f03f6bceb74adcdc3cec26f2126b6",
+      "notices": [
+        "rust-licenses/windows-targets-0.52.6/license-apache-2.0",
+        "rust-licenses/windows-targets-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_aarch64_gnullvm",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3",
+      "manifestSha256": "7535a631f6950dae31847b64f09469b499bc00fc492374fbb37589cfb9f2d02e",
+      "notices": [
+        "rust-licenses/windows_aarch64_gnullvm-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_aarch64_gnullvm-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_aarch64_msvc",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469",
+      "manifestSha256": "36a94f20ae8c86cfc38b0489dc9c4a9d0607d5f8e1e3216c866eae9e5bd2d5a5",
+      "notices": [
+        "rust-licenses/windows_aarch64_msvc-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_aarch64_msvc-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_i686_gnu",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b",
+      "manifestSha256": "bd9f2440820141c9a41c21b48a9d98c4c14f41936afe10e911ba963aa2c35809",
+      "notices": [
+        "rust-licenses/windows_i686_gnu-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_i686_gnu-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_i686_gnullvm",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66",
+      "manifestSha256": "ab3340805fce89252fa7d9c7e38fcdc2d8f5aa114dfdaa4d7926c7265ea54f38",
+      "notices": [
+        "rust-licenses/windows_i686_gnullvm-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_i686_gnullvm-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_i686_msvc",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66",
+      "manifestSha256": "30419314e9cb467e2ddfe347f1626a9b59f030041bcdc9cb563cbc5a39fc4a5f",
+      "notices": [
+        "rust-licenses/windows_i686_msvc-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_i686_msvc-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_x86_64_gnu",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78",
+      "manifestSha256": "7bd069878ae02213cb113a56b15a1eac497a697de64ec0006bb0930c49b65386",
+      "notices": [
+        "rust-licenses/windows_x86_64_gnu-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_x86_64_gnu-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_x86_64_gnullvm",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d",
+      "manifestSha256": "b4e30fa8303981a233886a54ab98a180041adf2815f4a0d45e34484e5fb20585",
+      "notices": [
+        "rust-licenses/windows_x86_64_gnullvm-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_x86_64_gnullvm-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.52.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT OR Apache-2.0",
+      "project": "https://github.com/microsoft/windows-rs",
+      "registryChecksum": "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec",
+      "manifestSha256": "cebfc4eefe4d2c0da8ab97e31e3f5a518fc9db453a131d31d84dcdb5c16acb26",
+      "notices": [
+        "rust-licenses/windows_x86_64_msvc-0.52.6/license-apache-2.0",
+        "rust-licenses/windows_x86_64_msvc-0.52.6/license-mit"
+      ]
+    },
+    {
+      "name": "winnow",
+      "version": "0.7.15",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/winnow-rs/winnow",
+      "registryChecksum": "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945",
+      "manifestSha256": "819b55f4ba81a84e3742d3550c68f6e04996d126d463cdb87ef88fbb43d42197",
+      "notices": [
+        "rust-licenses/winnow-0.7.15/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "writeable",
+      "version": "0.6.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc",
+      "manifestSha256": "fb3b4d69110d0714243299545a6c3fb79c714673b7279768c0bd8227c4c2a6ee",
+      "notices": [
+        "rust-licenses/writeable-0.6.4/LICENSE"
+      ]
+    },
+    {
+      "name": "yoke",
+      "version": "0.8.3",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "709fe23a0424b6a435d82152b1bd3fdfb0833487d5fa90d05d42762a9891fef5",
+      "manifestSha256": "5162db7018f95fa001cf9b7fbb067bb9446d5a2aa5e1a316567f6195b1f2af49",
+      "notices": [
+        "rust-licenses/yoke-0.8.3/LICENSE"
+      ]
+    },
+    {
+      "name": "yoke-derive",
+      "version": "0.8.4",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "ec8ebde2db3681e8c9980cc27822030e68752690ddfa9473e739aeb4dbde6d71",
+      "manifestSha256": "dd192215953d1b2e6ece053276be2e292bb7a3aebf6b331c57d5153facce681d",
+      "notices": [
+        "rust-licenses/yoke-derive-0.8.4/LICENSE"
+      ]
+    },
+    {
+      "name": "zerofrom",
+      "version": "0.1.8",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "0ec05a11813ea801ff6d75110ad09cd0824ddba17dfe17128ea0d5f68e6c5272",
+      "manifestSha256": "df8e84cb1898a8daae112228b118fed4861c8c3e9174bb761baf041790c1235a",
+      "notices": [
+        "rust-licenses/zerofrom-0.1.8/LICENSE"
+      ]
+    },
+    {
+      "name": "zerofrom-derive",
+      "version": "0.1.8",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "f75b4683f6c7f45248d4d64056a24298c6281e0993356d7d1b4a1a962ef10d4a",
+      "manifestSha256": "0bc9ebe5d49afbfb7e9a32272ea24dfef28889c2c4cb4f153168f1f1c2bee837",
+      "notices": [
+        "rust-licenses/zerofrom-derive-0.1.8/LICENSE"
+      ]
+    },
+    {
+      "name": "zeroize",
+      "version": "1.9.1",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Apache-2.0 OR MIT",
+      "project": "https://github.com/RustCrypto/utils",
+      "registryChecksum": "e13084392c5e4bc371903e2935a5eaeed24905a7511356b883835e18a78f6879",
+      "manifestSha256": "71dd9b47dcf1ea92e55517d3543d1524448c76582a0a49d1d4c16c24a09f7cb0",
+      "notices": [
+        "rust-licenses/zeroize-1.9.1/LICENSE-APACHE",
+        "rust-licenses/zeroize-1.9.1/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "zerotrie",
+      "version": "0.2.5",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "4ea269c3bd32f0a32c321907a2ae912ba6f4649bb0fc764a15627e99a7095a3f",
+      "manifestSha256": "b9da7ef44f8fe9a47a64f019628f22c65f52c7e2a427891fee3b83ce7b646375",
+      "notices": [
+        "rust-licenses/zerotrie-0.2.5/LICENSE"
+      ]
+    },
+    {
+      "name": "zerovec",
+      "version": "0.11.8",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "bb0464e17806c1d976d5cba29399c7f08e516e279e2ba493f63123b5fca67dd8",
+      "manifestSha256": "11216eeba19169e8bec8d703c0c452367747e20e1ca319fc48feda7f0b1e8fba",
+      "notices": [
+        "rust-licenses/zerovec-0.11.8/LICENSE"
+      ]
+    },
+    {
+      "name": "zerovec-derive",
+      "version": "0.11.6",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "Unicode-3.0",
+      "project": "https://github.com/unicode-org/icu4x",
+      "registryChecksum": "34df6fc39dbd26ddc9c10e6a2984476e13acce22e64e4487636ef494369225da",
+      "manifestSha256": "b34f777e761fd83dea749dc9179aaee9327f0842329894aab47e7fa567e42473",
+      "notices": [
+        "rust-licenses/zerovec-derive-0.11.6/LICENSE"
+      ]
+    },
+    {
+      "name": "zmij",
+      "version": "1.0.23",
+      "scope": "Cargo.lock superset (Android, host bindgen, optional and other targets)",
+      "license": "MIT",
+      "project": "https://github.com/dtolnay/zmij",
+      "registryChecksum": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b",
+      "manifestSha256": "b31420c7a806fae5b9ea2438dd4cbb99dcb3a22da67697fdf2776cc44a69527e",
+      "notices": [
+        "rust-licenses/zmij-1.0.23/LICENSE-MIT"
+      ]
+    }
+  ]
+}

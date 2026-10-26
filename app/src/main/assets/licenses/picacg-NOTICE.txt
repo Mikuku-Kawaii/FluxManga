@@ -1,0 +1,46 @@
+PicACG protocol adaptation for FluxManga, 2026-10-24
+
+Primary upstream: Keiyoushi/extensions-source
+https://github.com/keiyoushi/extensions-source
+Commit: ff521c17bb3e503c01e658e8fac00b60a95829f3
+License: Apache License, Version 2.0
+Files: src/zh/picacomic/src/eu/kanade/tachiyomi/extension/zh/picacomic/
+  Picacomic.kt, PicaApiSchemas.kt, Filters.kt
+Copyright remains with the upstream authors and contributors.
+
+Supplemental upstream: niuhuan/pica-go
+https://github.com/niuhuan/pica-go
+Commit: 2c208674152c3031862a6dd0b8b99bb45835f950
+License: MIT
+Copyright (c) 2021-2021 niuhuan
+Files: client.go, dto.go (user profile identity, categories and collection contracts).
+
+FluxManga modifications:
+- Protocol constants, signed paths, login, list/metadata mappings and chapter/page
+  pagination adapted to the existing Kotlin Repository and Rust reqwest session.
+- Token is sealed in the private world's existing storage. Source identity binds
+  to users/profile UID. Password is not persisted; account switching retains books.
+- Chapter pages are collected sequentially and sorted by server order; only the
+  selected chapter's image references are collected. UI pagination remains explicit.
+- Anonymous image requests use the existing encrypted private image pipeline and
+  Android bounded region decoding; API authorization is not sent to image hosts.
+- No Mihon extension host, Go runtime, global account, new database, DNS routing,
+  HTTP address bootstrap, automatic login/check-in or remote favorite writes.
+
+HmacSHA256.kt was inspected as protocol evidence and credits
+https://github.com/czp3009/picacomic-api in its header. Its helper/hex-table code is
+not copied into FluxManga. This adapter calls standard Android JCA HmacSHA256 and
+uses the project's existing hexadecimal formatting idiom.
+
+Complete primary Apache-2.0 and supplemental MIT texts are retained together in
+picacg-LICENSES.txt. Upstream source samples and provenance are retained under
+docs/verification/m4-storage-foundation-local/picacg-upstream and indexed in
+docs/third-party/source-adapters.json. This adaptation has not been compiled,
+tested, packaged or exercised against real accounts/services in this stage.
+
+Homepage recommendation follow-up (2026-10-25): uses Collections() and
+CollectionsResponse / Collection in the same pinned MIT niuhuan/pica-go
+client.go / dto.go. Maps collections[].comics into the existing source-aware
+feed instead of substituting the H24 leaderboard. Keeps account isolation,
+cancellation and errors; no runtime dependency added. No tests/build/live
+service request for this follow-up.

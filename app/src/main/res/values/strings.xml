@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">FluxManga</string>
+    <string name="core_loading">正在连接 Rust Core…</string>
+    <string name="core_ready">Rust Core %1$s · %2$s</string>
+    <string name="core_error">Rust Core 加载失败：%1$s</string>
+    <string name="tab_search">搜索</string>
+    <string name="tab_home">首页</string>
+    <string name="tab_tags">标签</string>
+    <string name="tab_library">书库</string>
+    <string name="tab_discover">推荐</string>
+    <string name="navigation_title">%1$s · %2$s</string>
+    <string name="navigation_description">M1 页面样本 · 无真实漫画内容</string>
+    <string name="sample_query">查询（状态恢复验证）</string>
+    <string name="sample_source">%1$s / %2$s · 无真实漫画内容</string>
+    <string name="detail_title">%1$s · 作品 %2$s</string>
+    <string name="detail_back">返回原标签</string>
+    <string name="detail_marks">验证标记：%1$d</string>
+    <string name="add_mark">增加标记</string>
+</resources>
+

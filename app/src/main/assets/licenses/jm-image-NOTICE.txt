@@ -1,0 +1,63 @@
+JMComic API and image strip rule adaptation
+
+Upstream: https://github.com/hect0x7/JMComic-Crawler-Python
+Commit: 303904252f586ef0123f468feac2b890c9cba8d8
+Copyright (c) 2023 hect0x7
+License: MIT; complete text is included in jm-image-MIT.txt.
+
+Source: src/jmcomic/jm_toolkit.py, JmImageTool.get_num and decode_and_save;
+src/jmcomic/jm_config.py, JmMagicConstants.SCRAMBLE_268850 / SCRAMBLE_421926.
+
+FluxManga modifications (2026-10-23): metadata rule ported to Kotlin/JCA;
+row ordering ported to Rust/UniFFI with validated viewport intersections;
+Android BitmapRegionDecoder handles pixels, cancellation and bounded output.
+The original 2026-10-23 image work was limited to offline synthetic chapters.
+
+FluxManga modifications (2026-10-24), after explicit user M4 admission:
+src/jmcomic/jm_client_impl.py (JmApiClient), jm_toolkit.py (JmCryptoTool,
+JmPageTool and JmApiAdaptTool), jm_config.py (pinned protocol and endpoints),
+and jm_entity.py (chapter/image URL structure) inform the Kotlin API adapter.
+Login/cookies, AES response decoding, paginated favorites/search, album/chapter
+mapping and chapter scramble metadata are adapted in JmComic.kt. Rust's existing
+reqwest session provides bounded requests; JmReaderRepository.kt and JmCover.kt
+reuse encrypted private cache and Android region decoding. UI/account state,
+book ownership, progress and lifecycle integration are project-specific.
+No Python, Pillow, PyCryptodome or upstream HTTP runtime is included.
+The pinned protocol app-version constant is 2.1.7, not a live-service version claim.
+No live account/service requests, tests, compilation or APK packaging were run
+for this adaptation. Private offline download remains unimplemented.
+
+Connectivity corrections (2026-10-25): jm_config.py and jm_client_impl.py at
+fd8953025db5b844f1b7f025d063f544e61a2dbd (same MIT license) inform the 2.1.12
+protocol version and anonymous /setting cookie initialization. No Python runtime
+is added. API host options additionally reflect the public newsvr-2025.txt snapshot
+recorded in docs/verification/m4-storage-foundation-local/jm-connectivity-upstream.
+The previous host remains accepted for saved settings. No automatic credential
+migration or replay of login across hosts; no account/content requests or tests.
+
+Catalog integration (2026-10-25): the same pinned MIT jm_client_impl.py and
+jm_config.py inform /categories/filter (c=0, empty order, o=mr for latest or
+o=mv for all-time views, 80 items per page). Reuses the existing Kotlin parser
+and Rust transport without adding a runtime or dependency. Targeted MuMu
+debugging of anonymous lists and numeric lookup is recorded separately; the
+no-live-request statements above describe the earlier adaptations only.
+
+Homepage recommendation and tag directory adaptation (2026-10-25):
+JUKOMU/JMComic-Api-Java, MIT, Copyright (c) 2025 JUKOMU.
+https://github.com/JUKOMU/JMComic-Api-Java
+Pinned commit: 5a7a4bb4870edb512274dc2adeb4f7c157445321
+References: JmApiClient, JmConstants, ApiParser and JmPromoteCategory /
+JmCategoryList / JmCategoryListItem / JmCategoryBlock models (original paths
+and hashes in discovery-upstream/upstream.json). FluxManga adapts /promote
+comic previews and /categories primary categories and topic tags to its
+existing Kotlin parser, source-aware navigation and Rust HTTPS transport.
+No Java upstream runtime, Gson, OkHttp, database or new dependency is bundled.
+The MIT copyright and permission notice is retained in jm-image-MIT.txt.
+No tests, build, APK or live service request for this follow-up.
+
+Web account connection (2026-10-25): read-only useredit/<uid> and username field
+contract reviewed against JUKOMU/JMComic-Api-Java at
+5a7a4bb4870edb512274dc2adeb4f7c157445321 (MIT), getUserProfile and
+ApiParser.parseUserProfile. No Java implementation or OkHttp dependency copied.
+The WebView lifecycle, DOM metadata extraction and account commit are original
+FluxManga integration; existing source keys and favorites import remain intact.
