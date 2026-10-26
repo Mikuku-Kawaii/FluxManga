@@ -681,10 +681,10 @@ private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, widt
     LaunchedEffect(list, width, predecodeActive, visibility.visibilityEpoch) {
         if (predecodeActive) snapshotFlow {
             val visible = list.layoutInfo.visibleItemsInfo
-            val first = visible.firstOrNull()?.index
-            val last = visible.lastOrNull()?.index
-            val chapter = first?.let { currentTiles.getOrNull(it)?.page?.chapterId }
-            if (last == null || chapter == null) emptyList()
+            val firstKey = visible.firstOrNull()?.key
+            val last = currentTiles.indexOfFirst { it.key == visible.lastOrNull()?.key }
+            val chapter = currentTiles.firstOrNull { it.key == firstKey }?.page?.chapterId
+            if (last < 0 || chapter == null) emptyList()
             else currentTiles.drop(last + 1).take(2).filter { it.bottom != null && it.page.chapterId == chapter }
         }.distinctUntilChanged().collectLatest { upcoming ->
             // Keep only a small decoded look-ahead; the full chapter stays encoded on disk.
@@ -699,7 +699,8 @@ private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, widt
     LaunchedEffect(list, restored) {
         if (restored) snapshotFlow {
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == list.firstVisibleItemIndex }
-            val tile = currentTiles.getOrNull(list.firstVisibleItemIndex)
+            // Preloading dimensions can insert tiles above the viewport before layout catches up.
+            val tile = currentTiles.firstOrNull { it.key == item?.key }
             if (item == null || tile?.bottom == null) null else {
                 val fraction = (tile.top + list.firstVisibleItemScrollOffset.toFloat() / item.size.coerceAtLeast(1) * (tile.bottom - tile.top)) / tile.page.height!!.toInt()
                 Triple(tile.index, fraction.coerceIn(0f, .9999f), tile.top)
