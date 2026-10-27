@@ -61,7 +61,8 @@ internal fun DiscoveryFeedList(session: WorldSession, sourceId: String, section:
     back: () -> Unit, sources: () -> Unit, open: (String, String) -> Unit) {
     val model = discoveryFeedModel(session, sourceId, section)
     val state by model.feed.state.collectAsStateWithLifecycle()
-    ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.feed.refresh() }, refreshEnabled = !state.unsupported, modifier = Modifier.fillMaxSize().testTag("discovery-section-${section.name}"), state = rememberLazyListState(),
+    val scroll = rememberLazyListState()
+    ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.feed.refresh() }, refreshEnabled = !state.unsupported, modifier = Modifier.fillMaxSize().testTag("discovery-section-${section.name}"), state = scroll,
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item(key = "heading") {
             ReferenceHeading(section.title, "当前空间 · 图源提供的真实内容", back)
@@ -70,14 +71,7 @@ internal fun DiscoveryFeedList(session: WorldSession, sourceId: String, section:
         if (state.busy && state.cards.isEmpty()) item("layout") { ReadLayoutPlaceholder() }
         items(if (state.error != null && !state.busy) emptyList() else state.cards, key = { it.key.mangaId }) { card -> DiscoveryFeedBook(model.library, card, open) }
         item(key = "pagination") {
-            state.appendError?.let {
-                RequestFeedback("后续页加载失败：$it", color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            }
-            if (state.next is SourceContinuation.Next) TextButton(onClick = feedbackAttempt(model.feed::more), enabled = !state.busy,
-                modifier = Modifier.testTag("discovery-more")) {
-                Text(if (state.appendError != null) "重试后续页" else "加载更多")
-            } else if (state.loaded && state.cards.isNotEmpty()) Text("已显示全部结果")
+            key(model) { SourceBrowsePagination(state, model.feed::more, "discovery-more", scroll) }
         }
     }
 }

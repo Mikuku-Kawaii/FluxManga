@@ -71,10 +71,9 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                 }
                 bookGridItems(if (feed.error != null && !feed.busy) emptyList() else feed.cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card -> DiscoveryGridBook(model.library, card, open) }
                 item("more") {
-                    feed.appendError?.let { RequestFeedback("后续页加载失败：$it", color = MaterialTheme.colorScheme.error) }
-                    if (feed.next is SourceContinuation.Next) TextButton(onClick = feedbackAttempt(model.feed::more), enabled = !feed.busy) {
-                        Text(if (feed.appendError != null) "重试后续页" else "加载更多目录作品")
-                    } else if (feed.loaded && feed.cards.isNotEmpty()) Text("此来源已显示全部结果")
+                    key(model, model.submitted) {
+                        SourceBrowsePagination(feed, model.feed::more, "baozi-more", scroll, "more")
+                    }
                 }
                 item("history") { SearchHistoryPanel(history, sourceId, submit, sources) }
             } else if (mangaId != null) {

@@ -44,7 +44,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
     private var downloadRows = emptyList<ChapterDownload>()
     private fun active() = session.accepts(identity)
     init {
-        refresh()
+        refresh(silent = true)
         if(identity.world==PrototypeWorld.SFW) viewModelScope.launch {
             session.downloads(app).state.collect { queue ->
                 if(queue.loaded && active()) {
@@ -109,7 +109,10 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
                     val info = information.readAll(rows.mapNotNull { it.remote?.book })
                     val enriched = rows.map { row -> row.copy(remote = row.remote?.copy(information = info[row.key.sourceId to row.key.mangaId]),
                         title = info[row.key.sourceId to row.key.mangaId]?.title?.takeIf(String::isNotBlank) ?: row.title) }
-                    if (active()) { onlineRows = enriched; mutable.value = state.value.copy(books = enriched, loading = false, errors = errors) }
+                    if (active()) {
+                        onlineRows = enriched; mutable.value = state.value.copy(books = enriched, loading = false, errors = errors)
+                        if (!silent) enriched.forEach { prepareInformation(it, refreshMetadata = true) }
+                    }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { if (active()) mutable.value = state.value.copy(loading = false, errors = listOf("私有书库读取失败，请重试")) }
                 return@launch
@@ -125,6 +128,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { errors += "下载状态读取失败；保留已显示状态，请重试" }
             if (active()) mutable.value = state.value.copy(books = withShelfDownloads(localRows + onlineRows,downloadRows), loading = false, errors = errors)
+            if (active() && !silent) onlineRows.forEach { prepareInformation(it, refreshMetadata = true) }
         }
     }
     fun favorite(book: ShelfBook) {
@@ -141,7 +145,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
                 else local.setFavorite(current.key, !current.favorite) { active() }
                 if (active()) {
                     // Refresh after a known successful write, retaining other sources on read failure.
-                    refresh()
+                    refresh(silent = true)
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
@@ -203,12 +207,12 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
     private val informationWork = mutableMapOf<String, Job>()
 
     // Metadata belongs to the page model, not a recycled lazy-list cell. Covers render independently.
-    fun prepareInformation(book: ShelfBook) {
-        if (!active() || !book.online || !book.available || book.information?.let { it.detailsReady && it.coverReady } == true ||
+    fun prepareInformation(book: ShelfBook, refreshMetadata: Boolean = false) {
+        if (!active() || !book.online || !book.available || (!refreshMetadata && book.information?.let { it.detailsReady && it.coverReady && it.chaptersKnown } == true) ||
             informationWork[book.stableKey]?.isActive == true) return
         informationWork[book.stableKey] = viewModelScope.launch {
             try {
-                val result = informationLoader.load(book.key.sourceId, book.key.mangaId)
+                val result = informationLoader.load(book.key.sourceId, book.key.mangaId, refreshMetadata = refreshMetadata)
                 if (active()) {
                     fun ShelfBook.enriched() = if (stableKey != book.stableKey) this else copy(
                         title = result.info.title.takeIf(String::isNotBlank) ?: title,

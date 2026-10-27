@@ -19,6 +19,13 @@ internal class DetailPageCache(private val context: Context, private val session
         // No disk rewrite when only the current request/session generation changed.
         val target = cache(slot)
         if (target.read()?.toString() != value.toString()) target.write(value)
+        value.optJSONArray("chapters")?.takeIf { value.optJSONObject("next") == null }?.let { chapters ->
+            val rows = List(chapters.length()) { chapters.getJSONObject(it) }
+            val ordered = if (rows.all { it.has("ordinal") }) rows.sortedBy { it.getLong("ordinal") }
+                else if (rows.all { it.has("order") }) rows.sortedBy { it.getInt("order") } else rows
+            informationStore.chapters(source, id, if (slot.startsWith("chapters:")) slot else "default",
+                ordered.map { if (it.has("id")) it.getString("id") else it.getInt("order").toString() })
+        }
     }
     suspend fun information(value: OnlineBookInformation) {
         val previous = informationStore.read(source, id)
@@ -27,7 +34,8 @@ internal class DetailPageCache(private val context: Context, private val session
 }
 
 internal fun detailInformation(b: SourceDetail) = OnlineBookInformation(b.manga.title, b.metadata.authors.joinToString(" / ") { it.name },
-    b.description.orEmpty(), b.tags.orEmpty(), b.metadata.status.orEmpty(), b.metadata.updatedAt.orEmpty(), b.metadata.partial)
+    b.description.orEmpty(), b.tags.orEmpty(), b.metadata.status.orEmpty(), b.metadata.updatedAt.orEmpty(), b.metadata.partial,
+    contentUpdated = b.metadata.updateKind == SourceUpdateKind.CONTENT)
 internal fun detailInformation(b: JmBook) = OnlineBookInformation(b.title, b.author, b.description, b.tags)
 internal fun detailInformation(b: PicaBook) = OnlineBookInformation(b.title, listOf(b.author, b.artist).filter(String::isNotBlank).distinct().joinToString(" / "),
     b.description, (b.tags + b.categories).distinct(), if (b.finished) "已完结" else "连载中")
@@ -35,7 +43,8 @@ internal fun detailInformation(b: EhBook) = OnlineBookInformation(b.title,
     summary = listOf(b.subtitle, b.uploader.takeIf(String::isNotBlank)?.let { "上传者：$it" }.orEmpty()).filter(String::isNotBlank).joinToString("\n"),
     tags = (listOf(b.category).filter(String::isNotBlank) + b.tags).distinct(), status = "${b.pages} 页")
 internal fun detailInformation(b: BaoziBook) = OnlineBookInformation(b.card.title, b.author, b.description, b.tags.orEmpty(),
-    b.metadata.status.orEmpty(), b.metadata.updatedAt.orEmpty(), b.metadata.partial)
+    b.metadata.status.orEmpty(), b.metadata.updatedAt.orEmpty(), b.metadata.partial,
+    contentUpdated = b.metadata.updateKind == SourceUpdateKind.CONTENT)
 
 private fun JSONObject.text(name: String) = if (isNull(name)) null else getString(name)
 private fun JSONObject.number(name: String) = if (isNull(name)) null else getLong(name).toUInt()

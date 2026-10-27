@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -126,7 +127,9 @@ internal val LocalGalleryTagsPicker = staticCompositionLocalOf<(GalleryTagsModel
     val model = galleryTagsModel(session); val state by model.state.collectAsStateWithLifecycle()
     val pick = LocalGalleryTagsPicker.current; val context = LocalContext.current
     var removing by remember { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val scroll = rememberLazyListState()
+    ReferenceRefreshColumn(refreshing = state.busy, refresh = model::refresh, state = scroll,
+        modifier = Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading("中文标签", site.label, back) }
         item {
             if (state.busy) { RequestLoading(); TextButton(model::stop) { Text("停止") } }
@@ -176,7 +179,12 @@ internal val LocalGalleryTagsPicker = staticCompositionLocalOf<(GalleryTagsModel
                 Text(entry.key, style = MaterialTheme.typography.bodySmall)
                 TextButton({ open(entry.query) }) { Text("搜索此标签") }
             } }
-            if (state.more) item { ReferenceButton(feedbackAttempt(model::more), enabled = !state.searching) { Text("更多标签") } }
+            if (state.more) item("more") {
+                key(model, state.query, state.namespace) {
+                    AutomaticPagination(scroll, "more", state.matches.size, !state.busy && !state.searching && state.message == null, model::more)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
     if (removing) ReferenceDialog(onDismissRequest = { removing = false }, title = { Text("移除词库副本？") },

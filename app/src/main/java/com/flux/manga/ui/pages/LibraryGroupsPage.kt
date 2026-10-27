@@ -125,7 +125,7 @@ internal fun LibraryGroupsPage(session: WorldSession, bookKey: String?, back: ()
                 }
             }
         } else if (group != null) {
-            item { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            selectionHeader("group-selection") { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (batchMode) "批量选择 · 确认加入或移出后保存" else "勾选即保存 · 包含未收藏书目",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LibraryQueryField(query, { query = it }, "group-book-query")

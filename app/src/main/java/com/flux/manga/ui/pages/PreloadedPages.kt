@@ -136,7 +136,7 @@ internal class PreloadedPages(private val app: Application, private val session:
 
     fun pause() {
         running = false
-        if (session.identity.value == identity) session.clearPageCovers()
+        // Stopping page warmers is not a cache invalidation. WorldSession owns privacy revocation.
         watching?.cancel(); watching = null
         secondary?.cancel(); secondary = null
         coverWarmers.values.forEach { it.cancel() }; coverWarmers.clear()

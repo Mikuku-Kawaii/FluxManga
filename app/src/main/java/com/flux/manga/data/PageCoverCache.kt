@@ -8,29 +8,33 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-/** Decoded previews only. Shared requests survive Tab disposal, never a session/background boundary. */
+/** Decoded previews only. Session-owned requests survive cell/Tab disposal; private memory is revoked on background. */
 internal class PageCoverCache(private val scope: CoroutineScope, private val active: () -> Boolean) {
     private val lock = Any()
     private var epoch = 0L
     private val changes = MutableStateFlow(0L)
     val revision = changes.asStateFlow()
-    private val capacity = 32 * 1024 * 1024
+    // Spend more of the app heap on returning covers, while leaving room for reader bitmaps.
+    private val capacity = minOf(Runtime.getRuntime().maxMemory() / 3, 192L * 1024 * 1024).toInt()
     private val images = object : LruCache<Pair<String, String>, Bitmap>(capacity) {
         override fun sizeOf(key: Pair<String, String>, value: Bitmap) = value.allocationByteCount
         // Do not recycle: a visible composable may still own the evicted bitmap.
     }
     private val pending = mutableMapOf<Pair<String, String>, Deferred<Bitmap?>>()
     private val permits = Semaphore(2)
+    private val diskPermits = Semaphore(4)
 
     /** Read during initial composition so a returning cell never starts with a blank frame. */
     fun peek(source: String, manga: String): Bitmap? = synchronized(lock) {
         if (active()) images.get(source to manga) else null
     }
 
-    suspend fun get(source: String, manga: String, load: suspend () -> Bitmap): Bitmap =
-        requireNotNull(getOrNull(source, manga, load))
+    suspend fun get(source: String, manga: String, readCached: (suspend () -> Bitmap?)? = null,
+        load: suspend () -> Bitmap): Bitmap =
+        requireNotNull(getOrNull(source, manga, readCached, load))
 
-    suspend fun getOrNull(source: String, manga: String, load: suspend () -> Bitmap?): Bitmap? {
+    suspend fun getOrNull(source: String, manga: String, readCached: (suspend () -> Bitmap?)? = null,
+        load: suspend () -> Bitmap?): Bitmap? {
         currentCoroutineContext().ensureActive()
         if (!active()) throw CancellationException()
         val key = source to manga
@@ -39,7 +43,9 @@ internal class PageCoverCache(private val scope: CoroutineScope, private val act
             pending[key] ?: run {
                 val generation = epoch
                 val created = scope.async(start = CoroutineStart.LAZY) {
-                    val bitmap = permits.withPermit { load() }
+                    // Disk hits must not queue behind slow cover downloads from other sources.
+                    val cached = readCached?.let { diskPermits.withPermit { it() } }
+                    val bitmap = cached ?: permits.withPermit { load() }
                     ensureActive()
                     synchronized(lock) {
                         ensureActive()
@@ -66,10 +72,14 @@ internal class PageCoverCache(private val scope: CoroutineScope, private val act
     }
 
     fun clear() = synchronized(lock) {
+        pause(retainImages = false)
+    }
+
+    fun pause(retainImages: Boolean) = synchronized(lock) {
         epoch++
         val jobs = pending.values.toList()
-        pending.clear(); images.evictAll()
+        pending.clear()
         jobs.forEach { it.cancel() }
-        changes.value++
+        if (!retainImages) { images.evictAll(); changes.value++ }
     }
 }

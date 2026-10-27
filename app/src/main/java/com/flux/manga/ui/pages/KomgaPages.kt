@@ -213,7 +213,7 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
                 }
             }
             if (mangaId == null) item(key = "pagination") {
-                SourceBrowsePagination(feed, model::more, "komga-more")
+                key(model, model.submitted) { SourceBrowsePagination(feed, model::more, "komga-more", scroll) }
             }
         }
 

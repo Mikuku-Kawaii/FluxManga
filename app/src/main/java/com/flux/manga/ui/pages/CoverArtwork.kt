@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +61,10 @@ internal fun PrivateSourceCover(session: WorldSession, source: String, id: Strin
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val active = visibility.foreground && lifecycle.isAtLeast(Lifecycle.State.STARTED)
     val cache = remember(session, identity) { session.pageCovers() }
+    val app = LocalContext.current.applicationContext
+    val savedCovers = remember(session, identity, app) {
+        com.flux.manga.data.OnlineBookInformationStore(com.flux.manga.data.WorldDataStore(app), session)
+    }
     val revision by cache.revision.collectAsState()
     var bitmap by remember(identity, source, id, visibility.visibilityEpoch, revision) { mutableStateOf(cache.peek(source, id)) }
     var error by remember(identity, source, id) { mutableStateOf<String?>(null) }
@@ -70,7 +75,7 @@ internal fun PrivateSourceCover(session: WorldSession, source: String, id: Strin
         if (!active) { bitmap = null; return@LaunchedEffect }
         if (bitmap != null) return@LaunchedEffect
         error = null; missing = false
-        try { bitmap = cache.get(source, id) { loader() } }
+        try { bitmap = cache.get(source, id, readCached = { savedCovers.cover(source, id) }) { loader() } }
         catch (cancelled: CancellationException) {
             // A source's Cancel action closes its client while this visible cell can remain mounted.
             if (currentCoroutineContext().isActive) error = "封面请求已取消"

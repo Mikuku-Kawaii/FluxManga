@@ -167,7 +167,7 @@ class WorldSession : ViewModel() {
     }
 
     fun pause(now: Long = SystemClock.elapsedRealtime()) {
-        clearPageCovers()
+        pageCoverOwner?.pause(retainImages = identity.value.world == PrototypeWorld.SFW)
         // Resource cache bytes are shared across store instances; revoke them before a new foreground frame.
         if (::repository.isInitialized) repository.clearMemory()
         if (downloadBackgroundOwner?.running != true) downloadOwner?.pauseAll()

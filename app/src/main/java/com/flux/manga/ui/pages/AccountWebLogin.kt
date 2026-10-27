@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -338,7 +340,8 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     loginUrls: List<String> = emptyList(),
     autoConnectKey: (suspend (AccountWebPage, String, String) -> String?)? = null,
     accountNameLabel: String? = null, initialAccountName: String = "",
-    restoreBaozi: (suspend () -> BaoziSavedAccount?)? = null, setupBaoziAutoLogin: Boolean = false) {
+    restoreBaozi: (suspend () -> BaoziSavedAccount?)? = null, setupBaoziAutoLogin: Boolean = false,
+    backgroundRecoveryFailure: ((String) -> Unit)? = null) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val latestClose by rememberUpdatedState(close)
@@ -346,6 +349,8 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     val latestConnect by rememberUpdatedState(connect)
     val latestAutoKey by rememberUpdatedState(autoConnectKey)
     val latestRestoreBaozi by rememberUpdatedState(restoreBaozi)
+    val latestRecoveryFailure by rememberUpdatedState(backgroundRecoveryFailure)
+    val backgroundRecovery = backgroundRecoveryFailure != null
     val baoziMemory = remember { BaoziWebMemory() }
     var baoziPassword by remember { mutableStateOf("") }
     var showBaoziPassword by remember { mutableStateOf(setupBaoziAutoLogin) }
@@ -366,6 +371,18 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     var chooseLoginUrl by remember { mutableStateOf(false) }
     var verifyingBrowser by remember { mutableStateOf(false) }
     var attemptedKey by remember { mutableStateOf<String?>(null) }
+
+    // A recovery may need human verification. End quietly instead of keeping a hidden
+    // browser alive indefinitely or promoting it into a modal over the current page.
+    LaunchedEffect(backgroundRecovery) {
+        if (backgroundRecovery) {
+            delay(45_000)
+            if (alive) latestRecoveryFailure?.invoke("自动恢复未完成，可在此打开网页登录完成验证。")
+        }
+    }
+    LaunchedEffect(error, backgroundRecovery) {
+        if (backgroundRecovery && alive) error?.let { latestRecoveryFailure?.invoke(it) }
+    }
 
     fun connectAccount() {
         val action = latestConnect ?: return
@@ -431,12 +448,17 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     username = page.baoziLoginEmail()
                         ?: baoziMemory.restored?.takeIf { it.browserSession?.origin == page.baoziOrigin() }?.username.orEmpty()
                     val login = baoziMemory.restored?.autoLogin
-                    if (!showBaoziPassword && !baoziMemory.automaticAttempted && login != null && login.origin == page.baoziOrigin() &&
-                        page.baoziNeedsLogin()) {
-                        baoziMemory.automaticAttempted = true
-                        loginBaozi(login)
-                        delay(1000)
-                        continue
+                    if (!showBaoziPassword && !baoziMemory.automaticAttempted && page.baoziNeedsLogin()) {
+                        if (login != null && login.origin == page.baoziOrigin()) {
+                            baoziMemory.automaticAttempted = true
+                            loginBaozi(login)
+                            delay(1000)
+                            continue
+                        } else if (backgroundRecovery) {
+                            error = if (login == null) "登录已过期，请在此登录或设置一次自动登录。"
+                                else "官网地址已变化，请在此重新登录。"
+                            return@LaunchedEffect
+                        }
                     }
                 }
                 val candidate = try { latestAutoKey?.invoke(page, uid, username) }
@@ -482,6 +504,11 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             else {
                 browser = WebView(context).apply {
                     importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+                    if (backgroundRecovery) {
+                        isFocusable = false
+                        isFocusableInTouchMode = false
+                        importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    }
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -568,6 +595,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             ensureActive()
                             if (!alive) return@launch
                             baoziMemory.restored = saved
+                            if (backgroundRecovery && saved?.browserSession == null) {
+                                error = "尚无可恢复的网页会话，请在此完成一次网页登录。"
+                                return@launch
+                            }
                             saved?.browserSession?.let { profile ->
                                 profile.validate(requireNotNull(saved.token))
                                 browser?.settings?.userAgentString = profile.userAgent
@@ -594,6 +625,15 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             owner.lifecycle.removeObserver(observer)
             disposeBrowser()
         }
+    }
+
+    if (backgroundRecovery) {
+        // Keep browser scripts attached without opening a window, claiming focus,
+        // installing a BackHandler, or changing the current page's navigation.
+        view?.let { browser ->
+            AndroidView(factory = { browser }, modifier = Modifier.size(1.dp).alpha(0f).clearAndSetSemantics { })
+        }
+        return
     }
 
     fun back() { if (view?.canGoBack() == true && !busy) view?.goBack() else { connection?.cancel(); latestClose() } }

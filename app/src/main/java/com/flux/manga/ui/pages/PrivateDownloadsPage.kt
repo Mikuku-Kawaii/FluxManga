@@ -161,7 +161,7 @@ internal class PrivateDownloadsModel(private val app: Application, private val s
             state.message?.let { RequestFeedback(it) }
         } }
         if (source != null) {
-            item { FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            selectionHeader("chapter-selection") { FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(model::catalog, enabled = !state.busy) { Text("联网读取完整目录") }
                 TextButton({ confirm = true }, enabled = state.ready && !state.busy && selected.isNotEmpty()) { Text("下载已选 ${selected.size} 章") }
                 TextButton({ selected = emptySet() }, enabled = !state.busy) { Text("清空选择") }

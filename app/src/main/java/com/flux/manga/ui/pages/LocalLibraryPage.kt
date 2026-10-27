@@ -391,6 +391,7 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
                         Text(card.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
+                    ShelfUpdateLabel(null, card.progress?.chapterId, online = false)
                     Text((card.pageCount?.let { "$it 页" } ?: "页数待获取") + if (card.available) "" else " · 副本缺失，请重新导入",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     FavoriteAction(card, !busy) { model.setFavorite(card) }

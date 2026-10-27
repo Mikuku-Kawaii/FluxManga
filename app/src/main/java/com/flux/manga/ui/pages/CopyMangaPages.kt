@@ -97,7 +97,7 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                     })
                 }
                 item("pagination") {
-                    SourceBrowsePagination(feed, model.feed::more, "copy-more")
+                    key(model, model.submitted) { SourceBrowsePagination(feed, model.feed::more, "copy-more", scroll) }
                 }
             } else {
                 if (!readContentLayout(detail.detail != null, detail.busy, detail.error ?: detail.notice.takeIf { detail.detail == null }, model::refreshDetail, detail = true, cancel = model::cancelDetail))

@@ -17,6 +17,8 @@ import java.io.IOException
 internal data class OnlineBookInformation(
     val title: String, val author: String = "", val summary: String = "", val tags: List<String> = emptyList(),
     val status: String = "", val updated: String = "", val partial: Boolean = false, val coverReady: Boolean = false, val detailsReady: Boolean = true,
+    val chapterGroups: Map<String, List<String>> = emptyMap(), val chaptersKnown: Boolean = false,
+    val contentUpdated: Boolean = false,
 )
 internal data class BookInformationResult(val info: OnlineBookInformation, val coverError: String? = null, val metadataError: String? = null)
 internal fun informationSlot(source: String, id: String) = "online-info-v1:${source.length}:$source$id"
@@ -32,28 +34,58 @@ internal class OnlineBookInformationStore(private val data: WorldDataStore, priv
             val j = JSONObject(bytes.toString(Charsets.UTF_8)); require(j.getInt("version") == 1)
             val tags = j.getJSONArray("tags")
             OnlineBookInformation(j.getString("title"), j.getString("author"), j.getString("summary"),
-                List(tags.length()) { tags.getString(it) }, j.getString("status"), j.getString("updated"), j.getBoolean("partial"), j.getBoolean("cover"), j.optBoolean("detailsReady", true))
+                List(tags.length()) { tags.getString(it) }, j.getString("status"), j.getString("updated"), j.getBoolean("partial"), j.getBoolean("cover"), j.optBoolean("detailsReady", true),
+                j.optJSONObject("chapterGroups")?.let { groups -> groups.keys().asSequence().associateWith { group ->
+                    val ids = groups.getJSONArray(group); List(ids.length()) { ids.getString(it) }
+                } }.orEmpty(), j.optBoolean("chaptersKnown"),
+                j.optBoolean("contentUpdated", isCopySource(source) || isBaoziSource(source)))
         } finally { bytes.fill(0) }
     }
     suspend fun read(source: String, id: String) = db.transaction(::active) { it.readInfo(source, id) }
     suspend fun readAll(books: List<OnlineBook>) = db.transaction(::active) { rows ->
         books.mapNotNull { book -> rows.readInfo(book.sourceId, book.mangaId)?.let { (book.sourceId to book.mangaId) to it } }.toMap()
     }
-    suspend fun save(source: String, id: String, info: OnlineBookInformation) = db.transaction(::active) { rows ->
+    private fun AccountImportRows.writeInfo(source: String, id: String, value: OnlineBookInformation): OnlineBookInformation {
         // Do not resurrect a book removed while its detail request was in flight.
-        if (rows.book(source, id) == null) return@transaction
-        if (rows.readInfo(source, id) == info) return@transaction
+        if (book(source, id) == null) return value
+        val old = readInfo(source, id)
+        val info = value.copy(chapterGroups = old?.chapterGroups.orEmpty() + value.chapterGroups,
+            chaptersKnown = value.chaptersKnown || old?.chaptersKnown == true)
+        if (old == info) return info
         val j = JSONObject().put("version", 1).put("title", info.title).put("author", info.author).put("summary", info.summary)
             .put("tags", JSONArray(info.tags.distinct())).put("status", info.status).put("updated", info.updated)
             .put("partial", info.partial).put("cover", info.coverReady).put("detailsReady", info.detailsReady)
+            .put("chapterGroups", JSONObject().also { groups -> info.chapterGroups.forEach { (group, ids) -> groups.put(group, JSONArray(ids)) } })
+            .put("chaptersKnown", info.chaptersKnown)
+            .put("contentUpdated", info.contentUpdated)
         val bytes = j.toString().toByteArray()
-        try { rows.write(informationSlot(source, id), bytes) } finally { bytes.fill(0) }
+        try { write(informationSlot(source, id), bytes) } finally { bytes.fill(0) }
+        return info
+    }
+    suspend fun save(source: String, id: String, info: OnlineBookInformation) = db.transaction(::active) { rows ->
+        rows.writeInfo(source, id, info)
+    }
+    suspend fun chapters(source: String, id: String, group: String, ids: List<String>) = db.transaction(::active) { rows ->
+        val book = rows.book(source, id) ?: return@transaction
+        val info = rows.readInfo(source, id) ?: OnlineBookInformation(book.title, detailsReady = false)
+        rows.writeInfo(source, id, info.copy(chapterGroups = info.chapterGroups + (group to ids.distinct()), chaptersKnown = true))
     }
     suspend fun cover(source: String, id: String): Bitmap? {
-        val bytes = data.resource(informationCover(identity.world, source, id), ::active) ?: return null
+        val bytes = data.resource(informationCover(identity.world, source, id), ::active)
+            ?: if (identity.world == PrototypeWorld.NSFW)
+                data.resource(ResourceKey(SampleKey(identity.world, source, id), "cover-v1"), ::active) ?: return null
+            else return null
         var bitmap: Bitmap? = null
         return try {
-            withContext(Dispatchers.Default) { bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+            withContext(Dispatchers.Default) {
+                // Source cover-v1 stores the original encoded image; keep its existing preview bound.
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                var sample = 1
+                while (bounds.outWidth / sample > 640 || bounds.outHeight / sample > 960) sample *= 2
+                bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
+                    BitmapFactory.Options().apply { inSampleSize = sample })
+            }
             currentCoroutineContext().ensureActive(); if (!active()) throw CancellationException()
             bitmap
         } catch (failure: Exception) { bitmap?.recycle(); throw failure }
@@ -69,32 +101,53 @@ internal class OnlineBookInformationLoader(private val app: Application, private
     companion object { private val slots = Semaphore(2) }
     private fun active() = session.accepts(identity) && session.state.value.foreground
     private fun SourceDetail.info() = OnlineBookInformation(manga.title, metadata.authors.joinToString(" / ") { it.name },
-        description.orEmpty(), tags.orEmpty(), metadata.status.orEmpty(), metadata.updatedAt.orEmpty(), metadata.partial)
-    suspend fun load(source: String, id: String, force: Boolean = false): BookInformationResult = slots.withPermit { coroutineScope {
+        description.orEmpty(), tags.orEmpty(), metadata.status.orEmpty(), metadata.updatedAt.orEmpty(), metadata.partial,
+        contentUpdated = metadata.updateKind == SourceUpdateKind.CONTENT)
+    private suspend fun chapterIds(load: suspend (SourcePageRequest) -> SourceChapterPage): List<String> {
+        val ids = mutableListOf<String>()
+        var request: SourcePageRequest = SourcePageRequest.Start
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val page = load(request)
+            ids += page.items.map { it.id }
+            request = (page.continuation as? SourceContinuation.Next)?.request ?: break
+        }
+        return ids.distinct()
+    }
+    suspend fun load(source: String, id: String, force: Boolean = false, refreshMetadata: Boolean = false): BookInformationResult = slots.withPermit { coroutineScope {
         if (!active()) throw CancellationException()
         var info = store.read(source, id)
         var metadataError: String? = null
-        if (info == null || !info.detailsReady || force) {
+        if (info == null || !info.detailsReady || !info.chaptersKnown || force || refreshMetadata) {
             info = try { if (identity.world == PrototypeWorld.SFW) when {
-                isCopySource(source) -> copyMangaClient(app, session, source).detail(id).info()
+                isCopySource(source) -> copyMangaClient(app, session, source).let { client ->
+                    client.detail(id).info().copy(chapterGroups = mapOf("default" to chapterIds { client.allChapters(id, it) }), chaptersKnown = true)
+                }
                 isBaoziSource(source) -> session.baoziSources.client(app, source).source.detail(id).let {
                     OnlineBookInformation(it.card.title, it.author, it.description, it.tags.orEmpty(),
-                        it.metadata.status.orEmpty(), it.metadata.updatedAt.orEmpty(), it.metadata.partial)
+                        it.metadata.status.orEmpty(), it.metadata.updatedAt.orEmpty(), it.metadata.partial,
+                        chapterGroups = it.chapters?.let { chapters -> mapOf("default" to chapters.map { chapter -> chapter.id }) }.orEmpty(),
+                        chaptersKnown = it.chapters != null, contentUpdated = it.metadata.updateKind == SourceUpdateKind.CONTENT)
                 }
-                else -> KomgaAccess(app, session, source).client().detail(SourceMangaKey(SourceWorld.SFW, source, id)).info()
+                else -> KomgaAccess(app, session, source).client().let { client ->
+                    val key = SourceMangaKey(SourceWorld.SFW, source, id)
+                    client.detail(key).info().copy(chapterGroups = mapOf("default" to chapterIds { client.chapters(key, it) }), chaptersKnown = true)
+                }
             } else when {
                 isJmSource(source) -> {
                     val settings = JmStore(app, session).settings()
                     if (source != JM_SOURCE && source != settings.account?.source) throw IOException("请登录作品所属的 JMComic 账号")
                     JmClient(session, if (source == JM_SOURCE) settings.copy(account = null) else settings, source, this).use { client ->
-                        client.detail(id).let { OnlineBookInformation(it.title, it.author, it.description, it.tags) }
+                        client.detail(id).let { OnlineBookInformation(it.title, it.author, it.description, it.tags,
+                            chapterGroups = mapOf("default" to it.chapters.map { chapter -> chapter.id }), chaptersKnown = true) }
                     }
                 }
                 isPicaSource(source) -> {
                     val account = PicaStore(app, session).account()?.takeIf { it.source == source } ?: throw IOException("请登录作品所属的 PicACG 账号")
                     PicaClient(session, account, this).use { client -> client.detail(id).let {
                         OnlineBookInformation(it.title, listOf(it.author, it.artist).filter(String::isNotBlank).distinct().joinToString(" / "),
-                            it.description, (it.tags + it.categories).distinct(), if (it.finished) "已完结" else "连载中")
+                            it.description, (it.tags + it.categories).distinct(), if (it.finished) "已完结" else "连载中",
+                            chapterGroups = mapOf("default" to client.allChapters(id).map { chapter -> chapter.order.toString() }), chaptersKnown = true)
                     } }
                 }
                 else -> {
@@ -102,7 +155,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                     if (source != EH_SOURCE && (settings.account == null || source != site.source(settings.account))) throw IOException("请登录作品所属的 ${site.label} 账号")
                     EhClient(session, if (source == EH_SOURCE) null else settings.account, this, site).use { client -> client.detail(id).let {
                         OnlineBookInformation(it.title, summary = listOf(it.subtitle, it.uploader.takeIf(String::isNotBlank)?.let { name -> "上传者：$name" }.orEmpty()).filter(String::isNotBlank).joinToString("\n"),
-                            tags = (listOf(it.category).filter(String::isNotBlank) + it.tags).distinct(), status = "${it.pages} 页")
+                            tags = (listOf(it.category).filter(String::isNotBlank) + it.tags).distinct(), status = "${it.pages} 页", chaptersKnown = true)
                     } }
                 }
             }
@@ -111,7 +164,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                 metadataError = "作品资料未补齐，可重试；已保存资料保留"
                 info ?: OnlineBookInformation(data.worldData(identity.world, ::active) { it.onlineBook(source, id)?.title.orEmpty() }, detailsReady = false)
             }
-            ensureActive(); store.save(source, id, requireNotNull(info))
+            ensureActive(); info = store.save(source, id, requireNotNull(info))
         }
         var current = requireNotNull(info)
         var coverError: String? = null
@@ -136,7 +189,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
             current = current.copy(coverReady = true)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { coverError = "封面未补齐，可重试"; current = current.copy(coverReady = false) }
-        if (current != info) store.save(source, id, current)
+        if (current != info) current = store.save(source, id, current)
         ensureActive(); if (!active()) throw CancellationException()
         BookInformationResult(current, coverError, metadataError)
     } }

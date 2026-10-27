@@ -175,20 +175,22 @@ internal fun MixedRequestControls(controller: AggregateSearchController, state: 
     }
 }
 
-/** Explicit paging only: a busy or failed source never holds up a different source. */
+/** Visible-footer paging: a busy or failed source never holds up a different source. */
 @Composable
-internal fun MixedMoreButton(controller: AggregateSearchController, state: AggregateSearchState,
+internal fun MixedPagination(controller: AggregateSearchController, state: AggregateSearchState,
+    scroll: androidx.compose.foundation.lazy.LazyListState,
     feeds: List<ResultFeed> = controller.sources.map { ResultFeed(it, it) }) {
-    val ready = feeds.filter { feed -> state.results[feed.id]?.let {
-        !it.busy && !it.unsupported && it.error == null && it.appendError == null && it.notice == null &&
-            it.next is SourceContinuation.Next
-    } == true }
-    if (ready.isNotEmpty()) TextButton(onClick = feedbackAttempt({ ready.forEach { controller.more(it.id) } }),
-        modifier = Modifier.testTag("mixed-load-more")) { Text("加载更多") }
+    feeds.forEach { feed -> key(controller, state.query, feed.id) {
+        val result = state.results[feed.id]
+        AutomaticPagination(scroll, "more", result?.next, result != null && result.loaded &&
+            !result.busy && !result.unsupported && result.error == null && result.appendError == null &&
+            result.notice == null && result.next is SourceContinuation.Next) { controller.more(feed.id) }
+    } }
+    if (feeds.any { state.results[it.id]?.busy == true }) RequestLoading()
     else if (feeds.isNotEmpty() && feeds.all { state.results[it.id]?.let(::resultFeedComplete) == true } &&
         feeds.any { state.results[it.id]?.cards?.isNotEmpty() == true }) {
         Text("已显示全部结果", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    } else Spacer(Modifier.height(8.dp))
 }
 
 @Composable
@@ -225,7 +227,7 @@ internal fun MixedSourceStatusDialog(controller: AggregateSearchController, stat
     feeds: List<ResultFeed>, sources: () -> Unit, dismiss: () -> Unit) {
     ReferenceDialog(onDismissRequest = dismiss, title = { Text("来源状态") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("切换来源仅筛选结果；下拉刷新当前筛选来源，各来源可继续加载或取消。数量为已加载作品。",
+            Text("切换来源仅筛选结果；下拉刷新当前筛选来源，滑到底部自动读取后续作品。数量为已加载作品。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (feeds.isEmpty()) Text("暂无可用来源")
             feeds.forEach { feed ->
@@ -254,8 +256,8 @@ internal fun MixedSourceStatusDialog(controller: AggregateSearchController, stat
                         else if (result != null && !result.unsupported) {
                             if (result.error != null) TextButton(onClick = feedbackAttempt({ controller.refresh(feed.id) }),
                                 modifier = Modifier.semantics { contentDescription = "$title，重试读取" }) { Text("重试读取") }
-                            if (result.next is SourceContinuation.Next) {
-                                val moreLabel = if (result.appendError != null) "重试后续页" else "加载更多"
+                            if (result.next is SourceContinuation.Next && (result.appendError != null || result.notice != null)) {
+                                val moreLabel = if (result.appendError != null) "重试后续页" else "继续读取"
                                 TextButton(onClick = feedbackAttempt({ controller.more(feed.id) }),
                                     modifier = Modifier.semantics { contentDescription = "$title，$moreLabel" }) { Text(moreLabel) }
                             }

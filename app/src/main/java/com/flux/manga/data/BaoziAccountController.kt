@@ -15,7 +15,7 @@ internal data class BaoziAccountUiState(val loaded: Boolean = false, val sourceI
     val busy: Boolean = false, val stage: String? = null, val error: String? = null, val notice: String? = null,
     val entries: List<BaoziShelfEntry> = emptyList(), val snapshotRevision: Long = 0,
     val importJob: BaoziImportJob? = null, val reconnectRequested: Boolean = false,
-    val autoLoginAvailable: Boolean = false)
+    val autoLoginAvailable: Boolean = false, val recoveryNotice: String? = null)
 
 /** One WorldSession owner. Secrets never enter UI state, routes, SavedStateHandle or logs. */
 internal class BaoziAccountController(private val scope: CoroutineScope, private val active: () -> Boolean,
@@ -112,7 +112,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
             if (!allowed(ticket)) throw CancellationException()
             publish(saved); showSnapshot(result)
             recoveryAttempted = false
-            mutable.value = state.value.copy(reconnectRequested = false)
+            mutable.value = state.value.copy(reconnectRequested = false, recoveryNotice = null)
             mutable.value = state.value.copy(notice = "网页账号已验证并保存；可继续导入书架")
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) { throw java.io.IOException(failureMessage(error)) }
@@ -140,6 +140,11 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
         return store.current { allowed(ticket) }?.takeIf { it.token != null }
     }
     fun dismissReconnect() { mutable.value = state.value.copy(reconnectRequested = false) }
+    fun reconnectFailed(reason: String) {
+        if (closed || !active() || !state.value.reconnectRequested) return
+        // Keep recoveryAttempted set: concurrent source failures must not restart a failed login.
+        mutable.value = state.value.copy(reconnectRequested = false, recoveryNotice = reason)
+    }
     fun logout() {
         val source = state.value.sourceId ?: return
         run("正在退出登录") { ticket ->
@@ -148,7 +153,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
             currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
             publish(saved)
             recoveryAttempted = false
-            mutable.value = state.value.copy(verified = false, entries = emptyList(), reconnectRequested = false,
+            mutable.value = state.value.copy(verified = false, entries = emptyList(), reconnectRequested = false, recoveryNotice = null,
                 notice = "已退出登录并删除自动登录凭据，书目、进度和待办导入任务已保留。")
         }
     }

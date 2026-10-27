@@ -93,7 +93,8 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
     val snapshot = state.snapshot
     var menu by remember { mutableStateOf(false) }
     var help by rememberSaveable { mutableStateOf(false) }
-    ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag("reading-statistics"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
+    val scroll = androidx.compose.foundation.lazy.rememberLazyListState()
+    ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = true, state = scroll, modifier = Modifier.fillMaxSize().testTag("reading-statistics"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading("阅读统计", "", leave, actions = {
             Box {
@@ -146,8 +147,11 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
                         null, if (state.filter.day == null) ({ model.day(row.day) }) else null)
                 }
             }
-            if ((if (state.works) result.works.size else result.days.size) > state.limit) item {
-                TextButton(onClick = feedbackAttempt({ model.refresh(more = true) }), enabled = !state.loading) { Text("加载更多") }
+            if ((if (state.works) result.works.size else result.days.size) > state.limit) item("more") {
+                key(model, state.filter, state.works) {
+                    AutomaticPagination(scroll, "more", state.limit, !state.loading && state.error == null) { model.refresh(more = true) }
+                }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

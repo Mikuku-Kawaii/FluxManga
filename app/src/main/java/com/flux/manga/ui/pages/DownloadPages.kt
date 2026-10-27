@@ -99,6 +99,8 @@ internal fun DownloadChaptersPage(session: WorldSession, source: String, manga: 
         }) }
         item { TransferPanel(title = "下载选择") {
             DownloadTitleFilter(query, { query = it }, visibleChapters.size, chapters.items.size, !state.controlling)
+        } }
+        selectionHeader("chapter-selection") {
             DownloadSelectionSummary(selection, visibleChapters.map { it.id })
             if (selection.size == 200) Text("已达单次 200 章上限；可先取消部分选择，再添加其他章节。")
             FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -113,7 +115,7 @@ internal fun DownloadChaptersPage(session: WorldSession, source: String, manga: 
             if(state.controlling) Text("正在保存队列…",Modifier.semantics { liveRegion=LiveRegionMode.Polite })
             val count=state.jobs.count { it.source==source && it.manga==manga && it.status!=DownloadStatus.CANCELLED }
             if (count > 0) Text("已有 $count 章下载任务", style = MaterialTheme.typography.bodySmall)
-        } }
+        }
         if (chapters.items.isNotEmpty() && visibleChapters.isEmpty()) item { Text("已加载章节中没有匹配结果，可清除筛选或继续加载目录。") }
         items(visibleChapters,key={it.id}) { chapter ->
             DownloadChapterChoice(chapter.title, chapter.id in selection,
@@ -186,13 +188,14 @@ internal fun DownloadQueuePage(session: WorldSession, back: () -> Unit, catalog:
                 TextButton(onClick = { query = ""; filter = DownloadQueueFilter.ALL }, enabled = !state.controlling) { Text("清除") }
             })
         }
-        if (selecting) item { TransferPanel {
+        if (selecting) selectionHeader("queue-selection") {
             DownloadSelectionSummary(selected, visibleJobs.map { it.id })
             FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick={selected=state.jobs.map { it.id }}, enabled=!state.controlling) { Text("全选整个队列") }
                 TextButton(onClick={selected=addDownloadSelection(selected, visibleJobs.map { it.id })},
                     enabled=!state.controlling && visibleJobs.isNotEmpty()) { Text("追加筛选结果") }
                 TextButton(onClick={selected=emptyList()}, enabled=!state.controlling) { Text("清除选择") }
+                TextButton(onClick = { selecting = false; selected = emptyList() }, enabled = !state.controlling) { Text("取消") }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -201,7 +204,7 @@ internal fun DownloadQueuePage(session: WorldSession, back: () -> Unit, catalog:
             }
             TextButton(onClick={clearSelected=true},shape = MaterialTheme.shapes.small,enabled=state.loaded && !state.controlling && selected.isNotEmpty(),
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("移除选中下载及记录") }
-        } }
+        }
         item {
             if(!state.loaded && !state.controlling) TextButton(onClick=feedbackAttempt(owner::start)) { Text("读取 / 恢复队列") }
             if(state.controlling) { RequestLoading(); Text("正在处理并核对已保存状态…",Modifier.semantics { liveRegion=LiveRegionMode.Polite }) }

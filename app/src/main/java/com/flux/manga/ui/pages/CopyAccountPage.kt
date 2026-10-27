@@ -107,12 +107,6 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                     Checkbox(favorite, null, enabled = !state.busy)
                     Text("同时收藏新书目", Modifier.weight(1f))
                 }
-                FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { selection = state.entries.map { it.collectionId } }, enabled = !state.busy) { Text("选择已读取条目") }
-                    if (selection.isNotEmpty()) TextButton(onClick = { selection = emptyList() }, enabled = !state.busy) { Text("清除选择") }
-                }
-                ReferenceButton(onClick = { confirm = "import" }, enabled = state.loaded && !state.busy && selection.isNotEmpty() && !unfinished,
-                    modifier = Modifier.fillMaxWidth()) { Text("导入选中 ${selection.size} 本") }
                 ReferenceButton(onClick = { confirm = "all" }, enabled = state.loaded && state.entriesLoaded && !state.busy && !unfinished,
                     modifier = Modifier.fillMaxWidth()) { Text("一键导入全部收藏 · 当前接口范围") }
                 AccountMoreActions("导入选项与说明") { _ ->
@@ -126,6 +120,10 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
             }
         } }
         if (state.verified) {
+            selectionHeader("selection-actions") {
+                ImportSelectionActions(selection.size, !state.busy, state.loaded && !state.busy && !unfinished,
+                    { selection = state.entries.map { it.collectionId } }, { selection = emptyList() }, { confirm = "import" })
+            }
             items(visibleEntries, key = { "book:${it.collectionId}" }) { entry ->
                 val key = entry.collectionId
                 ImportPreviewRow(entry.title, null, key in selection, !state.busy,

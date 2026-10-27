@@ -73,13 +73,19 @@ internal fun SourceBrowseStatus(state: DiscoveryFeedState, refresh: () -> Unit, 
 }
 
 @Composable
-internal fun SourceBrowsePagination(state: DiscoveryFeedState, more: () -> Unit, tag: String) {
+internal fun SourceBrowsePagination(state: DiscoveryFeedState, more: () -> Unit, tag: String,
+    scroll: androidx.compose.foundation.lazy.LazyListState, footerKey: String = "pagination") {
+    AutomaticPagination(scroll, footerKey, state.next,
+        state.loaded && !state.busy && !state.unsupported && state.error == null &&
+            state.appendError == null && state.notice == null && state.next is SourceContinuation.Next, more)
     if (state.error != null && !state.busy) return
     state.appendError?.let { RequestFeedback(it, busy = state.busy, color = MaterialTheme.colorScheme.error,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-    if (state.next is SourceContinuation.Next && !state.unsupported) TextButton(onClick = feedbackAttempt(more), enabled = !state.busy,
+    if (state.next is SourceContinuation.Next && !state.unsupported && (state.appendError != null || state.notice != null)) TextButton(onClick = feedbackAttempt(more), enabled = !state.busy,
         modifier = Modifier.testTag(tag)) {
-        Text(if (state.appendError != null) "重试后续页" else if (state.notice != null) "继续加载" else "加载更多")
+        Text(if (state.appendError != null) "重试后续页" else "继续读取")
     } else if (resultFeedComplete(state) && state.cards.isNotEmpty()) Text("已显示全部结果",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    else if (state.busy && state.loaded) RequestLoading()
+    else Spacer(Modifier.height(8.dp))
 }

@@ -133,6 +133,7 @@ private fun OnlineShelfBook(item: OnlineShelfItem, library: OnlineLibrary,
                     }
                 }
             }
+            ShelfUpdateLabel(item.information, item.progress?.chapterId)
             BookInformationSummary(item.information)
             if (saving) Text("正在保存收藏…", style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })

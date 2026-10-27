@@ -8,7 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
 
-/** One foreground recovery window for all Baozi requests in the current world session. */
+/** One silent recovery for all Baozi requests while this world session is in the foreground. */
 @Composable
 internal fun BaoziSessionRecovery(session: WorldSession, restored: () -> Unit) {
     val identity by session.identity.collectAsStateWithLifecycle()
@@ -32,6 +32,7 @@ internal fun BaoziSessionRecovery(session: WorldSession, restored: () -> Unit) {
             autoConnectKey = { page, _, name ->
                 val origin = page.baoziOrigin()
                 page.cookie(origin, "TSID").takeIf { it.isNotBlank() && name.isNotBlank() }?.let { "$origin:$name:$it" }
-            }, restoreBaozi = model::savedWebAccount, afterConnected = restored)
+            }, restoreBaozi = model::savedWebAccount, afterConnected = restored,
+            backgroundRecoveryFailure = model::reconnectFailed)
     }
 }

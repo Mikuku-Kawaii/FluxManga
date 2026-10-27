@@ -52,7 +52,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
                 "我的书架（当前页面快照）", state.username)
             WebAccountEntry(BaoziWebSite.url,
-                if (state.autoLoginAvailable) "已记住登录，掉线后自动恢复。" else "设置一次自动登录，后续掉线无需重复输入密码。", state.loaded && !state.busy,
+                if (state.autoLoginAvailable) "已记住登录，掉线后在后台恢复，不弹出登录页。" else "设置一次自动登录，后续掉线在后台恢复。", state.loaded && !state.busy,
                 connect = { page, _, name ->
                     val (token, browserSession) = page.baoziSession()
                     model.connectWebSession(name, token, browserSession, page.baoziAutoLogin)
@@ -61,6 +61,8 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                     val origin = page.baoziOrigin()
                     page.cookie(origin, "TSID").takeIf { it.isNotBlank() && name.isNotBlank() }?.let { "$origin:$name:$it" }
                 }, webSite = BaoziWebSite, restoreBaozi = model::savedWebAccount)
+            state.recoveryNotice?.let { Text(it, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(model::start, enabled = state.loaded && !state.busy) { Text("重新读取账号与书架") }
                 if (state.hasCredential) TextButton(model::logout, enabled = state.loaded && !state.busy) { Text("退出账号") }
@@ -98,12 +100,6 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                     Checkbox(favorite, null, enabled = !state.busy)
                     Text("同时收藏新书目", Modifier.weight(1f))
                 }
-                FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { selection = state.entries.map { it.card.key.mangaId } }, enabled = !state.busy) { Text("全选本次书目") }
-                    if (selection.isNotEmpty()) TextButton(onClick = { selection = emptyList() }, enabled = !state.busy) { Text("清除选择") }
-                }
-                ReferenceButton(onClick = { confirm = "import" }, enabled = !state.busy && selection.isNotEmpty() && !unfinished,
-                    modifier = Modifier.fillMaxWidth()) { Text("导入选中 ${selection.size} 本") }
                 AccountMoreActions("导入说明") { _ ->
                     Text("账号服务：网页登录时使用的包子官网")
                     Text("来自账号的“我的书架”，只能确认本次页面快照。勾选后只导入书目引用，不下载正文；已有收藏和阅读进度保持。")
@@ -112,6 +108,10 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
             }
         } }
         if (state.verified) {
+            selectionHeader("selection-actions") {
+                ImportSelectionActions(selection.size, !state.busy, !state.busy && !unfinished,
+                    { selection = state.entries.map { it.card.key.mangaId } }, { selection = emptyList() }, { confirm = "import" })
+            }
             items(visibleEntries, key = { "book:${it.card.key.sourceId}:${it.card.key.mangaId}" }) { entry ->
                 val key = entry.card.key.mangaId
                 ImportPreviewRow(entry.card.title, null, key in selection, !state.busy,

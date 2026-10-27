@@ -96,7 +96,7 @@ internal fun AggregateSearchPage(session: WorldSession, configuration: Discovery
             }
             if (state.query.isEmpty() || showHistory || historyState.error != null) item("history") { SearchHistoryPanel(history, model.historyScope, submit, sources) }
             bookGridItems(cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card -> DiscoveryGridBook(model.library, card, open) }
-            item("more") { MixedMoreButton(model.search, state, feeds) }
+            item("more") { MixedPagination(model.search, state, scroll, feeds) }
         }
     }
 }

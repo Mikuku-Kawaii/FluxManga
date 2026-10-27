@@ -190,7 +190,7 @@ private fun MixedBookList(model: MixedDiscoveryModel, title: String, back: () ->
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("heading") { SettingsHeading(title, "", back, actions = {
                 ResultActionsMenu(sources = sources, sourceStatus = { showSources = true },
-                    help = if (allSources) help else "$help\n\n来源筛选只改变显示范围。加载更多仅作用于当前筛选范围；数量为已加载作品，不是站点总量。")
+                    help = if (allSources) help else "$help\n\n来源筛选只改变显示范围。滑到底部自动读取当前筛选来源的后续作品；数量为已加载作品，不是站点总量。")
             }) }
             if (configurationError) item("configuration-error") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 RequestFeedback("部分图源配置读取失败，其他作品仍可使用。", color = MaterialTheme.colorScheme.error)
@@ -209,7 +209,7 @@ private fun MixedBookList(model: MixedDiscoveryModel, title: String, back: () ->
             bookGridItems(cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) {
                 if (grid) DiscoveryGridBook(model.library, it, open) else DiscoveryFeedBook(model.library, it, open)
             }
-            item("more") { MixedMoreButton(model.feed, state, visibleFeeds) }
+            item("more") { MixedPagination(model.feed, state, scroll, visibleFeeds) }
         }
     }
 }

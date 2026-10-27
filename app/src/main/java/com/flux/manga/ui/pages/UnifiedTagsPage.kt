@@ -195,8 +195,12 @@ internal fun UnifiedTagsPage(session: WorldSession, configuration: DiscoveryStat
             }
         }
         item("more") {
-            val pending = states.filterValues { it.next is SourceContinuation.Next }.keys
-            if (pending.isNotEmpty()) TextButton(onClick = feedbackAttempt({ pending.forEach { model.directories.getValue(it).more() } }), enabled = states.values.none { it.busy }) { Text("加载更多标签") }
+            states.forEach { (source, result) -> key(model, source, result.query) {
+                AutomaticPagination(scroll, "more", result.next, result.loaded && !result.busy &&
+                    result.error == null && result.appendError == null && result.notice == null &&
+                    result.next is SourceContinuation.Next) { model.directories.getValue(source).more() }
+            } }
+            if (states.values.any { it.busy }) RequestLoading() else Spacer(Modifier.height(8.dp))
         }
     }
     }

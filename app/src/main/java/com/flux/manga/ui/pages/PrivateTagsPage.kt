@@ -221,7 +221,8 @@ internal fun PrivateTagsPage(session: WorldSession, bottom: Dp, settings: () -> 
                 }
             }
             if (names.size > limit || matches.more) item("more") {
-                TextButton({ limit += 60 }) { Text("显示更多标签") }
+                key(query) { AutomaticPagination(scroll, "more", limit, !busy) { limit += 60 } }
+                Spacer(Modifier.height(8.dp))
             }
             item("actions") {
                 Column {

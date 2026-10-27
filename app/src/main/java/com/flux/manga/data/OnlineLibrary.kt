@@ -86,22 +86,21 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
         // Explicit metadata refresh bypasses both caches. Normal page/warmup reads share disk
         // decoding as well as network work, so navigation doesn't download the same cover again.
         if (!useSavedCover) return remoteCover(sourceId, mangaId)
-        return coverCache.get(sourceId, mangaId) {
-            OnlineBookInformationStore(data, session).cover(sourceId, mangaId) ?: run {
-                val bitmap = remoteCover(sourceId, mangaId)
-                try {
-                    val bytes = withContext(Dispatchers.Default) {
-                        java.io.ByteArrayOutputStream().use { output ->
-                            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) throw IOException("封面保存失败")
-                            output.toByteArray()
-                        }
+        return coverCache.get(sourceId, mangaId,
+            readCached = { OnlineBookInformationStore(data, session).cover(sourceId, mangaId) }) {
+            val bitmap = remoteCover(sourceId, mangaId)
+            try {
+                val bytes = withContext(Dispatchers.Default) {
+                    java.io.ByteArrayOutputStream().use { output ->
+                        if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) throw IOException("封面保存失败")
+                        output.toByteArray()
                     }
-                    try { data.putResource(informationCover(identity.world, sourceId, mangaId), bytes) {
-                        session.accepts(identity) && session.state.value.foreground
-                    } } finally { bytes.fill(0) }
-                    bitmap
-                } catch (failure: Exception) { bitmap.recycle(); throw failure }
-            }
+                }
+                try { data.putResource(informationCover(identity.world, sourceId, mangaId), bytes) {
+                    session.accepts(identity) && session.state.value.foreground
+                } } finally { bytes.fill(0) }
+                bitmap
+            } catch (failure: Exception) { bitmap.recycle(); throw failure }
         }
     }
     private suspend fun remoteCover(sourceId: String, mangaId: String): Bitmap {

@@ -117,12 +117,6 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
                         role = Role.Checkbox, onValueChange = { favorite = it }), verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(favorite, null, enabled = !state.busy); Text("同时收藏新作品", Modifier.weight(1f))
                     }
-                    FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { selected = state.entries.map { it.bookId ?: it.seriesId } }, enabled = !state.busy) { Text("选择已读取条目") }
-                        if (selected.isNotEmpty()) TextButton(onClick = { selected = emptyList() }, enabled = !state.busy) { Text("清除选择") }
-                    }
-                    ReferenceButton(onClick = { confirmation = "selected" }, enabled = canImport && selected.isNotEmpty(),
-                        modifier = Modifier.fillMaxWidth()) { Text("导入选中 ${selected.size} 条") }
                     ReferenceButton(onClick = { confirmation = "all" }, enabled = canImport,
                         modifier = Modifier.fillMaxWidth()) { Text("一键导入整个列表") }
                     AccountMoreActions("导入选项与说明") { _ ->
@@ -131,6 +125,10 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
                     }
                 } }
                 if (state.entriesLoaded && state.entries.isEmpty()) item("empty-entries") { Text("本页没有作品。") }
+                selectionHeader("selection-actions") {
+                    ImportSelectionActions(selected.size, !state.busy, canImport,
+                        { selected = state.entries.map { it.bookId ?: it.seriesId } }, { selected = emptyList() }, { confirmation = "selected" })
+                }
                 items(visibleEntries, key = { "entry:${it.bookId ?: it.seriesId}" }) { entry ->
                     val key = entry.bookId ?: entry.seriesId
                     ImportPreviewRow(entry.title, if (entry.bookId != null) "阅读列表第 ${entry.position.toLong() + 1} 项" else null,

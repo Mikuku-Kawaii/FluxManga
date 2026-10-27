@@ -95,8 +95,9 @@ internal fun VisitsPage(session: WorldSession, back: () -> Unit, open: (BrowseVi
     var menu by remember { mutableStateOf(false) }
     var help by remember { mutableStateOf(false) }
     BackHandler(managing && !clear && !menu && !help) { managing = false }
+    val scroll = rememberLazyListState()
     BookResultsLayout { columns ->
-    ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag("visits-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
+    ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.refresh() }, refreshEnabled = true, state = scroll, modifier = Modifier.fillMaxSize().testTag("visits-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") {
             SettingsHeading("最近观看", "", { if (managing) managing = false else back() }, actions = {
@@ -135,9 +136,11 @@ internal fun VisitsPage(session: WorldSession, back: () -> Unit, open: (BrowseVi
                     modifier = Modifier.semantics { contentDescription = "删除浏览记录：${item.visit.title}" }) { Text("删除记录") }
             }
         }
-        item {
+        item("more") {
             if (state.busy && !state.loading) RequestLoading()
-            if (state.more) TextButton(onClick = feedbackAttempt(model::more), enabled = !state.busy) { Text("加载更多记录") }
+            AutomaticPagination(scroll, "more", state.items.size,
+                state.more && !state.busy && state.error == null, model::more)
+            Spacer(Modifier.height(8.dp))
         }
     }
     }
