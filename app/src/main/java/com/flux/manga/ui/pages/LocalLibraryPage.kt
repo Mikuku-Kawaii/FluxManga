@@ -457,7 +457,7 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SettingsDisclosure("搜索范围", state.searchField.label) { LocalSearchFieldOptions(state.searchField, model::searchField) }
             Text("阅读状态", style = MaterialTheme.typography.titleMedium)
-            ShelfReadingFilters(readingFilter) { readingFilter = it }
+            ShelfReadingFilters(readingFilter, select = { readingFilter = it })
             FilterChip(state.favoritesOnly, { model.favoritesOnly(!state.favoritesOnly) }, label = { Text("仅收藏") }, modifier = Modifier.testTag("local-favorites"))
             if (readingFilter == ShelfFilter.READ) Text("本地读到末页计为已读。", style = MaterialTheme.typography.bodySmall)
             Text("条件同时满足才显示；清除筛选保留搜索文字。", style = MaterialTheme.typography.bodySmall)
