@@ -227,13 +227,15 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         entry<AppSettings> {
             com.flux.manga.ui.pages.SettingsPage(navigation::back,
                 navigation::openAppearanceSettings, navigation::openSources, navigation::openAboutSettings, navigation::openReadingSettings, navigation::openLibrarySettings, navigation::openPrivacyMaintenance,
-                session = session, effects = effects)
+                session = session, effects = effects, downloads = navigation::openDownloads,
+                history = { navigation.openDiscovery(DiscoverySection.VISITS) }, statistics = navigation::openReadingStatistics,
+                storage = navigation::openDownloadStorage)
         }
         entry<LibrarySettings> {
             com.flux.manga.ui.pages.LibrarySettingsPage(navigation::back,
                 navigation::openDownloads, navigation::openReadingStatistics, navigation::openRecordExport, navigation::openSpaceStorage,
                 session = session, localLibrary = if (navigation.world == PrototypeWorld.SFW) navigation::openLocalLibrary else null,
-                onlineLibrary = navigation::openOnlineLibrary)
+                onlineLibrary = navigation::openOnlineLibrary, protection = navigation::openDataProtection)
         }
         entry<PrivacyMaintenanceSettings> {
             com.flux.manga.ui.pages.PrivacyMaintenanceSettingsPage(navigation::back, navigation::openPrivacySettings,
@@ -250,12 +252,13 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
             com.flux.manga.ui.pages.AppearanceSettingsPage(effects, changeEffects, navigation::back, enhancementFailure)
         }
         entry<LibraryGroups> { androidx.compose.runtime.LaunchedEffect(Unit) { navigation.back() } }
+        entry<DownloadStorageSettings> { com.flux.manga.ui.pages.DownloadStorageSettingsPage(navigation::back, navigation::openDownloads, navigation::openSpaceStorage) }
         entry<SpaceStorageSettings> { com.flux.manga.ui.pages.SpaceStoragePage(session, navigation::back, navigation::openDownloads) }
         entry<ReadingSettings> { com.flux.manga.ui.pages.ReadingSettingsPage(session, navigation::back) }
         entry<ReadingStatisticsRoute> { com.flux.manga.ui.pages.ReadingStatisticsPage(session, navigation::back) }
         entry<RecordExportRoute> { com.flux.manga.ui.pages.RecordExportPage(session, navigation::back) }
         entry<AppUpdates> { com.flux.manga.ui.pages.AppUpdatePage(updates, navigation::back, installUpdate, updatePermission) }
-        entry<AboutSettings> { com.flux.manga.ui.pages.AboutSettingsPage(navigation::back, navigation::openLicenses) {
+        entry<AboutSettings> { com.flux.manga.ui.pages.AboutSettingsPage(navigation::back, navigation::openLicenses, updates = navigation::openAppUpdates) {
             TextButton(onClick = {
                 navigation.select(MainTab.LIBRARY)
                 while (navigation.currentStack.size > 1) navigation.back()

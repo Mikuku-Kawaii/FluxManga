@@ -28,13 +28,17 @@ data class SessionState(
 
 /** Activity-retained, never serialized. A generation owns page stores and requests. */
 class WorldSession : ViewModel() {
-    private var pageCoverOwner: com.flux.manga.data.PageCoverCache? = null
+    private var pageCoverOwner: Pair<SessionIdentity, com.flux.manga.data.PageCoverCache>? = null
     @Synchronized internal fun pageCovers(): com.flux.manga.data.PageCoverCache {
         val owner = identity.value
-        return pageCoverOwner ?: com.flux.manga.data.PageCoverCache(viewModelScope,
-            { accepts(owner) && state.value.foreground }).also { pageCoverOwner = it }
+        pageCoverOwner?.takeIf { it.first == owner }?.let { return it.second }
+        // Preparation publishes a new generation before committing its destination world.
+        // A cache obtained in that interval must never become the destination's cache.
+        pageCoverOwner?.second?.clear()
+        return com.flux.manga.data.PageCoverCache(viewModelScope,
+            { accepts(owner) && state.value.foreground }).also { pageCoverOwner = owner to it }
     }
-    internal fun clearPageCovers() { pageCoverOwner?.clear() }
+    internal fun clearPageCovers() { pageCoverOwner?.second?.clear() }
     private var downloadBackgroundOwner: com.flux.manga.data.DownloadBackgroundConnection? = null
     internal fun downloadBackground(context: android.content.Context): com.flux.manga.data.DownloadBackgroundConnection {
         val ownerIdentity = identity.value
@@ -121,7 +125,7 @@ class WorldSession : ViewModel() {
     fun selectTab(tab: MainTab) { tabs[state.value.target ?: identity.value.world] = tab }
 
     private fun invalidate(world: PrototypeWorld) {
-        pageCoverOwner?.clear(); pageCoverOwner = null
+        pageCoverOwner?.second?.clear(); pageCoverOwner = null
         navigationEpoch++
         downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); baoziAccountOwner = null
         baoziSources.close(); copyMangaSources.close()
@@ -167,7 +171,7 @@ class WorldSession : ViewModel() {
     }
 
     fun pause(now: Long = SystemClock.elapsedRealtime()) {
-        pageCoverOwner?.pause(retainImages = identity.value.world == PrototypeWorld.SFW)
+        pageCoverOwner?.second?.pause(retainImages = identity.value.world == PrototypeWorld.SFW)
         // Resource cache bytes are shared across store instances; revoke them before a new foreground frame.
         if (::repository.isInitialized) repository.clearMemory()
         if (downloadBackgroundOwner?.running != true) downloadOwner?.pauseAll()

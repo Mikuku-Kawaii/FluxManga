@@ -28,7 +28,9 @@ import kotlinx.coroutines.launch
 internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
     sources: () -> Unit, about: () -> Unit, reading: () -> Unit,
     library: () -> Unit, privacyMaintenance: () -> Unit,
-    session: com.flux.manga.session.WorldSession? = null, effects: DockEffects? = null) {
+    session: com.flux.manga.session.WorldSession? = null, effects: DockEffects? = null,
+    downloads: () -> Unit = library, history: () -> Unit = library, statistics: () -> Unit = library,
+    storage: () -> Unit = library) {
     val readingState = session?.let { preloadedPages(it).reading().state.collectAsStateWithLifecycle().value }
     val readingSummary = when {
         readingState == null -> ""
@@ -41,21 +43,30 @@ internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
             "减少动画".takeIf { current.reduceMotion }).joinToString(" · ")
     }.orEmpty()
     LazyColumn(Modifier.fillMaxSize().testTag("settings-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item("heading") { SettingsHeading("设置", "", back) }
-        item("preferences") { SettingsGroup {
-            SettingsRow("外观与动效", appearanceSummary, "settings-appearance", SettingsSymbol.APPEARANCE, appearance, prominent = true)
+        item("tools") { SettingsGroup("常用工具") {
+            SettingsRow("下载管理", "", "settings-downloads", SettingsSymbol.DOWNLOAD, downloads)
             SettingsDivider()
-            SettingsRow("阅读方式", readingSummary, "settings-reading", SettingsSymbol.READING, reading, prominent = true)
+            SettingsRow("阅读记录", "", "settings-history", SettingsSymbol.READING, history)
             SettingsDivider()
-            SettingsRow("图源管理", "图源开关、账号与书库导入", "settings-sources", SettingsSymbol.SOURCES, sources, prominent = true)
+            SettingsRow("阅读统计", "", "settings-statistics", SettingsSymbol.GROUPS, statistics)
         } }
-        item("management") { SettingsGroup {
-            SettingsRow("书库与记录", "下载、统计与存储", "settings-library", SettingsSymbol.GROUPS, library)
+        item("preferences") { SettingsGroup("内容与体验") {
+            SettingsRow("图源管理", "账号、收藏导入与连接", "settings-sources", SettingsSymbol.SOURCES, sources)
             SettingsDivider()
-            SettingsRow("隐私与维护", "隐私入口、数据保护与应用更新", "settings-maintenance", SettingsSymbol.PRIVACY, privacyMaintenance)
+            SettingsRow("阅读设置", readingSummary, "settings-reading", SettingsSymbol.READING, reading)
             SettingsDivider()
-            SettingsRow("关于 FluxManga", "", "settings-about", SettingsSymbol.ABOUT, about)
+            SettingsRow("外观与动效", appearanceSummary, "settings-appearance", SettingsSymbol.APPEARANCE, appearance)
+        } }
+        item("management") { SettingsGroup("应用管理") {
+            SettingsRow("下载与存储", "下载管理、空间占用与清理", "settings-storage", SettingsSymbol.STORAGE, storage)
+            SettingsDivider()
+            SettingsRow("隐私与安全", "验证、后台保护与入口", "settings-maintenance", SettingsSymbol.PRIVACY, privacyMaintenance)
+            SettingsDivider()
+            SettingsRow("数据管理", "记录导出、备份恢复与书目信息", "settings-library", SettingsSymbol.GROUPS, library)
+            SettingsDivider()
+            SettingsRow("关于与更新", "", "settings-about", SettingsSymbol.ABOUT, about)
         } }
     }
 }
@@ -64,7 +75,7 @@ internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
 internal fun LibrarySettingsPage(back: () -> Unit, downloads: () -> Unit,
     statistics: () -> Unit, exportRecords: () -> Unit, storage: () -> Unit,
     session: com.flux.manga.session.WorldSession? = null, localLibrary: (() -> Unit)? = null,
-    onlineLibrary: (() -> Unit)? = null) {
+    onlineLibrary: (() -> Unit)? = null, protection: () -> Unit = storage) {
     var showInformation by rememberSaveable { mutableStateOf(false) }
     val information = session?.let { rememberBookInformation(it) }
     if (showInformation && information != null) ReferenceSheet(onDismissRequest = { showInformation = false },
@@ -72,25 +83,14 @@ internal fun LibrarySettingsPage(back: () -> Unit, downloads: () -> Unit,
         confirmButton = { TextButton({ showInformation = false }) { Text("关闭") } })
     LazyColumn(Modifier.fillMaxSize().testTag("library-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("书库与记录", "", back) }
-        item { SettingsGroup("整理与阅读") {
-            SettingsRow("下载队列", "", "settings-downloads", null, downloads)
-            SettingsDivider()
-            SettingsRow("阅读统计", "", "settings-statistics", null, statistics)
-        } }
-        if (localLibrary != null || onlineLibrary != null || information != null) item { SettingsGroup("书目管理") {
-            localLibrary?.let { SettingsRow("本地书库", "", "settings-local-library", null, it) }
-            if (localLibrary != null && onlineLibrary != null) SettingsDivider()
-            onlineLibrary?.let { SettingsRow("在线书库", "", "settings-online-library", null, it) }
-            if (information != null) {
-                if (localLibrary != null || onlineLibrary != null) SettingsDivider()
-                SettingsRow("补齐书目信息", "", "settings-book-information", null, { showInformation = true })
-            }
-        } }
-        item { SettingsGroup("本地数据") {
+        item { SettingsHeading("数据管理", "当前空间", back) }
+        item { SettingsGroup("记录与备份") {
             SettingsRow("导出本地记录", "书目、书签与阅读进度", "settings-record-export", null, exportRecords)
             SettingsDivider()
-            SettingsRow("存储与清理", "", "settings-storage", null, storage)
+            SettingsRow("备份与恢复", "", "settings-protection", null, protection)
+        } }
+        if (information != null) item { SettingsGroup("书目维护") {
+            SettingsRow("更新书目信息", "封面、标签与作品资料", "settings-book-information", null, { showInformation = true })
         } }
     }
 }
@@ -100,13 +100,11 @@ internal fun PrivacyMaintenanceSettingsPage(back: () -> Unit, privacy: () -> Uni
     protection: () -> Unit, updates: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().testTag("privacy-maintenance-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("隐私与维护", "", back) }
+        item { SettingsHeading("隐私与安全", "", back) }
         item { SettingsGroup {
-            SettingsRow("隐私入口", "", "settings-privacy", null, privacy)
+            SettingsRow("身份验证与隐私入口", "后台保护与应用伪装", "settings-privacy", SettingsSymbol.PRIVACY, privacy)
             SettingsDivider()
-            SettingsRow("数据保护与恢复", "备份、恢复与保护状态", "settings-protection", null, protection)
-            SettingsDivider()
-            SettingsRow("应用更新", "", "settings-updates", null, updates)
+            SettingsRow("数据保护", "加密与恢复状态", "settings-protection", SettingsSymbol.PROTECTION, protection)
         } }
     }
 }
@@ -153,7 +151,7 @@ internal fun DockEffectControls(effects: DockEffects, change: (DockEffects) -> U
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun AboutSettingsPage(back: () -> Unit, licenses: () -> Unit,
+internal fun AboutSettingsPage(back: () -> Unit, licenses: () -> Unit, updates: (() -> Unit)? = null,
     developerTools: @Composable ColumnScope.() -> Unit = {}) {
     var developerEnabled by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -165,7 +163,7 @@ internal fun AboutSettingsPage(back: () -> Unit, licenses: () -> Unit,
     var linkError by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().testTag("about-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("关于", "", back, backModifier = Modifier.testTag("settings-back")) }
+        item { SettingsHeading("关于与更新", "", back, backModifier = Modifier.testTag("settings-back")) }
         item { SettingsPanel {
             Text("FluxManga · 流光漫匣", style = MaterialTheme.typography.titleLarge)
             Text("版本 $version", modifier = Modifier.testTag("app-version")
@@ -173,6 +171,9 @@ internal fun AboutSettingsPage(back: () -> Unit, licenses: () -> Unit,
                 .padding(vertical = 12.dp))
         } }
         if (developerEnabled) item("developer-tools") { SettingsPanel { SettingsDisclosure("开发工具") { developerTools() } } }
+        updates?.let { item("updates") { SettingsGroup {
+            SettingsRow("检查更新", "", "settings-updates", SettingsSymbol.UPDATE, it)
+        } } }
         item("offline-licenses") { SettingsGroup {
             SettingsRow("开源许可与声明", "离线搜索、组件信息与许可原文", "about-licenses", SettingsSymbol.ABOUT, licenses)
         } }
@@ -226,7 +227,7 @@ internal fun SourceManagementPage(
     val owner = session?.identity?.value
     fun active() = session == null || (session.accepts(requireNotNull(owner)) && session.state.value.foreground)
     @Composable fun Source(kind: SourceKind, settingsTag: String, settings: () -> Unit) {
-        SourceManagementGroup(kind.label, settingsTag, settings,
+        SourceManagementGroup(kind.label, sourceAccountSummary(kind, session), settingsTag, settings,
             enabled = enabledSources[kind] == true, saving = saving, toggle = { value ->
                 if (!saving && active()) {
                     feedback?.beginAttempt(); error = null; saving = true
@@ -244,10 +245,10 @@ internal fun SourceManagementPage(
                 }
             })
     }
-    error?.let { RequestFeedback(it) }
     LazyColumn(Modifier.fillMaxSize().testTag("source-management"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") { SettingsHeading("图源管理", if (available) "表世界图源" else "里世界图源", back) }
+        error?.let { message -> item("save-error") { RequestFeedback(message) } }
         item("sources") { SettingsGroup {
             if (available) {
                 Source(SourceKind.KOMGA, "manage-komga", komga)
@@ -265,21 +266,17 @@ internal fun SourceManagementPage(
                 Source(SourceKind.EX, "manage-ex-account", ex)
             }
         } }
-        item("scope") { AccountMoreActions("图源与导入说明") { _ ->
-            Text("开关控制首页推荐、最近更新、在线搜索和标签发现，保存后立即生效。关闭不退出账号、不移除书库或进度；已入库作品仍可直接阅读，账号管理与手动导入保持可用。")
-            Text("点击图源直接进入设置，书库导入位于同一页面。首次使用默认只开启表世界拷贝、里世界 JM，其余来源可手动开启。")
-            Text("导入保存书目，不自动下载漫画正文，也不修改网站上的喜欢或收藏。相同来源与账号的已有书目保留本机收藏设置和阅读进度。")
-            Text("同一空间的各来源统一展示在书库；不同空间、账号及 EH / EX 的作品身份保持独立。导入范围以各来源页面说明为准。")
-        } }
+        item("scope") { Text("开关仅控制发现与搜索；关闭后仍保留账号、书库和阅读进度。",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 
 @Composable
-private fun SourceManagementGroup(title: String, settingsTag: String, settings: () -> Unit,
+private fun SourceManagementGroup(title: String, account: String, settingsTag: String, settings: () -> Unit,
     enabled: Boolean, saving: Boolean, toggle: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) {
-            SettingsRow(title, if (enabled) "已启用" else "已关闭", "$settingsTag-entry", SettingsSymbol.SOURCES, settings)
+            SettingsRow(title, (if (enabled) "参与发现" else "发现已关闭") + " · " + account, "$settingsTag-entry", SettingsSymbol.SOURCES, settings)
         }
         Switch(checked = enabled, onCheckedChange = toggle, enabled = !saving,
             modifier = Modifier.padding(end = 12.dp).testTag("$settingsTag-enabled")

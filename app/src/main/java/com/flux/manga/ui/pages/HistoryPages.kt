@@ -27,6 +27,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.flux.manga.data.*
 import com.flux.manga.session.WorldSession
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import java.text.DateFormat
 import java.util.Date
 
@@ -167,14 +169,18 @@ private fun VisitCover(item: VisitItem, model: VisitsModel, open: (() -> Unit)? 
     var missing by remember(model, item.visit.stableKey) { mutableStateOf(false) }
     var attempt by remember(model, item.visit.stableKey) { mutableIntStateOf(0) }
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && (!private || visibility.foreground)
+    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && visibility.foreground &&
+        visibility.phase == com.flux.manga.session.SwitchPhase.Stable
     val available = item.availability == VisitAvailability.AVAILABLE
-    LaunchedEffect(model, item.visit.stableKey, available, active, epoch, attempt, revision) {
+    LaunchedEffect(model, item.visit.stableKey, available, active, visibility.visibilityEpoch, attempt, revision) {
         if (!active) { if (private) bitmap = null; return@LaunchedEffect }
         if (!available || bitmap != null) return@LaunchedEffect
         failed = false; missing = false
         try { bitmap = model.repository.cover(item.visit); missing = bitmap == null }
-        catch (cancelled: CancellationException) { throw cancelled }
+        catch (cancelled: CancellationException) {
+            if (currentCoroutineContext().isActive) failed = true
+            throw cancelled
+        }
         catch (_: com.flux.manga.core.SourceException.NotFound) { missing = true }
         catch (_: Exception) { failed = true }
     }

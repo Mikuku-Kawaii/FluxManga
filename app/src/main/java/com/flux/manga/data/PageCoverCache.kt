@@ -40,7 +40,8 @@ internal class PageCoverCache(private val scope: CoroutineScope, private val act
         val key = source to manga
         val task = synchronized(lock) {
             images.get(key)?.let { return it }
-            pending[key] ?: run {
+            // A cancelled transport may still be unwinding; a new visible request must not await it.
+            pending[key]?.takeUnless { it.isCancelled } ?: run {
                 val generation = epoch
                 val created = scope.async(start = CoroutineStart.LAZY) {
                     // Disk hits must not queue behind slow cover downloads from other sources.

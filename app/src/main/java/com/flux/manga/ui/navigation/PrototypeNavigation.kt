@@ -95,6 +95,8 @@ data object PortableBackupRoute : NavKey
 @Serializable
 data class LibraryGroups(val bookKey: String? = null) : NavKey
 @Serializable
+data object DownloadStorageSettings : NavKey
+@Serializable
 data object SpaceStorageSettings : NavKey
 
 @Serializable
@@ -249,16 +251,17 @@ class PrototypeNavigation(
     fun openSettings() { if (currentStack.last() != AppSettings) currentStack.add(AppSettings) }
     fun openLibrarySettings() { if (currentStack.last() == AppSettings) currentStack.add(LibrarySettings) }
     fun openPrivacyMaintenance() { if (currentStack.last() == AppSettings) currentStack.add(PrivacyMaintenanceSettings) }
-    fun openDataProtection() { if (currentStack.last() in listOf(AppSettings, PrivacyMaintenanceSettings)) currentStack.add(DataProtection) }
+    fun openDataProtection() { if (currentStack.last() in listOf(AppSettings, LibrarySettings, PrivacyMaintenanceSettings)) currentStack.add(DataProtection) }
     fun openPrivacySettings() { if (currentStack.last() in listOf(AppSettings, PrivacyMaintenanceSettings)) currentStack.add(PrivacySettings) }
     fun openAppearanceSettings() { if (currentStack.last() == AppSettings) currentStack.add(AppearanceSettings) }
     fun openLibraryGroups(bookKey: String? = null) { if (currentStack.last() != LibraryGroups(bookKey)) currentStack.add(LibraryGroups(bookKey)) }
+    fun openDownloadStorage() { if (currentStack.last() != DownloadStorageSettings) currentStack.add(DownloadStorageSettings) }
     fun openSpaceStorage() { if (currentStack.last() != SpaceStorageSettings) currentStack.add(SpaceStorageSettings) }
     fun openReadingSettings() { if (currentStack.last() == AppSettings) currentStack.add(ReadingSettings) }
     fun openReadingStatistics() { if (currentStack.last() != ReadingStatisticsRoute) currentStack.add(ReadingStatisticsRoute) }
     fun openRecordExport() { if (currentStack.last() != RecordExportRoute) currentStack.add(RecordExportRoute) }
     fun openPortableBackup() { if (currentStack.last() == DataProtection) currentStack.add(PortableBackupRoute) }
-    fun openAppUpdates() { if (currentStack.last() in listOf(AppSettings, PrivacyMaintenanceSettings)) currentStack.add(AppUpdates) }
+    fun openAppUpdates() { if (currentStack.last() in listOf(AppSettings, AboutSettings, PrivacyMaintenanceSettings)) currentStack.add(AppUpdates) }
     fun openAboutSettings() { if (currentStack.last() == AppSettings) currentStack.add(AboutSettings) }
     fun openLicenses() { if (currentStack.last() == AboutSettings) currentStack.add(OpenSourceLicenses) }
     fun openLicenseEntry(id: String) { if (currentStack.last() == OpenSourceLicenses) currentStack.add(LicenseEntryRoute(id)) }
@@ -472,7 +475,7 @@ internal fun restoreNavigation(selectedName: String, slots: List<List<NavKey>>,
         if (routes.drop(1).any {
             !supportedChild(it) || (it is AuthorSearch && it.world != world) || (world == PrototypeWorld.SFW && isPrivateSourceRoute(it)) || (it is UnifiedTagResults && it.world != world) || (it is SourceTagResults && it.world != world) || (it is MangaDetail && it.world != world) || (it is MangaReader && it.world != world) ||
                 (world == PrototypeWorld.NSFW && !isPrivateSourceRoute(it) && it !is MangaDetail && it !is MangaReader &&
-                    it !is AuthorSearch && it != Search && it != OnlineSearch && it != OnlineSources && it != DownloadQueue && it != AppSettings && it != LibrarySettings && it != PrivacyMaintenanceSettings && it != DataProtection && it != PrivacySettings && it != AppearanceSettings && it != AboutSettings && it != OpenSourceLicenses && it !is LicenseEntryRoute && it !is LicenseDocumentRoute && it != AppUpdates && it != ReadingSettings && it != ReadingStatisticsRoute && it != RecordExportRoute && it != PortableBackupRoute && it != SpaceStorageSettings && it !is LibraryGroups && it != FfiProbe && it != GlassLab && it !is ShelfList && it !is TagResults && it !is DiscoveryList && it !is UnifiedTagResults)
+                    it !is AuthorSearch && it != Search && it != OnlineSearch && it != OnlineSources && it != DownloadQueue && it != AppSettings && it != LibrarySettings && it != PrivacyMaintenanceSettings && it != DataProtection && it != PrivacySettings && it != AppearanceSettings && it != AboutSettings && it != OpenSourceLicenses && it !is LicenseEntryRoute && it !is LicenseDocumentRoute && it != AppUpdates && it != ReadingSettings && it != ReadingStatisticsRoute && it != RecordExportRoute && it != PortableBackupRoute && it != DownloadStorageSettings && it != SpaceStorageSettings && it !is LibraryGroups && it != FfiProbe && it != GlassLab && it !is ShelfList && it !is TagResults && it !is DiscoveryList && it !is UnifiedTagResults)
         }) return null
         return listOf(TabRoot(tab)) + routes.drop(1).map {
             when (it) {
@@ -517,7 +520,7 @@ private fun supportedChild(route: NavKey) = when (route) {
     EhSettingsRoute, is EhBrowseRoute, is EhBookRoute, is EhReaderRoute -> true
     PicaSettingsRoute, is PicaBrowseRoute, is PicaBookRoute, is PicaReaderRoute -> true
     JmSettingsRoute, is JmBrowseRoute, is JmBookRoute, is JmReaderRoute -> true
-    Search, OnlineSearch, CopyMangaBrowse, AppSettings, LibrarySettings, PrivacyMaintenanceSettings, DataProtection, PrivacySettings, AppearanceSettings, AboutSettings, OpenSourceLicenses, AppUpdates, ReadingSettings, ReadingStatisticsRoute, RecordExportRoute, PortableBackupRoute, SpaceStorageSettings, FfiProbe, GlassLab, LocalLibrary, OnlineLibrary, OnlineSources, KomgaConfiguration, KomgaAccountImport, BaoziAccountSettings, CopyAccountSettings, DownloadQueue -> true
+    Search, OnlineSearch, CopyMangaBrowse, AppSettings, LibrarySettings, PrivacyMaintenanceSettings, DataProtection, PrivacySettings, AppearanceSettings, AboutSettings, OpenSourceLicenses, AppUpdates, ReadingSettings, ReadingStatisticsRoute, RecordExportRoute, PortableBackupRoute, DownloadStorageSettings, SpaceStorageSettings, FfiProbe, GlassLab, LocalLibrary, OnlineLibrary, OnlineSources, KomgaConfiguration, KomgaAccountImport, BaoziAccountSettings, CopyAccountSettings, DownloadQueue -> true
     is LicenseEntryRoute, is LicenseDocumentRoute, is LibraryGroups, is DownloadedBook, is DownloadedReader, is DownloadChapters, is BaoziReaderRoute, is BaoziBookRoute, is CopyMangaBook, is CopyMangaReader, is DiscoveryList, is UnifiedTagResults, is SourceTagResults, is TagResults, is ShelfList, is LocalBookDetail, is LocalBookReader, is KomgaBrowse, is KomgaBook, is KomgaReader,
     is MangaDetail, is MangaReader -> true
     else -> false

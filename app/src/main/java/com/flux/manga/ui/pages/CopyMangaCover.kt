@@ -17,6 +17,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.flux.manga.core.SourceException
 import com.flux.manga.data.OnlineSourceCovers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 
 @Composable
 internal fun CopyMangaCover(covers: OnlineSourceCovers, id: String, fillWidth: Boolean = false) {
@@ -26,12 +28,17 @@ internal fun CopyMangaCover(covers: OnlineSourceCovers, id: String, fillWidth: B
     var failed by remember(covers, id) { mutableStateOf(false) }
     var attempt by remember(covers, id) { mutableIntStateOf(0) }
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED)
-    LaunchedEffect(covers, id, active, attempt, revision) {
+    val visibility by covers.visibility.collectAsState()
+    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && visibility.foreground &&
+        visibility.phase == com.flux.manga.session.SwitchPhase.Stable
+    LaunchedEffect(covers, id, active, visibility.visibilityEpoch, attempt, revision) {
         if (!active || bitmap != null) return@LaunchedEffect
         failed = false; missing = false
         if (active) try { bitmap = covers.load(id) }
-        catch (cancelled: CancellationException) { throw cancelled }
+        catch (cancelled: CancellationException) {
+            if (currentCoroutineContext().isActive) failed = true
+            throw cancelled
+        }
         catch (_: SourceException.NotFound) { missing = true }
         catch (_: Exception) { failed = true }
     }

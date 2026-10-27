@@ -51,21 +51,31 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
         if (state.verified) selection = selection.filter { id -> state.entries.any { it.collectionId == id } }
     }
     LaunchedEffect(state.verified) { if (state.verified) password = "" }
+    val navigation = rememberSourceSettingsNavigation(back)
     val unfinished = state.task?.done == false
     val informationModel = state.source?.let { rememberBookInformation(session, it) }
-    ReferenceRefreshColumn(refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("copy-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
+    ReferenceRefreshColumn(state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("copy-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item("heading") { SettingsHeading("拷贝漫画设置", "", back) }
-        informationModel?.let { info -> item("information") { BookInformationPanel(info, enabled = !state.busy) } }
-        item("account") { AccountPanel("账号") {
+        item("heading") { SettingsHeading(navigation.title("拷贝漫画"), "", navigation::back) }
+        sourceSettingsOverview(navigation,
+            account = accountStatus(state.loaded, state.verified, state.hasCredential, state.busy) + state.username.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
+            imports = { navigation.open(SourceSettingsSection.IMPORT) },
+            importSummary = if (unfinished) "有未完成任务，可继续导入" else "云收藏 · 支持全部或选中导入", connectionSummary = "其他账号连接方式")
+
+        if (navigation.section == SourceSettingsSection.IMPORT) informationModel?.let { info -> item("information") { SourceInformationEntry(info, enabled = !state.busy) } }
+        if (navigation.section == SourceSettingsSection.ACCOUNT || navigation.section == SourceSettingsSection.CONNECTION) item("account") { AccountPanel(navigation.section.label) {
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
                 "云收藏（当前接口范围）", state.username)
+            if (navigation.section == SourceSettingsSection.ACCOUNT) {
             WebAccountEntry("https://mangacopy.com/web/login?url=person%2Fhome",
                 "使用官方用户名登录或注册，成功后自动连接账号与云收藏。", state.loaded && !state.busy,
                 connect = { page, _, _ -> model.connectWebToken(page.copyToken()) },
                 autoConnectKey = { page, _, _ -> page.copyToken().takeIf(String::isNotBlank) },
                 afterConnected = model::start)
-            SettingsDisclosure("API 账号连接") {
+            if (state.hasCredential) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
+            TextButton({ navigation.open(SourceSettingsSection.CONNECTION) }, enabled = !state.busy) { Text("其他连接方式") }
+            }
+            if (navigation.section == SourceSettingsSection.CONNECTION) {
                 AccountCredentials("copy", username, password, { username = it }, { password = it },
                     enabled = state.loaded && !state.busy, verified = state.verified, busy = state.busy,
                     login = { keyboard?.hide(); model.signIn(username, password) }, reload = model::start,
@@ -75,6 +85,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
         if (state.busy || state.error != null || state.notice != null) item("status") {
             AccountRequestStatus(state.busy, state.stage, state.error, state.notice, model::cancel, model::start)
         }
+        if (navigation.section == SourceSettingsSection.IMPORT) {
         state.task?.let { job -> item("import-job") { AccountPanel("导入任务") {
             Text(if (job.done) "本次导入已完成" else "可恢复的云收藏导入", style = MaterialTheme.typography.titleMedium)
             Text("新增 ${job.added} · 已存在 ${job.existing}")
@@ -94,6 +105,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
         item("snapshot") { AccountPanel("书库导入") {
             if (!state.verified) {
                 Text("连接账号后，在这里选择云收藏并导入。", style = MaterialTheme.typography.bodyMedium)
+                TextButton({ navigation.open(SourceSettingsSection.ACCOUNT) }) { Text("连接账号") }
                 Text("已有书目与阅读进度保留。", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
@@ -130,6 +142,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                     { checked -> selection = if (checked) addImportSelection(selection, listOf(key)) else selection - key },
                     { state.source?.let { open(it, entry.mangaId) } })
             }
+        }
         }
     }
     if (confirm != null) ReferenceDialog(onDismissRequest = { confirm = null },

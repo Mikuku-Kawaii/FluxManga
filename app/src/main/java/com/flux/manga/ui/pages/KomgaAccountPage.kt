@@ -52,7 +52,7 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
     ReferenceRefreshColumn(refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("komga-account-import"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") { SettingsHeading("Komga 授权列表", "", back) }
-        informationModel?.let { info -> item("information") { BookInformationPanel(info, enabled = !state.busy) } }
+        informationModel?.let { info -> item("information") { SourceInformationEntry(info, enabled = !state.busy) } }
         item("account") { AccountPanel("账号") {
             AccountSummary(accountStatus(state.loaded, state.verified, state.source != null, state.busy),
                 "已授权书库、系列集合与阅读列表")

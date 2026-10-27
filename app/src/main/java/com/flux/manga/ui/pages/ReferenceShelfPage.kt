@@ -36,6 +36,8 @@ import com.flux.manga.data.LocalSearchField
 import com.flux.manga.ui.navigation.PrototypeWorld
 import com.flux.manga.ui.navigation.ShelfSection
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -103,34 +105,28 @@ internal fun ReferenceShelfPage(
         val columns = shelfColumns(maxWidth.value, fontScale, state.layout)
         val compactContinue = maxWidth < 340.dp || fontScale >= 1.5f
         Column(Modifier.fillMaxSize()) {
-        if (selecting) SelectionActionBar(Modifier.padding(horizontal = 20.dp)) {
-            FlowRow(itemVerticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("已选 ${selectedKeys.size} 部", style = MaterialTheme.typography.titleSmall)
-                TextButton({ selectedKeys = visibleKeys }, enabled = canEdit && books.isNotEmpty(),
-                    modifier = Modifier.semantics { contentDescription = "全选当前筛选结果" }) { Text("全选") }
-                TextButton({ selectedKeys = emptyList() }, enabled = canEdit && selectedKeys.isNotEmpty()) { Text("清空选择") }
-                TextButton({ selecting = false; selectedKeys = emptyList() }, enabled = !state.batchBusy,
-                    modifier = Modifier.testTag("shelf-batch-done")) { Text("取消") }
-            }
-            FlowRow(itemVerticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton({ model.batch(selectedKeys.toSet(), ShelfBatchAction.UNFAVORITE) }, enabled = canEdit && selectedKeys.isNotEmpty()) { Text("取消收藏") }
-                FilledTonalButton({ model.batch(selectedKeys.toSet(), ShelfBatchAction.FAVORITE) }, enabled = canEdit && selectedKeys.isNotEmpty()) { Text("收藏") }
-                if (public) OutlinedButton({ removalKeys = selectedRows.filterNot { it.online }.map { it.stableKey } },
-                    enabled = canEdit && selectedRows.any { !it.online },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("移除本地书目") }
-            }
-            if (state.batchBusy) {
-                Text("正在处理 ${state.batchProcessed}/${state.batchTotal} 部")
-                TextButton(model::cancelBatch) { Text("停止处理") }
-            }
-            state.batchMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-        }
+        if (selecting) ShelfSelectionBar(
+            count = selectedKeys.size,
+            allSelected = visibleKeys.isNotEmpty() && selectedKeys.size == visibleKeys.size,
+            canEdit = canEdit, hasBooks = books.isNotEmpty(),
+            primaryAction = if (isRoot || favoritesOnly || (selectedRows.isNotEmpty() && selectedRows.all { it.favorite }))
+                ShelfBatchAction.UNFAVORITE else ShelfBatchAction.FAVORITE,
+            public = public, hasLocal = selectedRows.any { !it.online },
+            busy = state.batchBusy, processed = state.batchProcessed, total = state.batchTotal, message = state.batchMessage,
+            exit = { selecting = false; selectedKeys = emptyList() },
+            selectAll = { selectedKeys = if (selectedKeys.size == visibleKeys.size) emptyList() else visibleKeys },
+            clear = { selectedKeys = emptyList() },
+            action = { model.batch(selectedKeys.toSet(), it) },
+            removeLocal = { removalKeys = selectedRows.filterNot { it.online }.map { it.stableKey } },
+            stop = model::cancelBatch,
+        )
         LazyVerticalGrid(GridCells.Fixed(columns), state = shownScroll,
             modifier = Modifier.weight(1f).fillMaxWidth().testTag("reference-shelf"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottomClearance),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item(key = "heading", span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (!selecting) {
                     if (!isRoot) SettingsHeading(when {
                         searchMode -> "本机书目搜索"
                         section == ShelfSection.HISTORY -> "阅读记录"
@@ -144,6 +140,7 @@ internal fun ReferenceShelfPage(
                             }
                             ReferenceMoreButton("设置", "shelf-more", settings)
                         }
+                    }
                     }
                     if (informationState.running) TextButton({ panel = "information" }) { Text("正在补齐作品资料 · ${informationState.processed}/${informationState.total}") }
                     switchError?.let { RequestFeedback(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
@@ -159,8 +156,10 @@ internal fun ReferenceShelfPage(
                     if (state.errors.isNotEmpty()) TextButton(onClick = feedbackAttempt(model::refresh), enabled = !state.loading) { Text("重试读取书库") }
                 }
             }
-            if (isRoot && !selecting) {
+            // Keep these structural keys in both modes so book anchors do not change.
+            if (isRoot) {
                 item(key = "continue", span = { GridItemSpan(maxLineSpan) }) {
+                  if (!selecting) {
                   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     DiscoverySectionHeading("继续阅读", "shelf-history", "阅读记录") { list(ShelfSection.HISTORY) }
                     if (latest != null) ContinueCard(latest, model, open, read, compactContinue)
@@ -170,6 +169,7 @@ internal fun ReferenceShelfPage(
                     else if (!state.loading) ReferenceEmptyState(if (state.errors.isEmpty()) "还没有可继续的阅读记录" else "暂时没有可确认的续读记录") {
                         TextButton(onClick = { list(ShelfSection.ALL) }) { Text("选择书目，开始阅读") }
                     }
+                  }
                   }
                 }
             } else item(key = "query", span = { GridItemSpan(maxLineSpan) }) {
@@ -280,6 +280,8 @@ internal fun ReferenceShelfPage(
             "add" -> {
                 if (public) PanelAction("导入本地 CBZ") { run(addCbz) }
                 PanelAction("从图源导入") { run(sources) }
+                if (public) PanelAction("本地文件管理") { run(localLibrary) }
+                PanelAction("在线书目管理") { run(onlineLibrary) }
             }
             "filters", "sort" -> {
                 if (!isRoot) {
@@ -373,9 +375,9 @@ private fun ShelfTile(book: ShelfBook, model: ShelfViewModel, row: Boolean, open
     @Composable fun Cover(modifier: Modifier) {
         Box(modifier) {
             ShelfCover(book, model, Modifier.fillMaxSize())
-            if (selecting) Surface(Modifier.align(Alignment.TopEnd).padding(4.dp),
-                shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surface) {
-                Checkbox(checked, onCheckedChange = null, modifier = Modifier.padding(4.dp))
+            if (selecting) {
+                if (checked) Box(Modifier.matchParentSize().border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)))
+                ShelfSelectionBadge(checked, Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
         }
     }
@@ -403,14 +405,18 @@ private fun ShelfCover(book: ShelfBook, model: ShelfViewModel, modifier: Modifie
     var missing by remember(model, book.stableKey) { mutableStateOf(false) }
     var attempt by remember(model, book.stableKey) { mutableIntStateOf(0) }
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && (!private || visibility.foreground)
-    LaunchedEffect(model, book.stableKey, book.available, book.information?.coverReady, active, epoch, attempt, revision) {
+    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && visibility.foreground &&
+        visibility.phase == com.flux.manga.session.SwitchPhase.Stable
+    LaunchedEffect(model, book.stableKey, book.available, book.information?.coverReady, active, visibility.visibilityEpoch, attempt, revision) {
         if (!active) { if (private) bitmap = null; return@LaunchedEffect }
         model.prepareInformation(book)
         if (bitmap != null) return@LaunchedEffect
         failed = false; missing = false
         try { bitmap = model.cover(book); missing = bitmap == null }
-        catch (cancelled: CancellationException) { throw cancelled }
+        catch (cancelled: CancellationException) {
+            if (currentCoroutineContext().isActive) failed = true
+            throw cancelled
+        }
         catch (_: com.flux.manga.core.SourceException.NotFound) { missing = true }
         catch (_: Exception) { failed = true }
     }

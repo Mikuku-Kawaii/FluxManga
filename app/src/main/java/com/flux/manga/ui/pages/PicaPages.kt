@@ -187,18 +187,22 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
 @Composable internal fun PicaSettingsPage(session: WorldSession, back: () -> Unit, browse: (String, String) -> Unit) {
     val model = picaModel(session); val state by model.state.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }
+    val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) password = "" }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("PicACG 设置", "", back) }
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { SettingsHeading(navigation.title("PicACG"), "", navigation::back) }
+        sourceSettingsOverview(navigation,
+            account = if (!state.ready) "账号状态待读取" else state.account?.let { "已保存会话 · ${it.name}" } ?: "未登录",
+            imports = { browse("favorites", "") }, importSummary = "全部收藏或逐页选择导入",
+            importEnabled = state.ready && !state.busy && state.account != null)
         item { PicaFeedback(model, state) }
-        item { SettingsPanel {
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item { SettingsPanel {
             AccountSummary(when {
                 !state.ready -> if (state.busy) "正在读取账号…" else "账号状态待核对"
                 state.account != null -> "已保存登录会话"
                 else -> "未登录 · 请先连接账号"
             }, "云收藏", state.account?.name.orEmpty())
-            Text("使用下方账号密码登录。", style = MaterialTheme.typography.bodySmall)
             SettingsDisclosure("API 账号连接") {
                 OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("邮箱 / 账号") }, enabled = !state.busy, singleLine = true)
                 OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("密码") }, enabled = !state.busy,
@@ -207,17 +211,19 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             }
             if (state.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
-        item("library-import") { SourceLibraryImportCard("全部云收藏或逐页选择导入；已有书目与阅读进度保留。",
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部云收藏或逐页选择导入；已有书目与阅读进度保留。",
             state.ready && state.account != null, state.busy, "import-pica-library", { browse("favorites", "") }) }
-        item { SettingsGroup("浏览") {
-            TextButton(feedbackAttempt({ browse("search", "") }), enabled = state.account != null && !state.busy) { Text("搜索作品") }
-            TextButton({ browse("categories", "") }, enabled = state.account != null && !state.busy) { Text("分类目录") }
-            TextButton({ browse("rank", "H24") }, enabled = state.account != null && !state.busy) { Text("热门榜单") }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item { SettingsGroup("浏览") {
+            SettingsRow("搜索作品", "", "pica-settings-search", SettingsSymbol.SOURCES,
+                feedbackAttempt({ browse("search", "") }), enabled = state.account != null && !state.busy)
+            SettingsDivider()
+            SettingsRow("分类目录", "", "pica-settings-categories", SettingsSymbol.GROUPS,
+                { browse("categories", "") }, enabled = state.account != null && !state.busy)
+            SettingsDivider()
+            SettingsRow("热门榜单", "", "pica-settings-rank", SettingsSymbol.READING,
+                { browse("rank", "H24") }, enabled = state.account != null && !state.busy)
         } }
-        item { SettingsDisclosure("连接与账号说明") {
-            Text("使用标准 HTTPS 线路与原图质量。密码不保存，登录凭据仅保存在里世界加密存储；失效后需重新登录。收藏按页读取和导入，不是全量账号备份。")
-            Text("暂不支持 DNS 分流、自动签到、网站收藏修改或独立喜欢列表。")
-        } }
+
     }
 }
 

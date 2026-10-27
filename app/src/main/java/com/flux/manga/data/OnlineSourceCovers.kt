@@ -19,6 +19,7 @@ internal class OnlineSourceCovers(private val app: Application, private val sess
     private fun active() { if (!session.accepts(identity)) throw CancellationException("Expired source session") }
     private val library = OnlineLibrary(app, session)
     val coverRevision get() = library.coverCache.revision
+    val visibility get() = session.state
     fun cached(id: String): Bitmap? = library.cachedCover(sourceId, id)
     suspend fun load(id: String): Bitmap = library.cover(sourceId, id)
     internal suspend fun loadRemote(id: String): Bitmap {

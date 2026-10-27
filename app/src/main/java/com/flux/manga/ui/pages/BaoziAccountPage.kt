@@ -42,13 +42,19 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
     LaunchedEffect(state.snapshotRevision) {
         if (state.verified) selection = selection.filter { id -> state.entries.any { it.card.key.mangaId == id } }
     }
+    val navigation = rememberSourceSettingsNavigation(back)
     val unfinished = (state.importJob?.remaining ?: 0) > 0
     val informationModel = state.sourceId?.let { rememberBookInformation(session, it) }
-    ReferenceRefreshColumn(refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("baozi-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
+    ReferenceRefreshColumn(state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("baozi-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item("heading") { SettingsHeading("包子漫画设置", "", back) }
-        informationModel?.let { info -> item("information") { BookInformationPanel(info, enabled = !state.busy) } }
-        item("account") { AccountPanel("账号") {
+        item("heading") { SettingsHeading(navigation.title("包子漫画"), "", navigation::back) }
+        sourceSettingsOverview(navigation,
+            account = accountStatus(state.loaded, state.verified, state.hasCredential, state.busy) + state.username.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
+            imports = { navigation.open(SourceSettingsSection.IMPORT) },
+            importSummary = if (unfinished) "有未完成任务，可继续导入" else "网站书架 · 选择作品导入")
+
+        if (navigation.section == SourceSettingsSection.IMPORT) informationModel?.let { info -> item("information") { SourceInformationEntry(info, enabled = !state.busy) } }
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item("account") { AccountPanel(navigation.section.label) {
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
                 "我的书架（当前页面快照）", state.username)
             WebAccountEntry(BaoziWebSite.url,
@@ -71,6 +77,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
         if (state.busy || state.error != null || state.notice != null) item("status") {
             AccountRequestStatus(state.busy, state.stage, state.error, state.notice, model::cancel, model::start)
         }
+        if (navigation.section == SourceSettingsSection.IMPORT) {
         state.importJob?.let { job -> item("import-job") { AccountPanel("导入任务") {
             Text(if (job.remaining > 0) "未完成的选中书目导入" else "本次选中书目已处理", style = MaterialTheme.typography.titleMedium)
             Text("新增 ${job.added} · 已存在 ${job.existing} · 待处理 ${job.remaining}")
@@ -87,6 +94,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
         item("snapshot") { AccountPanel("书库导入") {
             if (!state.verified) {
                 Text("连接账号后，在这里选择书架中的作品并导入。", style = MaterialTheme.typography.bodyMedium)
+                TextButton({ navigation.open(SourceSettingsSection.ACCOUNT) }) { Text("连接账号") }
                 Text("已有书目与阅读进度保留。", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
@@ -118,6 +126,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                     { checked -> selection = if (checked) addImportSelection(selection, listOf(key)) else selection - key },
                     { open(entry.card.key.sourceId, entry.card.key.mangaId) })
             }
+        }
         }
     }
     if (confirm != null) ReferenceDialog(onDismissRequest = { confirm = null },

@@ -43,13 +43,20 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
     }
     val app = LocalContext.current.applicationContext as Application
     val model: KomgaSettingsModel = viewModel(factory = viewModelFactory { initializer { KomgaSettingsModel(app, session) } })
+    val navigation = rememberSourceSettingsNavigation(back)
     val keyboard = LocalSoftwareKeyboardController.current
     DisposableEffect(model) { model.load(); onDispose { model.leave() } }
-    LazyColumn(Modifier.fillMaxSize().imePadding().testTag("komga-settings"), state = rememberLazyListState(),
+    LazyColumn(Modifier.fillMaxSize().imePadding().testTag("komga-settings"), state = navigation.scroll,
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("Komga 设置", "", back, backModifier = Modifier.testTag("komga-back")) }
-        item {
-            AccountPanel("连接设置") {
+        item { SettingsHeading(navigation.title("Komga"), "", navigation::back, backModifier = Modifier.testTag("komga-back")) }
+        sourceSettingsOverview(navigation,
+            account = if (!model.loaded) "配置待读取" else if (model.sourceId != null) "已保存服务器账号" else "尚未连接服务器",
+            imports = imports, importSummary = "授权书库、系列集合与阅读列表",
+            connectionSummary = model.savedAddress ?: "配置自己的 Komga 服务",
+            accountAction = { navigation.open(SourceSettingsSection.CONNECTION) },
+            importEnabled = model.loaded && !model.busy && model.sourceId != null)
+        if (navigation.section == SourceSettingsSection.CONNECTION) item {
+            AccountPanel("服务器与账号") {
                 OutlinedTextField(value = model.address, onValueChange = model::address,
                     label = { Text("HTTPS 服务地址") }, placeholder = { Text("https://example.com/komga/") },
                     singleLine = true, shape = MaterialTheme.shapes.small, enabled = !model.busy, modifier = Modifier.fillMaxWidth().testTag("komga-address"),
@@ -89,9 +96,9 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
                 model.message?.let { KomgaNotice(it) }
             }
         }
-        item("library-import") { SourceLibraryImportCard("选择授权书库、系列集合或阅读列表导入；已有进度保留。",
+        if (navigation.section == SourceSettingsSection.CONNECTION) item("library-import") { SourceLibraryImportCard("选择授权书库、系列集合或阅读列表导入；已有进度保留。",
             model.loaded && model.sourceId != null, model.busy, "import-komga-library", imports) }
-        model.sourceId?.let { sourceId ->
+        if (navigation.section == SourceSettingsSection.OVERVIEW) model.sourceId?.let { sourceId ->
             item {
                 Text(model.savedAddress.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -100,7 +107,7 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
                 }
             }
         }
-        item { AccountMoreActions("服务管理与说明") { close ->
+        if (navigation.section == SourceSettingsSection.CONNECTION) item { AccountMoreActions("账号管理") { close ->
             if (model.sourceId != null) TextButton(onClick = { close(); model.logout() }, enabled = !model.busy && model.loaded) { Text("退出账号 · 保留书目与进度") }
             Text("连接你自己的漫画服务，目前支持一个 Komga 服务。验证成功后加密保存网页会话、API Key 或 Basic 密码，用于后续阅读。")
             Text("API Key 或邮箱密码连接信息不变时，凭据可以留空沿用；网页会话失效后需重新登录。")

@@ -59,7 +59,8 @@ internal fun PrivateSourceCover(session: WorldSession, source: String, id: Strin
     val identity by session.identity.collectAsState()
     val visibility by session.state.collectAsState()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    val active = visibility.foreground && lifecycle.isAtLeast(Lifecycle.State.STARTED)
+    val active = visibility.foreground && lifecycle.isAtLeast(Lifecycle.State.STARTED) &&
+        visibility.phase == com.flux.manga.session.SwitchPhase.Stable
     val cache = remember(session, identity) { session.pageCovers() }
     val app = LocalContext.current.applicationContext
     val savedCovers = remember(session, identity, app) {

@@ -86,8 +86,9 @@ internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: Stri
     var error by remember(library, sourceId, mangaId) { mutableStateOf<String?>(null) }
     var attempt by remember(library, sourceId, mangaId) { mutableIntStateOf(0) }
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && (!library.privateWorld || visibility.foreground)
-    LaunchedEffect(library, sourceId, mangaId, active, if (library.privateWorld) visibility.visibilityEpoch else 0L, attempt, revision) {
+    val active = lifecycle.isAtLeast(Lifecycle.State.STARTED) && visibility.foreground &&
+        visibility.phase == com.flux.manga.session.SwitchPhase.Stable
+    LaunchedEffect(library, sourceId, mangaId, active, visibility.visibilityEpoch, attempt, revision) {
         if (!active) {
             if (library.privateWorld) bitmap = null
             return@LaunchedEffect
@@ -95,7 +96,10 @@ internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: Stri
         if (bitmap != null) return@LaunchedEffect
         error = null; missing = false
         if (active) try { bitmap = library.cover(sourceId, mangaId) }
-        catch (cancelled: CancellationException) { throw cancelled }
+        catch (cancelled: CancellationException) {
+            if (currentCoroutineContext().isActive) error = "封面请求已取消"
+            throw cancelled
+        }
         catch (_: com.flux.manga.core.SourceException.NotFound) { missing = true }
         catch (_: com.flux.manga.core.SourceException.Timeout) { error = "加载超时" }
         catch (_: Exception) { error = "加载失败" }

@@ -270,21 +270,25 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
     var api by remember(state.settings.api) { mutableStateOf(state.settings.api) }
     var webLogin by remember { mutableStateOf(false) }
     var image by remember(state.settings.image) { mutableStateOf(state.settings.image) }
+    val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) password = "" }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("JMComic 设置", "", back) }
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { SettingsHeading(navigation.title("JMComic"), "", navigation::back) }
+        sourceSettingsOverview(navigation,
+            account = if (!state.ready) "账号状态待读取" else state.settings.account?.let { "已保存会话 · ${it.username}" } ?: "未登录 · 可匿名阅读",
+            imports = favorites, importSummary = "全部收藏或按文件夹导入", connectionSummary = "API 与图片线路",
+            importEnabled = state.ready && !state.busy && state.settings.account != null)
         item { JmFeedback(model, state) }
-        item { SettingsPanel { SettingsDisclosure("连接线路", state.settings.api + " · " + state.settings.image) {
+        if (navigation.section == SourceSettingsSection.CONNECTION) item { SettingsPanel {
             Text("API 线路 · 与网页地址不同")
-            JM_APIS.forEach { host -> FilterChip(api == host, { api = host }, label = {
-                Text(if (host == "www.cdngwc.cc") "$host（旧线路）" else host)
-            }, enabled = !state.busy) }
+            JM_APIS.forEach { host -> SettingsChoiceRow(if (host == "www.cdngwc.cc") "$host（旧线路）" else host,
+                api == host, { api = host }, enabled = !state.busy) }
             Text("图片线路")
-            JM_IMAGES.forEach { host -> FilterChip(image == host, { image = host }, label = { Text(host) }, enabled = !state.busy) }
+            JM_IMAGES.forEach { host -> SettingsChoiceRow(host, image == host, { image = host }, enabled = !state.busy) }
             ReferenceButton({ model.configure(api, image) }, enabled = state.ready && !state.busy) { Text("保存线路") }
-        } } }
-        item { SettingsPanel {
+        } }
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item { SettingsPanel {
             AccountSummary(when {
                 !state.ready -> if (state.busy) "正在读取账号…" else "账号状态待核对"
                 state.settings.account != null -> "已保存登录会话"
@@ -302,9 +306,11 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
             if (state.settings.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
             Text("接回软件的会话按里世界加密保存。登录网页有临时存储，关闭时清理；切换 API 线路后需重新登录。", style = MaterialTheme.typography.bodySmall)
         } }
-        item("library-import") { SourceLibraryImportCard("全部收藏或按文件夹导入；已有书目与阅读进度保留。",
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部收藏或按文件夹导入；已有书目与阅读进度保留。",
             state.ready && state.settings.account != null, state.busy, "import-jm-library", favorites) }
-        item { ReferenceButton(browse, enabled = !state.busy) { Text("搜索与编号直达") } }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item { SettingsGroup {
+            SettingsRow("搜索与编号直达", "", "jm-settings-browse", SettingsSymbol.SOURCES, browse, enabled = !state.busy)
+        } }
     }
     if (webLogin) AccountWebLogin(JmWebSite, close = { webLogin = false }, jmIdentityFields = true, loginUrls = JmWebLoginUrls,
         autoConnectKey = { page, uid, name -> page.jmAccount(uid, name).let { "${it.uid}:${it.username}:${it.cookie}" } },

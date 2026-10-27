@@ -224,12 +224,18 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     val webSite = remember(site) { AccountWebSite("${site.label} 网页账号",
         "https://forums.e-hentai.org/index.php?act=Login&CODE=00",
         setOf("forums.e-hentai.org", "e-hentai.org", site.host)) }
+    val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) { uid = ""; hash = ""; igneous = ""; username = ""; password = "" } }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { SettingsHeading("${site.label} 设置", "", back) }
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { SettingsHeading(navigation.title(site.label), "", navigation::back) }
+        sourceSettingsOverview(navigation,
+            account = if (!state.ready) "账号状态待读取" else state.settings.account?.let { "已保存本站会话 · ${it.name}" }
+                ?: if (site == GallerySite.EX) "未登录 · 需要独立确认 EX 权限" else "未登录 · 可匿名浏览",
+            imports = { browse(true) }, importSummary = "本站全部收藏或按分类导入", connectionSummary = "图片质量与站点权限",
+            importEnabled = state.ready && !state.busy && state.settings.account != null)
         item { EhFeedback(model, state) }
-        item { SettingsPanel {
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item { SettingsPanel {
             AccountSummary(when {
                 !state.ready -> if (state.busy) "正在读取账号…" else "账号状态待核对"
                 state.settings.account != null -> "已保存 ${site.label} 登录会话"
@@ -266,23 +272,23 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
             if (state.settings.account != null) TextButton(feedbackAttempt(model::verifyAccess), enabled = !state.busy) { Text("重新确认本站访问权限") }
             if (state.settings.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
-        item("library-import") { SourceLibraryImportCard("${site.label} 全部收藏或按分类导入；各站账号和书库独立。",
+        if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("${site.label} 全部收藏或按分类导入；各站账号和书库独立。",
             state.ready && state.settings.account != null, state.busy,
             if (site == GallerySite.EX) "import-ex-library" else "import-eh-library", { browse(true) }) }
-        item { SettingsGroup("浏览与阅读") {
-            TextButton(tags) { Text("中文标签词库") }
-            TextButton({ browse(false) }, enabled = site == GallerySite.EH || state.settings.account != null) { Text("浏览与搜索画廊") }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("使用原图", Modifier.weight(1f)); Switch(state.settings.original, model::original, enabled = state.ready && !state.busy)
-            }
-            Text("默认使用站点图片。原图仅在页面提供权限链接时读取，可能消耗站点配额；不可用时明确报错，不自动改图。")
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item { SettingsGroup("浏览") {
+            SettingsRow("中文标签词库", "", "gallery-settings-tags", SettingsSymbol.GROUPS, tags)
+            SettingsDivider()
+            SettingsRow("浏览与搜索画廊", "", "gallery-settings-browse", SettingsSymbol.SOURCES, { browse(false) },
+                enabled = site == GallerySite.EH || state.settings.account != null)
         } }
-        item { SettingsDisclosure("账号与连接说明") {
-            Text(if (site == GallerySite.EX) "可独立输入论坛账号密码，或手动输入身份 Cookie；两种方式均需同账号的 EX 域 igneous。论坛身份、EX 首页和 EX 收藏均成功才保存；EH 登录成功不能代替 EX 权限。两站退出、设置、缓存和阅读记录独立。"
-                else "可在应用内网页登录，连接后核对身份与收藏访问并加密保存；手动 Cookie 入口保留。此处不会导入 EX 凭据。")
-            if (site == GallerySite.EX) Text("已保存账号只代表上次确认结果；访问过期、权限不足或验证页会显示错误，不会自动转到 EH。")
-            Text("仅支持 HTTPS 图片链路。收藏导入只写本机；网站收藏在详情的独立入口确认后修改。画廊正文使用私有加密缓存。")
+        if (navigation.section == SourceSettingsSection.CONNECTION) item { SettingsPanel {
+            SettingsSwitchRow("使用原图", "需要站点权限，可能消耗原图配额；不可用时不会自动改图。",
+                state.settings.original, model::original, enabled = state.ready && !state.busy)
         } }
+        if (navigation.section == SourceSettingsSection.CONNECTION && site == GallerySite.EX) item {
+            Text("EX 权限独立验证；EH 登录成功不代表 EX 可用。", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
     if (webLogin) AccountWebLogin(webSite, close = { webLogin = false }, destination = site.base,
         autoConnectKey = { page, _, _ ->
