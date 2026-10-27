@@ -72,9 +72,9 @@ internal fun ReferenceShelfPage(
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selectedKeys by rememberSaveable { mutableStateOf(emptyList<String>()) }
-    var removalKeys by remember { mutableStateOf<List<String>?>(null) }
-    androidx.activity.compose.BackHandler(selecting && !state.batchBusy && removalKeys == null) {
-        selecting = false; selectedKeys = emptyList()
+    androidx.activity.compose.BackHandler(selecting) {
+        if (state.batchBusy) model.cancelBatch()
+        else { selecting = false; selectedKeys = emptyList() }
     }
     var query by rememberSaveable(initialAuthor) { mutableStateOf(initialAuthor) }
     var searchField by rememberSaveable(initialAuthor) { mutableStateOf(if (initialAuthor.isBlank()) LocalSearchField.ALL else LocalSearchField.AUTHOR) }
@@ -88,7 +88,6 @@ internal fun ReferenceShelfPage(
     val visibleKeys = books.map { it.stableKey }
     LaunchedEffect(visibleKeys) { selectedKeys = selectedKeys.filter { it in visibleKeys } }
     LaunchedEffect(state.batchCompleted) { selectedKeys = selectedKeys.filterNot { it in state.batchCompleted } }
-    val selectedRows = books.filter { it.stableKey in selectedKeys }
     val canEdit = !state.loading && !state.batchBusy && state.saving.isEmpty()
     fun toggle(book: ShelfBook) {
         if (canEdit) selectedKeys = if (book.stableKey in selectedKeys) selectedKeys - book.stableKey else selectedKeys + book.stableKey
@@ -105,21 +104,21 @@ internal fun ReferenceShelfPage(
         val columns = shelfColumns(maxWidth.value, fontScale, state.layout)
         val compactContinue = maxWidth < 340.dp || fontScale >= 1.5f
         Column(Modifier.fillMaxSize()) {
-        if (selecting) ShelfSelectionBar(
-            count = selectedKeys.size,
-            allSelected = visibleKeys.isNotEmpty() && selectedKeys.size == visibleKeys.size,
-            canEdit = canEdit, hasBooks = books.isNotEmpty(),
-            primaryAction = if (isRoot || favoritesOnly || (selectedRows.isNotEmpty() && selectedRows.all { it.favorite }))
-                ShelfBatchAction.UNFAVORITE else ShelfBatchAction.FAVORITE,
-            public = public, hasLocal = selectedRows.any { !it.online },
-            busy = state.batchBusy, processed = state.batchProcessed, total = state.batchTotal, message = state.batchMessage,
-            exit = { selecting = false; selectedKeys = emptyList() },
-            selectAll = { selectedKeys = if (selectedKeys.size == visibleKeys.size) emptyList() else visibleKeys },
-            clear = { selectedKeys = emptyList() },
-            action = { model.batch(selectedKeys.toSet(), it) },
-            removeLocal = { removalKeys = selectedRows.filterNot { it.online }.map { it.stableKey } },
-            stop = model::cancelBatch,
-        )
+        if (selecting) SelectionActionBar(Modifier.padding(horizontal = 20.dp)) {
+            Text((if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目") + "（已选 ${selectedKeys.size} 部）",
+                style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            ShelfReadingFilters(filter, model::filter, enabled = !state.batchBusy)
+            ShelfSelectionBar(
+                canEdit = canEdit, hasBooks = books.isNotEmpty(), hasSelection = selectedKeys.isNotEmpty(),
+                selectAll = { selectedKeys = visibleKeys }, clear = { selectedKeys = emptyList() },
+                unfavorite = { model.batch(selectedKeys.toSet(), ShelfBatchAction.UNFAVORITE) },
+            )
+            if (state.batchBusy) Text("正在处理 ${state.batchProcessed}/${state.batchTotal} 部",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            state.batchMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+        }
         LazyVerticalGrid(GridCells.Fixed(columns), state = shownScroll,
             modifier = Modifier.weight(1f).fillMaxWidth().testTag("reference-shelf"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottomClearance),
@@ -176,7 +175,7 @@ internal fun ReferenceShelfPage(
                 LibraryQueryField(query, { query = it }, "shelf-query", searchField.placeholder)
             }
             item(key = "collection-heading", span = { GridItemSpan(maxLineSpan) }) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (!selecting) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目", style = MaterialTheme.typography.titleLarge,
@@ -266,13 +265,6 @@ internal fun ReferenceShelfPage(
     }
     }
     }
-    removalKeys?.let { keys ->
-        ReferenceDialog(onDismissRequest = { removalKeys = null }, title = { Text("移除 ${keys.size} 部本地书目？") },
-            text = { Text("删除所选本地书目的应用副本、收藏、阅读进度、书签及浏览记录。原 CBZ、在线书目和其他作品保留。") },
-            confirmButton = { ReferenceDialogConfirm("移除书目与副本", destructive = true, enabled = canEdit && keys.isNotEmpty(),
-                onClick = { removalKeys = null; model.batch(keys.toSet(), ShelfBatchAction.REMOVE_LOCAL) }) },
-            dismissButton = { TextButton({ removalKeys = null }) { Text("取消") } })
-    }
     if (panel != null) ShelfPanel(when (panel) { "add" -> "添加书目"; "filters", "sort" -> "筛选与排序"; "dev" -> "开发验证"; "help" -> "书目说明"; "information" -> "作品资料"; else -> "书库操作" }, { panel = null }) {
         fun run(action: () -> Unit) { panel = null; action() }
         when (panel) {
@@ -323,11 +315,11 @@ internal fun ReferenceShelfPage(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun ShelfReadingFilters(filter: ShelfFilter, select: (ShelfFilter) -> Unit) {
+internal fun ShelfReadingFilters(filter: ShelfFilter, select: (ShelfFilter) -> Unit, enabled: Boolean = true) {
     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().testTag("shelf-reading-filters"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ShelfFilter.entries.forEach { value ->
             val background = referenceStateColor(if (filter == value) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-            TextButton(onClick = { select(value) }, shape = RoundedCornerShape(14.dp),
+            TextButton(onClick = { select(value) }, enabled = enabled, shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.textButtonColors(
                     containerColor = background,
                     contentColor = if (filter == value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant),
