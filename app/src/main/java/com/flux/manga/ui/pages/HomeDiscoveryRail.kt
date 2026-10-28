@@ -21,8 +21,6 @@ import com.flux.manga.data.MangaCard
 import com.flux.manga.data.isCopySource
 import com.flux.manga.data.isBaoziSource
 import com.flux.manga.data.isPrivateComicSource
-import com.flux.manga.data.isEhSource
-import com.flux.manga.data.isExSource
 import com.flux.manga.ui.navigation.DiscoverySection
 import java.time.LocalDate
 import java.time.Instant
@@ -77,7 +75,7 @@ internal fun HomeDiscoveryRail(model: MixedDiscoveryModel, cards: List<MangaCard
                             }
                             Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface,
-                                    minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 HomeUpdateMetadata(model, card)
                             }
                         }
@@ -108,8 +106,8 @@ internal fun HomeUpdateMetadata(model: MixedDiscoveryModel, card: MangaCard) {
     Text(updateDate(card.updatedAt ?: extra?.date, dateSuffix), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
     val chapter = card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter?.takeIf(String::isNotBlank)
-    Text(chapter?.let { if (it.startsWith("更新")) it else "更新至 $it" }
-        ?: if (isEhSource(source) || isExSource(source)) "单篇画廊" else "章节未提供",
+    // Missing chapter labels (including hidden single-chapter works) are not a failure state.
+    if (chapter != null) Text(if (chapter.startsWith("更新")) chapter else "更新至 $chapter",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 2, overflow = TextOverflow.Ellipsis)
 }

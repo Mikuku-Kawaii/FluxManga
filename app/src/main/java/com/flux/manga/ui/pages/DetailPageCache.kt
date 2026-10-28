@@ -11,7 +11,8 @@ import org.json.JSONObject
 internal class DetailPageCache(private val context: Context, private val session: WorldSession, private val source: String, private val id: String) {
     private val identity = session.identity.value
     private val informationStore = OnlineBookInformationStore(WorldDataStore(context), session)
-    private val prefix = "detail-v1:${source.length}:$source${id.length}:$id:"
+    private val version = if (isCopyAccount(source)) "detail-copy-api-v2" else "detail-v1"
+    private val prefix = "$version:${source.length}:$source${id.length}:$id:"
     private val slots = mutableMapOf<String, CatalogPageCache>()
     private fun cache(slot: String) = slots.getOrPut(slot) { CatalogPageCache(context, session, prefix + slot, identity) }
     suspend fun read(slot: String = "book") = cache(slot).read()

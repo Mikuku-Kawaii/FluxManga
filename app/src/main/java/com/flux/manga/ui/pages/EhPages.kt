@@ -377,7 +377,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun EhDetailPage(session: WorldSession, source: String, id: String, back: () -> Unit, settings: () -> Unit,
+@Composable internal fun EhDetailPage(session: WorldSession, source: String, id: String, back: () -> Unit,
     read: () -> Unit, tag: (String) -> Unit, site: GallerySite = GallerySite.EH, tags: (() -> Unit)? = null, interactions: ((Boolean) -> Unit)? = null, download: () -> Unit = {}, searchAuthor: ((String) -> Unit)? = null) {
     val model = ehModel(session, source, site); val state by model.state.collectAsStateWithLifecycle()
     val translations = galleryTagsModel(session); val translated by translations.state.collectAsStateWithLifecycle()
@@ -387,7 +387,6 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
         item { DetailHeading(back) }
         if (!readContentLayout(state.book != null, state.busy, state.detailError ?: state.message.takeIf { state.error && state.book == null }, { model.detail(id) }, detail = true, cancel = model::stop)) {
             item("offline-entry") { TextButton(download) { Text("加密下载与离线章节") } }
-            item("source-settings") { TextButton(settings) { Text("图源与账号设置") } }
             return@ReferenceRefreshColumn
         }
         item { EhFeedback(model, state) }
@@ -404,7 +403,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
                 readingPosition = readingPosition(state.progress, emptyList()), belowActions = {
                     WorkTags(book.tags.map { text ->
                         (if (translated.enabled) translated.dictionary?.label(text) ?: text else text) to text
-                    }) { text, _ ->
+                    }, maxRows = 2) { text, _ ->
                         tag(text.substringBefore(':') + ":\"" + text.substringAfter(':').replace("\"", "") + "\"")
                     }
                     translated.message?.let { Text("中文标签暂不可用；原标签仍可搜索。", style = MaterialTheme.typography.bodySmall) }
@@ -415,6 +414,5 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
                 TextButton({ open(true) }) { Text("管理网站收藏") }
             } }
         } } }
-        item("source-settings") { TextButton(settings) { Text("图源与账号设置") } }
     }
 }

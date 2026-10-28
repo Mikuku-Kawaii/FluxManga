@@ -53,10 +53,6 @@ internal class BrowsingHistory(private val context: Context, private val session
         val config = if (identity.world == PrototypeWorld.SFW) try { KomgaSettingsStore(data).load() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { configFailed = true; null } else null
-        var copyFailed = false
-        val copy = if (identity.world == PrototypeWorld.SFW) try { CopyAccountStore(data.accountImportDatabase()).current { session.accepts(identity) } }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { copyFailed = true; null } else null
         var jmFailed = false
         val jm = if (identity.world == PrototypeWorld.NSFW) try { JmStore(context, session).settings().account }
             catch (cancelled: CancellationException) { throw cancelled }
@@ -102,12 +98,7 @@ internal class BrowsingHistory(private val context: Context, private val session
                     row.kind == "local" -> dao.localBook(row.sourceId, row.mangaId)?.let {
                         if (File(local.directory, it.archiveName).isFile) VisitAvailability.AVAILABLE else VisitAvailability.MISSING
                     } ?: VisitAvailability.MISSING
-                    isBaoziSource(row.sourceId) || row.sourceId == CopyMangaEndpoint.SOURCE_ID -> VisitAvailability.AVAILABLE
-                    isCopyAccount(row.sourceId) -> when {
-                        copyFailed -> VisitAvailability.SOURCE_UNKNOWN
-                        copy?.sourceId == row.sourceId && copy.hasCredential -> VisitAvailability.AVAILABLE
-                        else -> VisitAvailability.SOURCE_CHANGED
-                    }
+                    isBaoziSource(row.sourceId) || isCopySource(row.sourceId) -> VisitAvailability.AVAILABLE
                     configFailed -> VisitAvailability.SOURCE_UNKNOWN
                     config?.sourceId != row.sourceId -> VisitAvailability.SOURCE_CHANGED
                     else -> VisitAvailability.AVAILABLE

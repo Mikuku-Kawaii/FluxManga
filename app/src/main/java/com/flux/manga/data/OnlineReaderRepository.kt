@@ -44,7 +44,7 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
     }
     override fun isActive() = identity.world == PrototypeWorld.SFW && session.accepts(identity) && (access?.isActive() ?: true)
     override fun active() { if (!isActive()) throw CancellationException("Expired reader session") }
-    private suspend fun copyClient(): WorldCopyMangaClient { active(); return copyMangaClient(app, session, sourceId) }
+    private suspend fun copyClient(): WorldCopyMangaClient { active(); return copyMangaClient(session, sourceId) }
     override suspend fun pages(chapterId: String): List<SourcePageResource> {
         active()
         if(offlineEnabled) {

@@ -17,8 +17,9 @@ internal data class ShelfBook(val key: MangaKey, val title: String, val favorite
     val information get() = remote?.information
     val hasProgress get() = ordinal != null && ordinal > 0
     val validProgress get() = hasProgress && !chapterId.isNullOrBlank() && (pageCount == null || ordinal!! <= pageCount)
-    // Existing progress records the current page, not an independent finished-book flag.
+    // Online completion comes from an observed final page plus confirmed publication status.
     val status get() = when {
+        online && information?.isReadToEnd == true -> ShelfFilter.READ
         !hasProgress -> ShelfFilter.UNREAD
         !online && pageCount != null && pageCount > 0 && ordinal == pageCount -> ShelfFilter.READ
         else -> ShelfFilter.READING

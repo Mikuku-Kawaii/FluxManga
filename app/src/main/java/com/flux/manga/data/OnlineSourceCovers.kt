@@ -31,7 +31,7 @@ internal class OnlineSourceCovers(private val app: Application, private val sess
                     val directory = File(app.cacheDir, "sfw/${if (baozi) "baozi-covers" else "copy-covers"}/${identity.processSession}-${identity.generation}/$sourceId")
                     if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Image directory unavailable")
                     val output = if (baozi) session.baoziSources.client(app, sourceId).coverFile(id, directory.path)
-                        else copyMangaClient(app, session, sourceId).coverFile(id, directory.path)
+                        else copyMangaClient(session, sourceId).coverFile(id, directory.path)
                     output.use { file ->
                         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                         BitmapFactory.decodeFile(file.path(), bounds)

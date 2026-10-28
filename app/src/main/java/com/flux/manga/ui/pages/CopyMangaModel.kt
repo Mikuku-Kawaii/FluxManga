@@ -45,7 +45,7 @@ internal class CopyMangaModel(private val app: Application, private val session:
     private fun active() = identity.world == com.flux.manga.ui.navigation.PrototypeWorld.SFW && session.accepts(identity)
     private suspend fun client(): WorldCopyMangaClient = withContext(Dispatchers.IO) {
         if (!active()) throw CancellationException("Expired source session")
-        copyMangaClient(app, session, sourceId)
+        copyMangaClient(session, sourceId)
     }
     val feed = DiscoveryFeedController(viewModelScope, ::active, ::copyMangaFailure) { page ->
         val client = client()

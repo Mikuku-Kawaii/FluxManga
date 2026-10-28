@@ -65,13 +65,12 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
     suspend fun shelf(): List<OnlineShelfItem> {
         active()
         val config = KomgaSettingsStore(data).load()
-        val copy = CopyAccountStore(data.accountImportDatabase()).current { session.accepts(identity) }
         val result = data.localData { dao ->
             active()
             val progress = dao.onlineProgressRows().associateBy { it.sourceId to it.mangaId }
             val books = dao.onlineBooks().associateBy { it.sourceId to it.mangaId }.toMutableMap()
             progress.forEach { (key, value) -> books.putIfAbsent(key, OnlineBook(value.sourceId, value.mangaId, "", false, value.updatedAt)) }
-            books.map { (key, value) -> OnlineShelfItem(value, progress[key], isBaoziSource(value.sourceId) || value.sourceId == CopyMangaEndpoint.SOURCE_ID || (value.sourceId == copy?.sourceId && copy.hasCredential) || value.sourceId == config?.sourceId) }
+            books.map { (key, value) -> OnlineShelfItem(value, progress[key], isBaoziSource(value.sourceId) || isCopySource(value.sourceId) || value.sourceId == config?.sourceId) }
                 .sortedByDescending { it.progress?.updatedAt ?: it.book.updatedAt }
         }
         currentCoroutineContext().ensureActive(); active()

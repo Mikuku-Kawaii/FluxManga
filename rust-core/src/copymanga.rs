@@ -110,7 +110,7 @@ struct Group {
 #[derive(Deserialize)]
 struct Chapter {
     uuid: String,
-    name: String,
+    name: Option<String>,
     comic_path_word: String,
     group_path_word: String,
 }
@@ -659,7 +659,6 @@ impl CopyMangaSource {
         let mut items = Vec::new();
         for (index, chapter) in page.list.into_iter().enumerate() {
             if !valid_id(&chapter.uuid)
-                || chapter.name.trim().is_empty()
                 || chapter.comic_path_word != key.manga_id
                 || chapter.group_path_word != group_id
                 || items.iter().any(|c: &SourceChapter| c.id == chapter.uuid)
@@ -669,7 +668,7 @@ impl CopyMangaSource {
             items.push(SourceChapter {
                 manga: key.clone(),
                 id: chapter.uuid,
-                title: chapter.name,
+                title: chapter.name.unwrap_or_default(),
                 ordinal: expected
                     .checked_add(index as u32 + 1)
                     .ok_or(SourceError::InvalidResponse)?,

@@ -59,12 +59,12 @@ internal fun BookResultCard(title: String, open: () -> Unit, grid: Boolean = tru
     } else Column(Modifier.fillMaxWidth().clickable(enabled = enabled, role = Role.Button,
         onClickLabel = "查看《$title》详情", onClick = open), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         cover()
-        Text(title, titleModifier.fillMaxWidth(), style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface, minLines = 2,
-            maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (metadata.isNotBlank()) Text(metadata, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, minLines = 1, maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, titleModifier.fillMaxWidth(), style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (metadata.isNotBlank()) Text(metadata, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

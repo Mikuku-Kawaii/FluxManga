@@ -859,7 +859,6 @@ impl MangaSource for KomgaSource {
                 .map(|(index, book)| {
                     if book.series_id != key.manga_id
                         || !valid_id(&book.id)
-                        || book.metadata.title.trim().is_empty()
                     {
                         return Err(SourceError::InvalidResponse);
                     }

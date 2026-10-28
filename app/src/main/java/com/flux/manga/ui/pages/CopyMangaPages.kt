@@ -107,7 +107,7 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                     item("title") {
                         DetailHero(result.manga.title, { CopyMangaCover(model.covers, result.manga.key.mangaId, fillWidth = true) }) {
                             WorkMetadata(result.metadata, "$sourceId:$mangaId", searchAuthor)
-                            WorkTags(detail.themes?.map { it.name to it.pathWord }, compact = true) { id, name -> openTag(CopyMangaEndpoint.SOURCE_ID, id, name) }
+                            WorkTags(detail.themes?.map { it.name to it.pathWord }, compact = true, openInDialog = true) { id, name -> openTag(CopyMangaEndpoint.SOURCE_ID, id, name) }
                         }
                     }
                     item("actions") {
@@ -144,7 +144,7 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                                 Text(if (chapters.next is SourceContinuation.Next) "本页暂无章节，可加载后续页" else "该分组暂无章节")
                             }
                         }
-                        if (chapters.items.size > 1 || chapters.next is SourceContinuation.Next ||
+                        if (chapters.items.isNotEmpty() || chapters.next is SourceContinuation.Next ||
                             chapters.busy || chapters.appendError != null) item("directory") {
                             RecordedDetailCatalog(session, sourceId, mangaId, chapterEntries(chapters.items), detail.progress?.chapterId, { read?.invoke(it) },
                                 busy = chapters.busy, hasMore = chapters.next is SourceContinuation.Next, more = model.chapters::more,

@@ -197,7 +197,7 @@ internal class JmClient(private val session: WorldSession, private val settings:
         val data = requireNotNull(request("album", mapOf("id" to id)).first)
         val list = data.optJSONArray("series") ?: JSONArray()
         val chapters = (0 until list.length()).map { list.getJSONObject(it) }.sortedBy { it.optInt("sort", 1) }
-            .map { JmChapter(it.getString("id").also { value -> require(jmId(value)) }, it.optString("name", "章节")) }
+            .map { row -> JmChapter(row.getString("id").also { require(jmId(it)) }, if (row.isNull("name")) "" else row.getString("name")) }
             .ifEmpty { listOf(JmChapter(id, data.getString("name"))) }
         return JmBook(id, data.getString("name"), strings(data.optJSONArray("author")).joinToString(" / "),
             data.optString("description").takeUnless { data.isNull("description") }.orEmpty(), strings(data.optJSONArray("tags")), chapters,

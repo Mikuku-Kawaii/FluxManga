@@ -9,7 +9,11 @@ internal fun featuredTags(names: List<String>): List<String> {
 }
 
 internal data class DetailCatalogEntry(val id: String, val title: String, val description: String = "")
-internal fun chapterEntries(chapters: List<SourceChapter>) = chapters.map {
+internal fun chapterTitle(title: String, number: Int) = title.takeIf(String::isNotBlank) ?: "第${number}话"
+internal fun List<SourceChapter>.withChapterTitles() = mapIndexed { index, chapter ->
+    chapter.copy(title = chapterTitle(chapter.title, chapter.ordinal.toInt().takeIf { it > 0 } ?: (index + 1)))
+}
+internal fun chapterEntries(chapters: List<SourceChapter>) = chapters.withChapterTitles().map {
     DetailCatalogEntry(it.id, it.title, it.pageCount?.let { count -> "$count 页" }.orEmpty())
 }
 internal fun orderedCatalog(entries: List<DetailCatalogEntry>, reverse: Boolean) = if (reverse) entries.asReversed() else entries
@@ -21,4 +25,6 @@ internal fun readingPosition(progress: OnlineReadingProgress?, entries: List<Det
     (chapter?.takeIf(String::isNotBlank)?.let { name -> "$name · " } ?: "") + "第 ${it.ordinal} 页"
 }
 
-internal fun baoziChapterEntries(chapters: List<com.flux.manga.data.BaoziChapter>) = chapters.map { DetailCatalogEntry(it.id, it.title) }
+internal fun baoziChapterEntries(chapters: List<com.flux.manga.data.BaoziChapter>) = chapters.mapIndexed { index, chapter ->
+    DetailCatalogEntry(chapter.id, chapterTitle(chapter.title, index + 1))
+}

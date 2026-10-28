@@ -35,6 +35,7 @@ internal fun CollectionImportPage(
     error: String? = null, notice: String? = null, summary: String? = null,
     total: Long? = null, favorite: Boolean? = null, changeFavorite: (Boolean) -> Unit = {},
     information: BookInformationModel? = null,
+    librarySource: String? = source,
     scope: @Composable () -> Unit = {}, pagination: @Composable () -> Unit = {},
     options: @Composable ColumnScope.() -> Unit = {},
     footerExtra: @Composable () -> Unit = {},
@@ -46,13 +47,13 @@ internal fun CollectionImportPage(
     val identity by session.identity.collectAsStateWithLifecycle()
     val visibility by session.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var saved by remember(identity, source) { mutableStateOf<Set<String>?>(null) }
-    var savedError by remember(identity, source) { mutableStateOf<String?>(null) }
-    LaunchedEffect(identity, source, busy, visibility.foreground, visibility.visibilityEpoch) {
+    var saved by remember(identity, source, librarySource) { mutableStateOf<Set<String>?>(null) }
+    var savedError by remember(identity, source, librarySource) { mutableStateOf<String?>(null) }
+    LaunchedEffect(identity, source, librarySource, busy, visibility.foreground, visibility.visibilityEpoch) {
         if (!visibility.foreground || source == null) { saved = null; return@LaunchedEffect }
         try {
             val ids = WorldDataStore(context).worldData(identity.world, { session.accepts(identity) }) { dao ->
-                dao.onlineBooks().filter { it.sourceId == source }.map { it.mangaId }.toSet()
+                dao.onlineBooks().filter { it.sourceId == source || it.sourceId == librarySource }.map { it.mangaId }.toSet()
             }
             if (session.accepts(identity)) { saved = ids; savedError = null }
         } catch (cancelled: CancellationException) { throw cancelled }

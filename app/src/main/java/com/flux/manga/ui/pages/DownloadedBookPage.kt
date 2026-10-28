@@ -77,7 +77,7 @@ internal fun DownloadedBookPage(session: WorldSession, source: String, manga: St
     var showActions by rememberSaveable(source, manga) { mutableStateOf(false) }
     val jobs = state.jobs.associateBy { it.chapter }
     val visibleChapters = remember(state.chapters, jobs, onlyDownloaded, query) {
-        state.chapters.filter { (!onlyDownloaded || jobs[it.id]?.status == DownloadStatus.COMPLETE) && downloadTitleMatches(it.title, query) }
+        state.chapters.withChapterTitles().filter { (!onlyDownloaded || jobs[it.id]?.status == DownloadStatus.COMPLETE) && downloadTitleMatches(it.title, query) }
     }
     ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh(); readings.refresh() }, refreshEnabled = !queueState.controlling && !readingState.busy, modifier = Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading("离线目录", "", back, actions = { ReferenceActionsButton("离线作品管理", { showActions = true }) }) }

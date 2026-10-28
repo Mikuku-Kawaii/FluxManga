@@ -237,7 +237,7 @@ internal class BaoziSource(private val context: SourceContext, private val accep
         if (elements.size > 10_000) throw SourceException.InvalidResponse()
         return elements.map { element ->
             val title = element.text().trim()
-            if (title.isEmpty() || title.contains("{{")) throw SourceException.InvalidResponse()
+            if (title.contains("{{")) throw SourceException.InvalidResponse()
             BaoziChapter(key, chapterId(element, key.mangaId), title)
         }.distinctBy { it.id }
     }

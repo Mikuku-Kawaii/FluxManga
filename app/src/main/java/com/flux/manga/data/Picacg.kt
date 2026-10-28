@@ -158,7 +158,7 @@ internal class PicaClient(private val session: WorldSession, private val account
     suspend fun chapters(id: String, number: Int): PicaPage<PicaChapter> {
         require(picaId(id))
         return page(request("comics/$id/eps?page=$number").getJSONObject("eps"), number) { row, _ ->
-            PicaChapter(row.getInt("order").also { require(it > 0) }, row.getString("title"), row.text("updated_at"))
+            PicaChapter(row.getInt("order").also { require(it > 0) }, row.text("title"), row.text("updated_at"))
         }
     }
     suspend fun allChapters(id: String): List<PicaChapter> {

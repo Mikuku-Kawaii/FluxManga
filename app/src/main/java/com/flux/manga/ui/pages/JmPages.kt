@@ -317,7 +317,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
 }
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun JmDetailPage(session: WorldSession, source: String, id: String, back: () -> Unit,
-    read: (String) -> Unit, tag: (String) -> Unit, settings: () -> Unit, download: () -> Unit = {}, searchAuthor: ((String) -> Unit)? = null) {
+    read: (String) -> Unit, tag: (String) -> Unit, download: () -> Unit = {}, searchAuthor: ((String) -> Unit)? = null) {
     val model = jmModel(session, source); val state by model.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.ready, state.source, state.settings) { if (state.ready && state.detail == null) model.detail(id) }
     ReferenceRefreshColumn(modifier = Modifier.fillMaxSize(), refreshing = state.busy, refresh = { model.detail(id) },
@@ -325,7 +325,6 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         item { DetailHeading(back) }
         if (!readContentLayout(state.detail != null, state.busy, state.detailError ?: state.message.takeIf { state.error && state.detail == null }, { model.detail(id) }, detail = true, cancel = model::stop)) {
             item("offline-entry") { TextButton(download) { Text("加密下载与离线章节") } }
-            item("source-settings") { TextButton(settings) { Text("图源与账号设置") } }
             return@ReferenceRefreshColumn
         }
         item { JmFeedback(model, state) }
@@ -339,13 +338,12 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                     read = { (state.resume ?: book.chapters.firstOrNull()?.id)?.let(read) },
                     canRead = (state.resume != null || book.chapters.isNotEmpty()) && !state.busy, hasProgress = state.resume != null,
                     description = book.description, descriptionIdentity = "$source:${book.id}",
-                    readingPosition = readingPosition(state.progress, book.chapters.map { DetailCatalogEntry(it.id, it.title) }),
-                    belowActions = { WorkTags(book.tags.map { it to it }) { value, _ -> tag(value) } })
+                    readingPosition = readingPosition(state.progress, book.chapters.mapIndexed { index, chapter -> DetailCatalogEntry(chapter.id, chapterTitle(chapter.title, index + 1)) }),
+                    belowActions = { WorkTags(book.tags.map { it to it }, maxRows = 2) { value, _ -> tag(value) } })
             } }
-            if (book.chapters.size > 1) item { RecordedDetailCatalog(session, source, id, book.chapters.map { DetailCatalogEntry(it.id, it.title) }, state.resume, read,
+            if (book.chapters.size > 1) item { RecordedDetailCatalog(session, source, id, book.chapters.mapIndexed { index, chapter -> DetailCatalogEntry(chapter.id, chapterTitle(chapter.title, index + 1)) }, state.resume, read,
                 enabled = !state.busy) }
 
         }
-        item("source-settings") { TextButton(settings) { Text("图源与账号设置") } }
     }
 }

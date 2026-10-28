@@ -6,7 +6,7 @@ import kotlinx.coroutines.*
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Fixed public endpoint from the pinned upstream. No mirror discovery; account access uses the same fixed endpoint. */
+/** Reading endpoint stays independent of the service used to sign in and import collections. */
 internal object CopyMangaEndpoint {
     const val SOURCE_ID = "copymanga-api2024-v3"
     const val BASE_URL = "https://api.2024manga.com/"
@@ -15,11 +15,18 @@ internal object CopyMangaEndpoint {
 /** Lazy generation-owned client; metadata pages share one pool and limiter. */
 internal class WorldCopyMangaSources(private val session: WorldSession) : Closeable {
     private var value: WorldCopyMangaClient? = null
+    private val importedReaders = mutableMapOf<String, WorldCopyMangaClient>()
     @Synchronized fun client(): WorldCopyMangaClient {
         check(session.accepts(session.identity.value))
         return value ?: WorldCopyMangaClient(session).also { value = it }
     }
     @Volatile var credentialRevision = 0L; private set
+    /** Legacy book keys retain their progress namespace, but always read through the public API. */
+    @Synchronized fun importedReader(source: String): WorldCopyMangaClient {
+        require(isCopyAccount(source))
+        check(session.accepts(session.identity.value))
+        return importedReaders.getOrPut(source) { WorldCopyMangaClient(session, source, accountAccess = false) }
+    }
     private var account: WorldCopyMangaClient? = null
     private var credential: CopyAccount? = null
     @Synchronized fun account(c: CopyAccount, expectedRevision: Long = credentialRevision): WorldCopyMangaClient {
@@ -35,18 +42,22 @@ internal class WorldCopyMangaSources(private val session: WorldSession) : Closea
         return requireNotNull(account)
     }
     @Synchronized fun closeAccount() { credentialRevision++; account?.close(); account = null; credential = null }
-    @Synchronized override fun close() { value?.close(); value = null; closeAccount() }
+    @Synchronized override fun close() {
+        value?.close(); value = null
+        importedReaders.values.forEach { it.close() }; importedReaders.clear()
+        closeAccount()
+    }
 }
 
 internal class WorldCopyMangaClient(private val session: WorldSession, sourceId: String = CopyMangaEndpoint.SOURCE_ID, token: String? = null,
-    service: CopyAccountService = CopyAccountService.LEGACY) : Closeable {
+    service: CopyAccountService = CopyAccountService.LEGACY, accountAccess: Boolean = isCopyAccount(sourceId)) : Closeable {
     private val identity = session.identity.value
-    private val context = identity.sourceContext(sourceId, if (isCopyAccount(sourceId)) "$sourceId:account" else null)
+    private val context = identity.sourceContext(sourceId, if (accountAccess) "$sourceId:account" else null)
     private val closed = AtomicBoolean()
     private val config = SourceHttpConfig(15_000u, 2u, 100u, 2u, 4u * 1024u * 1024u)
-    private val source = if (isCopyAccount(sourceId) && service == CopyAccountService.WEB) CopyMangaSource.withWebAccount(context, requireNotNull(token), config)
-        else if (isCopyAccount(sourceId) && service == CopyAccountService.OFFICIAL) CopyMangaSource.withOfficialAccount(context, token, config)
-        else if (isCopyAccount(sourceId)) CopyMangaSource.withAccount(context, token, config)
+    private val source = if (accountAccess && service == CopyAccountService.WEB) CopyMangaSource.withWebAccount(context, requireNotNull(token), config)
+        else if (accountAccess && service == CopyAccountService.OFFICIAL) CopyMangaSource.withOfficialAccount(context, token, config)
+        else if (accountAccess) CopyMangaSource.withAccount(context, token, config)
         else CopyMangaSource(context, CopyMangaEndpoint.BASE_URL, config)
     private val mapper = SourceModelMapper(identity, context, session::accepts)
     private fun active() {
@@ -118,16 +129,12 @@ internal class WorldCopyMangaClient(private val session: WorldSession, sourceId:
     }
 }
 
-/** Resolve the active encrypted account again; stale routes must not become anonymous requests. */
-internal suspend fun copyMangaClient(context: android.content.Context, session: WorldSession, source: String): WorldCopyMangaClient {
+/** Account identity is import provenance, never the transport used to read an imported comic. */
+internal fun copyMangaClient(session: WorldSession, source: String): WorldCopyMangaClient {
     val identity = session.identity.value
     fun checkActive() { if (identity.world != com.flux.manga.ui.navigation.PrototypeWorld.SFW || !session.accepts(identity)) throw CancellationException() }
     checkActive()
     if (source == CopyMangaEndpoint.SOURCE_ID) return session.copyMangaSources.client()
     require(isCopyAccount(source))
-    val revision = session.copyMangaSources.credentialRevision
-    val c = CopyAccountStore(WorldDataStore(context).accountImportDatabase()).current { session.accepts(identity) }
-    currentCoroutineContext().ensureActive(); checkActive()
-    if (c?.sourceId != source || !c.hasCredential) throw SourceException.AuthenticationRequired()
-    return session.copyMangaSources.account(c, revision)
+    return session.copyMangaSources.importedReader(source)
 }

@@ -167,7 +167,7 @@ internal fun ReaderChapterDialog(state: OnlineReaderState, offlineOnly: Boolean,
     restart: () -> Unit, adjacent: (Int) -> Unit, refreshReadings: () -> Unit, mark: ((Boolean) -> Unit)?) {
     val current = state.pages.getOrNull(state.index)?.chapterId.orEmpty()
     var query by rememberSaveable { mutableStateOf("") }
-    val visible = remember(state.chapters, query) { state.chapters.filter { it.title.contains(query.trim(), ignoreCase = true) } }
+    val visible = remember(state.chapters, query) { state.chapters.withChapterTitles().filter { it.title.contains(query.trim(), ignoreCase = true) } }
     val currentIndex = visible.indexOfFirst { it.id == current }
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()

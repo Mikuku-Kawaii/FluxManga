@@ -19,6 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.draw.clip
 
 @Composable
@@ -29,33 +34,55 @@ internal fun DetailHeading(back: () -> Unit, modifier: Modifier = Modifier, back
 
 @Composable
 internal fun DetailHero(title: String, cover: @Composable () -> Unit, titleTag: String? = null,
-    titleLines: Int = 3,
+    titleLines: Int = 3, onTitleLines: (Int) -> Unit = {},
     metadata: @Composable ColumnScope.() -> Unit = {}) {
     var expanded by rememberSaveable(title) { mutableStateOf(false) }
     var titleOverflow by remember(title) { mutableStateOf(false) }
+    var titleLineCount by remember(title) { mutableIntStateOf(1) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val vertical = maxWidth < 280.dp || LocalDensity.current.fontScale >= 1.5f
         val coverWidth = (maxWidth * .34f).coerceAtMost(150.dp)
         @Composable fun Information(modifier: Modifier = Modifier) {
-            Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.headlineSmall,
                     maxLines = if (expanded) Int.MAX_VALUE else titleLines, overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { if (!expanded) titleOverflow = it.hasVisualOverflow },
+                    onTextLayout = { titleLineCount = it.lineCount; onTitleLines(it.lineCount); if (!expanded) titleOverflow = it.hasVisualOverflow },
                     modifier = Modifier.then(if (titleTag != null) Modifier.testTag(titleTag) else Modifier).semantics { heading() })
                 if (titleOverflow || expanded) TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
                     Text(if (expanded) "收起书名" else "完整书名")
                 }
                 ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp), content = metadata)
+                    CompositionLocalProvider(LocalDetailTagRows provides if (titleLineCount >= 2) 1 else 2) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), content = metadata)
+                    }
                 }
             }
         }
         if (vertical) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.width(140.dp)) { cover() }
             Information()
-        } else Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
-            Box(Modifier.width(coverWidth)) { cover() }
-            Information(Modifier.weight(1f))
+        } else SubcomposeLayout(Modifier.fillMaxWidth()) { constraints ->
+            val width = coverWidth.roundToPx()
+            val gap = 16.dp.roundToPx()
+            val informationWidth = (constraints.maxWidth - width - gap).coerceAtLeast(0)
+            val minimumHeight = (width / .7f).toInt()
+            val info = subcompose("information") { Information(Modifier.fillMaxWidth()) }.single()
+                .measure(Constraints(minWidth = informationWidth, maxWidth = informationWidth, minHeight = minimumHeight))
+            val height = constraints.constrainHeight(info.height)
+            val coverContent = subcompose("cover") {
+                // Match the information height without distorting the image: fill and crop the sides.
+                Layout(content = cover, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clipToBounds()) { children, frame ->
+                    val imageWidth = maxOf(frame.maxWidth, kotlin.math.ceil(frame.maxHeight * .7f).toInt())
+                    val image = children.map { it.measure(Constraints.fixedWidth(imageWidth)) }
+                    layout(frame.maxWidth, frame.maxHeight) {
+                        image.forEach { it.placeRelative((frame.maxWidth - it.width) / 2, (frame.maxHeight - it.height) / 2) }
+                    }
+                }
+            }.single().measure(Constraints.fixed(width, height))
+            layout(constraints.maxWidth, height) {
+                coverContent.placeRelative(0, 0)
+                info.placeRelative(width + gap, 0)
+            }
         }
     }
 }
@@ -156,9 +183,9 @@ internal fun DetailCatalog(entries: List<DetailCatalogEntry>, lastId: String?, o
     title: String = "章节目录", busy: Boolean = false, hasMore: Boolean = false, more: (() -> Unit)? = null,
     appendError: String? = null, enabled: Boolean = true,
     totalCount: Long? = null, completed: Set<String> = emptySet(), readingLabels: Map<String, String> = emptyMap(),
-    recordStatus: @Composable () -> Unit = {}, chapterActions: ((DetailCatalogEntry) -> Unit)? = null) {
-    // Keep paging/retry available until the directory is complete; a sole chapter uses Read.
-    if (entries.size <= 1 && !hasMore && !busy && appendError == null) return
+    recordStatus: @Composable () -> Unit = {}, chapterActions: ((DetailCatalogEntry) -> Unit)? = null, showSingle: Boolean = false) {
+    // Public works keep their sole chapter reachable; private works retain the compact rule.
+    if ((entries.isEmpty() || (entries.size == 1 && !showSingle)) && !hasMore && !busy && appendError == null) return
     var reverse by rememberSaveable { mutableStateOf(false) }
     var visibleCount by rememberSaveable { mutableIntStateOf(12) }
     val sorted = remember(entries, reverse) { orderedCatalog(entries, reverse) }

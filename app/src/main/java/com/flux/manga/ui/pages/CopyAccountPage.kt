@@ -52,20 +52,21 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
     LaunchedEffect(state.verified) { if (state.verified) password = "" }
     val navigation = rememberSourceSettingsNavigation(back)
     val unfinished = state.task?.done == false
-    val informationModel = state.source?.let { rememberBookInformation(session, it) }
+    val readingSource = com.flux.manga.data.CopyMangaEndpoint.SOURCE_ID
+    val informationModel = state.source?.let { rememberBookInformation(session, readingSource) }
     val coverLibrary = remember(session, identity) { com.flux.manga.data.OnlineLibrary(context, session) }
     if (navigation.section == SourceSettingsSection.IMPORT) {
         CollectionImportPage(session, state.source, "拷贝漫画", state.username,
             books = state.entries.map { ImportBook(it.collectionId, it.mangaId, it.title) }, signedIn = state.verified, busy = state.busy,
             selected = selection, select = { selection = it }, query = previewQuery, changeQuery = { previewQuery = it },
             back = navigation::back, login = { navigation.open(SourceSettingsSection.ACCOUNT) },
-            open = { id -> state.source?.let { open(it, id) } },
+            open = { id -> open(readingSource, id) },
             primaryLabel = if (unfinished) "继续导入" else "导入全部", canImport = state.loaded && !state.busy && (unfinished || state.entriesLoaded),
             importBooks = { if (unfinished) model.resume() else { confirm = if (selection.isEmpty()) "all" else "import" } }, pause = model::cancel, refresh = model::start,
             scroll = navigation.scroll, error = state.error, notice = state.notice,
             summary = state.task?.let { "${if (it.done) "已完成" else "导入进度"} · 新增 ${it.added} · 已存在 ${it.existing}" },
             total = state.reportedTotal,
-            favorite = favorite, changeFavorite = { favorite = it }, information = informationModel,
+            favorite = favorite, changeFavorite = { favorite = it }, information = informationModel, librarySource = readingSource,
             pagination = { if (!state.entriesLoaded || state.nextOffset != null) TextButton(model::moreEntries,
                     enabled = state.loaded && !state.busy && state.entries.size < 1000) { Text("加载更多 / 重试本页") } },
             options = {
@@ -81,7 +82,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                 TextButton(library, enabled = !state.busy) { Text("查看书库") }
             },
             footerExtra = { if (state.task != null && !unfinished) TextButton(library) { Text("查看书库") } },
-            cover = { book -> state.source?.let { OnlineCover(coverLibrary, it, book.manga, fillWidth = true) } })
+            cover = { book -> OnlineCover(coverLibrary, readingSource, book.manga, fillWidth = true) })
     } else {
     ReferenceRefreshColumn(state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("copy-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {

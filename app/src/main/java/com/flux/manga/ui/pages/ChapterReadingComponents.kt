@@ -94,12 +94,13 @@ internal fun RecordedDetailCatalog(session: WorldSession, source: String, manga:
     entries: List<DetailCatalogEntry>, lastId: String?, open: (String) -> Unit,
     busy: Boolean = false, hasMore: Boolean = false, more: (() -> Unit)? = null,
     appendError: String? = null, enabled: Boolean = true, totalCount: Long? = null) {
-    if (entries.size <= 1 && !hasMore && !busy && appendError == null) return
+    val showSingle = session.identity.value.world == com.flux.manga.ui.navigation.PrototypeWorld.SFW
+    if ((entries.isEmpty() || (entries.size == 1 && !showSingle)) && !hasMore && !busy && appendError == null) return
     val model = rememberChapterReadings(session, source, manga)
     val state by model.state.collectAsStateWithLifecycle()
     var selectedChapter by rememberSaveable(source, manga) { mutableStateOf<String?>(null) }
     DetailCatalog(entries, lastId, open, busy = busy, hasMore = hasMore, more = more,
-        appendError = appendError, enabled = enabled, totalCount = totalCount,
+        appendError = appendError, enabled = enabled, totalCount = totalCount, showSingle = showSingle,
         completed = state.records.filterValues { it.completed }.keys,
         readingLabels = state.records.mapNotNull { (id, record) -> record.ordinal?.let { id to "第 $it 页" } }.toMap(),
         recordStatus = { ChapterReadingStatus(state, model::refresh) },

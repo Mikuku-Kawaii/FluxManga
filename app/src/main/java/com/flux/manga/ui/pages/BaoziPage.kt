@@ -83,7 +83,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                 detail.book?.let { book ->
                     item("book") { DetailHero(book.card.title, { OnlineCover(model.library, sourceId, mangaId, fillWidth = true) }) {
                         WorkMetadata(book.metadata, "$sourceId:$mangaId", searchAuthor)
-                        WorkTags(book.tags?.map { it to it }, { it in com.flux.manga.data.BaoziCategories.tags }, compact = true) { id, name -> openTag(BaoziEndpoint.SOURCE_ID, id, name) }
+                        WorkTags(book.tags?.map { it to it }, { it in com.flux.manga.data.BaoziCategories.tags }, compact = true, openInDialog = true) { id, name -> openTag(BaoziEndpoint.SOURCE_ID, id, name) }
                     } }
                     item("library") {
                         DetailActions(detail.favorite, detail.saving, toggleFavorite = model::favorite, download = download,
@@ -107,7 +107,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                             else -> Unit
                         }
                     } }
-                    if (book.chapters.orEmpty().size > 1) item("directory") {
+                    if (book.chapters.orEmpty().isNotEmpty()) item("directory") {
                         if (book.chapters != null) RecordedDetailCatalog(session, sourceId, mangaId, baoziChapterEntries(book.chapters), detail.progress?.chapterId,
                             { read?.invoke(it) }, enabled = read != null)
                     }

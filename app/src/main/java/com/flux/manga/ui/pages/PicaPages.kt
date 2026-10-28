@@ -301,7 +301,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun PicaDetailPage(session: WorldSession, source: String, id: String, back: () -> Unit, settings: () -> Unit,
+@Composable internal fun PicaDetailPage(session: WorldSession, source: String, id: String, back: () -> Unit,
     read: (String) -> Unit, list: (String, String) -> Unit, download: () -> Unit = {}, searchAuthor: ((String) -> Unit)? = null) {
     val model = picaModel(session, source); val state by model.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.ready, state.account) { if (state.ready && state.book == null) model.detail(id) }
@@ -314,7 +314,6 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         item { DetailHeading(back) }
         if (!readContentLayout(state.book != null, state.busy, state.detailError ?: state.message.takeIf { state.error && state.book == null }, { model.detail(id) }, detail = true, cancel = model::stop)) {
             item("offline-entry") { TextButton(download) { Text("加密下载与离线章节") } }
-            item("source-settings") { TextButton(settings) { Text("图源与账号设置") } }
             return@ReferenceRefreshColumn
         }
         item { PicaFeedback(model, state) }
@@ -327,19 +326,18 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                 read = { target?.let(read) }, canRead = target != null && !state.busy, hasProgress = state.resume != null,
                 description = book.description, descriptionIdentity = "$source:${book.id}",
-                readingPosition = readingPosition(state.progress, state.chapters.map { DetailCatalogEntry(it.order.toString(), it.title) }),
+                readingPosition = readingPosition(state.progress, state.chapters.map { DetailCatalogEntry(it.order.toString(), chapterTitle(it.title, it.order)) }),
                 belowActions = {
-                    WorkTags(book.categories.map { it to "category:$it" } + book.tags.map { it to "search:$it" }) { value, _ ->
+                    WorkTags(book.categories.map { it to "category:$it" } + book.tags.map { it to "search:$it" }, maxRows = 2) { value, _ ->
                         list(value.substringBefore(':'), value.substringAfter(':'))
                     }
                 })
         } } }
         if (state.chapters.size != 1) {
             item { TextButton({ model.chapters(id) }, enabled = state.book != null && !state.busy) { Text("刷新章节目录") } }
-            item { RecordedDetailCatalog(session, source, id, state.chapters.map { DetailCatalogEntry(it.order.toString(), it.title) }, state.resume, read,
+            item { RecordedDetailCatalog(session, source, id, state.chapters.map { DetailCatalogEntry(it.order.toString(), chapterTitle(it.title, it.order)) }, state.resume, read,
                 busy = state.busy, enabled = !state.busy) }
         }
-        item("source-settings") { TextButton(settings) { Text("图源与账号设置") } }
     }
 }
 

@@ -33,6 +33,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
     private val privateCatalog = if (identity.world == PrototypeWorld.NSFW) PrivateCatalog(app, session) else null
     val library = com.flux.manga.data.OnlineLibrary(app, session)
     private val selection = SourceSelection(app, identity.world)
+    val featured = HomeFeaturedMetadata(app, session)
     val updateInfo = mutableStateMapOf<MangaKey, HomeUpdateInfo>()
     val updateVersions = mutableStateMapOf<String, Int>()
     private val updateLoaded = mutableMapOf<MangaKey, Int>()

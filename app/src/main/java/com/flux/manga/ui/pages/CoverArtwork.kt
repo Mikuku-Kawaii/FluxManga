@@ -29,22 +29,26 @@ import kotlinx.coroutines.isActive
 internal fun CoverArtwork(bitmap: Bitmap?, loading: Boolean, message: String, modifier: Modifier,
     retry: (() -> Unit)? = null, description: String? = null, contentScale: ContentScale = ContentScale.Crop,
     imageModifier: Modifier = Modifier, retryModifier: Modifier = Modifier) {
-    if (!loading && bitmap == null && retry != null) RequestFeedback(listOfNotNull(description, message).joinToString(" · "))
     Surface(modifier, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
             if (bitmap != null) Image(bitmap.asImageBitmap(), description,
                 modifier = Modifier.fillMaxSize().then(imageModifier), contentScale = contentScale)
             else {
                 val compact = maxWidth < 96.dp || maxHeight < 120.dp || LocalDensity.current.fontScale >= 1.5f
+                val showCompactMessage = maxHeight >= 96.dp
                 val label = listOfNotNull(description, message.takeIf(String::isNotBlank)).joinToString(" · ")
                 if (loading) CircularProgressIndicator(Modifier.size(24.dp).semantics { contentDescription = label })
                 else if (compact) {
-                    if (retry != null) IconButton(feedbackAttempt(retry), Modifier.then(retryModifier)
-                        .semantics { contentDescription = "$label，重试封面" }) { ReferenceIcon(ReferenceSymbol.UPDATE) }
-                    else Box(Modifier.semantics { contentDescription = label }) { ReferenceIcon(ReferenceSymbol.BOOK) }
+                    Column(Modifier.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (retry != null) IconButton(feedbackAttempt(retry), Modifier.then(retryModifier)
+                            .semantics { contentDescription = "$label，重试封面" }) { ReferenceIcon(ReferenceSymbol.UPDATE) }
+                        else Box(Modifier.semantics { contentDescription = label }) { ReferenceIcon(ReferenceSymbol.BOOK) }
+                        if (showCompactMessage) Text(message, style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
                 } else Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(if (retry != null) "封面暂不可用" else message, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                    Text(message, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
                     if (retry != null) TextButton(feedbackAttempt(retry), retryModifier.semantics { contentDescription = "$label，重试封面" }) { Text("重试") }
                 }
             }

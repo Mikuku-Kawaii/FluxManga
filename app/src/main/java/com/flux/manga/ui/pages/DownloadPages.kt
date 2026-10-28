@@ -91,7 +91,7 @@ internal fun DownloadChaptersPage(session: WorldSession, source: String, manga: 
     var confirm by remember { mutableStateOf(false) }
     var query by rememberSaveable(source, manga) { mutableStateOf("") }
     var showTools by rememberSaveable(source, manga) { mutableStateOf(false) }
-    val visibleChapters = remember(chapters.items, query) { chapters.items.filter { downloadTitleMatches(it.title, query) } }
+    val visibleChapters = remember(chapters.items, query) { chapters.items.withChapterTitles().filter { downloadTitleMatches(it.title, query) } }
     val jobs = remember(state.jobs, source, manga) { state.jobs.filter { it.source == source && it.manga == manga }.associateBy { it.chapter } }
     LazyColumn(Modifier.fillMaxSize().imePadding().testTag("download-chapters"),contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading("选择下载章节","",back, actions = {
@@ -139,7 +139,7 @@ internal fun DownloadChaptersPage(session: WorldSession, source: String, manga: 
             Text("后台下载需在队列中开启，切换空间会暂停。已完成章节可离线阅读。")
         } }, confirmButton = { TextButton(onClick = { showTools = false }) { Text("关闭") } })
     if(confirm) ReferenceDialog(onDismissRequest={confirm=false},title={Text("下载选中的章节？")},text={Text("下载选中的 ${selection.size} 章，可能使用移动流量。已有下载自动跳过。", Modifier.verticalScroll(rememberScrollState()))},
-        confirmButton={ReferenceDialogConfirm("加入下载队列", onClick={confirm=false; owner.enqueue(source,manga,chapters.items.filter { it.id in selection }.map { it.id to it.title })},
+        confirmButton={ReferenceDialogConfirm("加入下载队列", onClick={confirm=false; owner.enqueue(source,manga,chapters.items.withChapterTitles().filter { it.id in selection }.map { it.id to it.title })},
             enabled = state.loaded && !state.controlling && selection.isNotEmpty())},
         dismissButton={TextButton(onClick={confirm=false}) { Text("返回") }})
 }

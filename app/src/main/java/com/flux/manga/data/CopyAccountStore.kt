@@ -111,9 +111,15 @@ internal class CopyAccountStore(private val db: AccountImportDatabase) {
         for (entry in entries) {
             if (!allowed()) throw CancellationException()
             CopyAccountCodec.validate(entry)
-            val old = rows.book(c.sourceId, entry.mangaId); val progress = rows.hasProgress(c.sourceId, entry.mangaId)
+            // New books belong to the existing reading source. Keep legacy keys when they
+            // already own a book/progress, so reimport cannot split or overwrite that history.
+            val publicSource = CopyMangaEndpoint.SOURCE_ID
+            val source = if (rows.book(publicSource, entry.mangaId) != null || rows.hasProgress(publicSource, entry.mangaId)) publicSource
+                else if (rows.book(c.sourceId, entry.mangaId) != null || rows.hasProgress(c.sourceId, entry.mangaId)) c.sourceId
+                else publicSource
+            val old = rows.book(source, entry.mangaId); val progress = rows.hasProgress(source, entry.mangaId)
             if (old != null || progress) existing++ else added++
-            if (old == null) rows.putBook(OnlineBook(c.sourceId, entry.mangaId, entry.title, if (progress) false else task.favorite, System.currentTimeMillis()))
+            if (old == null) rows.putBook(OnlineBook(source, entry.mangaId, entry.title, if (progress) false else task.favorite, System.currentTimeMillis()))
             // Membership ID belongs to the filtered cloud collection, never to the manga key.
             rows.write("copy-import-ref:${c.sourceId}:free-type-1:${entry.collectionId}",
                 (entry.mangaId + "\n" + entry.folder).toByteArray())

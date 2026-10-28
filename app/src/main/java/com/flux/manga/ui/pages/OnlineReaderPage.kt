@@ -99,6 +99,24 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     private var nextTicket = 0L
     private var nextAttempt: String? = null
     private var terminalChapter: String? = null
+    private var endViewportKey: String? = null
+    private var pendingEnd: SourcePageResource? = null
+    private var savedEnd: String? = null
+    private val bookInformation = OnlineBookInformationStore(data, session)
+    fun endPageShown(page: SourcePageResource?, top: Int = 0) {
+        endViewportKey = page?.let { "${it.chapterId}:${it.id}:$top" }
+        recordBookEnd()
+    }
+    private fun recordBookEnd() {
+        if (syntheticPrivate || !repository.isActive() || !session.state.value.foreground || state.value.loading) return
+        val last = state.value.pages.lastOrNull() ?: return
+        val key = endViewportKey ?: return
+        if (last.chapterId != terminalChapter || !key.startsWith("${last.chapterId}:${last.id}:") || key !in loadedTiles) return
+        if (savedEnd == pageIdentity(last) || pendingEnd == last) return
+        pendingEnd = last
+        mutable.value = state.value.copy(saved = false)
+        flush()
+    }
     private var continuousReading = true
     private fun pageIdentity(page: SourcePageResource) = "${page.chapterId}:${page.id}"
     // Recent screen-sized tiles only; encoded chapter files remain in the repository cache.
@@ -172,7 +190,7 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
         val last = current.pages.last().chapterId
         if (current.pages[current.index].chapterId != last || current.pages.lastIndex - current.index > 3 ||
             nextJob?.isActive == true || current.chapterBusy) return
-        if (terminalChapter == last) { mutable.value = current.copy(atSeriesEnd = true); return }
+        if (terminalChapter == last) { mutable.value = current.copy(atSeriesEnd = true); recordBookEnd(); return }
         if (!retry && nextAttempt == last) return
         nextAttempt = last
         val ticket = ++nextTicket
@@ -188,7 +206,7 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
                     else ReaderDirectory(state.value.chapters, state.value.chapterNext)
                 val target = adjacentReaderChapter(mangaKey, last, 1, directory, repository::chapters,
                     publish = { active(); mutable.value = state.value.copy(chapters = it.chapters, chapterNext = it.next) }, active = ::active)
-                if (target == null) { terminalChapter = last; mutable.value = state.value.copy(atSeriesEnd = true); return@launch }
+                if (target == null) { terminalChapter = last; mutable.value = state.value.copy(atSeriesEnd = true); recordBookEnd(); return@launch }
                 if (!continuous) return@launch
                 if (offlineOnly && target.id !in repository.offlineIds()) throw IOException("下一话尚未下载，可从目录选择已下载章节")
                 val pages = repository.pages(target.id)
@@ -277,10 +295,12 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
         if (state.value.loading || !repository.isActive()) return
         val key = "$chapterId:$pageId"
         loadedTiles.add("$key:$top")
-        if (state.value.pages.getOrNull(state.value.index)?.let(::pageIdentity) != key) return
-        if (state.value.mode == ReadingMode.STRIP && onlineTileTop(state.value.pages[state.value.index], state.value.fraction) != top) return
-        visibleLoaded = key
-        record()
+        if (state.value.pages.getOrNull(state.value.index)?.let(::pageIdentity) == key &&
+            (state.value.mode != ReadingMode.STRIP || onlineTileTop(state.value.pages[state.value.index], state.value.fraction) == top)) {
+            visibleLoaded = key
+            record()
+        }
+        recordBookEnd()
     }
     fun unloaded(pageId: String, top: Int, chapterId: String? = state.value.pages.getOrNull(state.value.index)?.chapterId) {
         loadedTiles.remove("$chapterId:$pageId:$top")
@@ -325,7 +345,12 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
                         repository.save(snapshot.page, snapshot.mode, snapshot.fraction, snapshot.explicit)
                         if (pendingChapters[chapter]?.first == version) pendingChapters.remove(chapter)
                     }
-                    mutable.value = state.value.copy(saved = pendingChapters.isEmpty(), saveError = null)
+                    pendingEnd?.let { end ->
+                        bookInformation.markReadToEnd(sourceId, mangaKey.mangaId, end.chapterId)
+                        savedEnd = pageIdentity(end)
+                        if (pendingEnd == end) pendingEnd = null
+                    }
+                    mutable.value = state.value.copy(saved = pendingChapters.isEmpty() && pendingEnd == null, saveError = null)
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { mutable.value = state.value.copy(saveError = "阅读进度未保存，请重试") }
             }
@@ -376,6 +401,7 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
                     if (direction > 0) terminalChapter = current
                     mutable.value = state.value.copy(loading = false, atSeriesEnd = direction > 0 || state.value.atSeriesEnd,
                         boundaryMessage = if (direction > 0) null else "已到第一章")
+                    recordBookEnd()
                 } else {
                     if (offlineOnly && target.id !in repository.offlineIds()) throw IOException("相邻章节尚未下载。")
                     retryChapter = target.id; retryAtEnd = direction < 0; retryResume = false
@@ -513,7 +539,7 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
                 }
             }
             if (chrome) Column(Modifier.align(Alignment.TopCenter).referenceToolEntrance(fromTop = true)) {
-                ReaderTopBar(state.chapters.firstOrNull { it.id == currentChapter }?.title ?: if (offlineOnly) "离线阅读" else "在线阅读",
+                ReaderTopBar(state.chapters.withChapterTitles().firstOrNull { it.id == currentChapter }?.title ?: if (offlineOnly) "离线阅读" else "在线阅读",
                     state.mode, !state.loading && !leaving && state.pages.isNotEmpty(), leaving, leave, model::mode,
                     { tool = it }, { tools = false }, chapters = openChapters)
                 Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = .96f)) {
@@ -572,6 +598,14 @@ private fun OnlinePagedReader(model: OnlineReaderModel, state: OnlineReaderState
         LaunchedEffect(pager, options.continuous) {
             snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { group ->
                 if (group * unit < model.state.value.pages.size) model.settledPage(settledReaderAnchor(model.state.value.index, group, spread), state.mode)
+            }
+        }
+        LaunchedEffect(pager, state.pages.lastOrNull()?.let { "${it.chapterId}:${it.id}" }, state.mode) {
+            snapshotFlow { pager.settledPage.takeUnless { pager.isScrollInProgress } }.distinctUntilChanged().collect { group ->
+                val pages = model.state.value.pages
+                val last = pages.lastIndex
+                val containsLast = group != null && group * unit <= last && group * unit + unit > last
+                model.endPageShown(pages.lastOrNull().takeIf { containsLast })
             }
         }
         ReaderVolumeKeys(options.volume && keysEnabled && zoomedPages.isEmpty() && !state.loading, options.invertVolume) { direction ->
@@ -643,7 +677,7 @@ private fun OnlineReaderImage(model: OnlineReaderModel, page: SourcePageResource
     }
     val changing by remember(model) { model.state.map { it.loading }.distinctUntilChanged() }
         .collectAsStateWithLifecycle(initialValue = remember(model) { model.state.value.loading })
-    LaunchedEffect(bitmap, selected, changing, active) { if (active && !changing && bitmap != null && (selected || bottom != null)) model.displayed(page.id, top, page.chapterId) }
+    LaunchedEffect(bitmap, selected, gestureActive, changing, active) { if (active && !changing && bitmap != null && (selected || gestureActive || bottom != null)) model.displayed(page.id, top, page.chapterId) }
     ReadingImageVisibility(selected && active && !changing && bitmap != null && bitmapEpoch == epoch)
     Box(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
         bitmap?.takeIf { active && bitmapEpoch == epoch }?.let { pixels ->
@@ -708,6 +742,16 @@ private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, widt
                 Triple(tile.index, fraction.coerceIn(0f, .9999f), tile.top)
             }
         }.distinctUntilChanged().collect { it?.let { (index, fraction, top) -> model.stripPosition(index, fraction, top) } }
+    }
+    LaunchedEffect(list, restored, predecodeActive, tiles.lastOrNull()) {
+        if (restored && predecodeActive) snapshotFlow {
+            val last = currentTiles.lastOrNull()
+            val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == last?.key }
+            if (last?.bottom != null && visible != null &&
+                visible.offset + visible.size <= list.layoutInfo.viewportEndOffset &&
+                visible.offset + visible.size > list.layoutInfo.viewportStartOffset) last else null
+        }.distinctUntilChanged().collect { tile -> model.endPageShown(tile?.page, tile?.top ?: 0) }
+        else model.endPageShown(null)
     }
     val scope = rememberCoroutineScope()
     var keyScroll by remember { mutableStateOf<Job?>(null) }

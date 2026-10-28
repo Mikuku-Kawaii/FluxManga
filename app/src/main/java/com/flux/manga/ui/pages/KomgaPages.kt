@@ -212,7 +212,7 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
                             description = detail.description, descriptionIdentity = "$sourceId:$mangaId",
                             readingPosition = readingPosition(state.progress, chapterEntries(state.chapters)))
                     }
-                    if (state.chapters.size != 1 || state.next is SourceContinuation.Next || state.busy || state.appendError != null) item(key = "directory") {
+                    item(key = "directory") {
                         RecordedDetailCatalog(session, sourceId, mangaId, chapterEntries(state.chapters), state.progress?.chapterId, { read(it) }, busy = state.busy,
                             hasMore = state.next is SourceContinuation.Next, more = model::more, appendError = state.appendError, totalCount = state.chapterTotal)
                         if (state.loaded && state.chapters.isEmpty() && state.error == null) Text("暂无章节")

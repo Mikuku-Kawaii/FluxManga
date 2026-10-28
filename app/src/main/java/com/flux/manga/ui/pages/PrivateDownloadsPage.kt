@@ -74,7 +74,7 @@ internal class PrivateDownloadsModel(private val app: Application, private val s
     fun enqueue(ids: Set<String>) = run {
         require(ids.isNotEmpty() && ids.size <= 200 && ids.all { id -> state.value.chapters.any { it.id == id } })
         store.jobs.recover(::active)
-        store.jobs.enqueue(requireNotNull(source), requireNotNull(manga), state.value.chapters.filter { it.id in ids }.map { it.id to it.title }, ::active)
+        store.jobs.enqueue(requireNotNull(source), requireNotNull(manga), state.value.chapters.withChapterTitles().filter { it.id in ids }.map { it.id to it.title }, ::active)
         publish(); download()
     }
     fun resume(id: String) = run {
@@ -166,7 +166,7 @@ internal class PrivateDownloadsModel(private val app: Application, private val s
                 TextButton({ confirm = true }, enabled = state.ready && !state.busy && selected.isNotEmpty()) { Text("下载已选 ${selected.size} 章") }
                 TextButton({ selected = emptySet() }, enabled = !state.busy) { Text("清空选择") }
             } }
-            items(state.chapters, key = { "chapter:${it.id}" }) { chapter ->
+            items(state.chapters.withChapterTitles(), key = { "chapter:${it.id}" }) { chapter ->
                 DownloadChapterChoice(chapter.title, chapter.id in selected, !state.busy, null) { checked ->
                     selected = if (checked && selected.size < 200) selected + chapter.id else selected - chapter.id
                 }

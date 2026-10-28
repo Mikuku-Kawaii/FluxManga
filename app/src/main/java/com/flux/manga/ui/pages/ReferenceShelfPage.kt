@@ -343,9 +343,9 @@ private fun ShelfTile(book: ShelfBook, model: ShelfViewModel, row: Boolean, open
         onLongClickLabel = if (selecting) null else "批量选择")
         .semantics { if (selecting) { role = Role.Checkbox; toggleableState = if (checked) ToggleableState.On else ToggleableState.Off; contentDescription = "选择书目：${book.title}" } }
     @Composable fun Info(modifier: Modifier) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(book.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
-                minLines = 2, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             ShelfUpdateLabel(book.information, book.chapterId, book.online)
             Text(shelfReadingLabel(
                 if (book.hasProgress && !book.validProgress) "阅读位置待核对" else book.status.label,
