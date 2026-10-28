@@ -254,7 +254,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             importSelected = { model.importSelected(it) }, pagination = { enabled -> FlowRow {
                 if (state.page > 1) TextButton({ model.browse("favorites", initial, state.page - 1) }, enabled = enabled) { Text("上一页") }
                 state.next?.let { next -> TextButton({ model.browse("favorites", initial, next) }, enabled = enabled) { Text("下一页") } }
-            }, cover = { entry -> state.source?.let { source ->
+            } }, cover = { entry -> state.source?.let { source ->
                 val book = state.books.first { it.id == entry.key }
                 PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) }
             } })

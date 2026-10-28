@@ -225,7 +225,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
             scope = { enabled -> ImportScopePicker(state.folder, state.folders.map { it.id to it.title }, enabled) { model.favorites(it) } }, pagination = { enabled -> FlowRow {
                 if (state.page > 1) TextButton({ model.favorites(page = state.page - 1) }, enabled = enabled) { Text("上一页") }
                 state.next?.let { next -> TextButton({ model.favorites(page = next) }, enabled = enabled) { Text("下一页") } }
-            }, cover = { book -> PrivateSourceCover(session, state.source, book.manga, book.title) { model.cover(book.manga) } })
+            } }, cover = { book -> PrivateSourceCover(session, state.source, book.manga, book.title) { model.cover(book.manga) } })
         return
     }
     BookResultsLayout(enabled = !favorites) { columns ->
