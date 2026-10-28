@@ -100,24 +100,26 @@ internal fun ReferenceShelfPage(
     SideEffect { reportScroll { shownScroll.firstVisibleItemIndex; shownScroll.firstVisibleItemScrollOffset; Unit } }
     val fontScale = LocalDensity.current.fontScale
     val collectionHeader: @Composable () -> Unit = {
-        Column(Modifier.fillMaxWidth().then(if (selecting) Modifier.background(MaterialTheme.colorScheme.background) else Modifier),
+        Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-              Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text((if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目") +
-                    (if (selecting) "（已选 ${selectedKeys.size} 部）" else ""), style = MaterialTheme.typography.titleLarge,
+              FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                  itemVerticalAlignment = Alignment.CenterVertically) {
+                Text(if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目", style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.semantics { heading() })
-                if (!selecting) Text(when {
+                Text(when {
                     state.loading && state.books.isEmpty() -> "读取中…"
                     else -> "${books.size} 部${if (state.errors.isNotEmpty()) " · 待确认" else ""}"
                 },
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (selecting) Text("已选 ${selectedKeys.size} 部",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
-                if (!selecting) TextButton(onClick = { selecting = true; selectedKeys = emptyList() }, enabled = canEdit,
-                    modifier = Modifier.testTag("shelf-batch-toggle")) { Text("批量") }
-                if (!selecting) IconButton(onClick = { panel = "filters" }, enabled = !state.batchBusy, modifier = Modifier.testTag("shelf-actions")
+                ShelfTextButton("批量", { selecting = true; selectedKeys = emptyList() }, enabled = canEdit && !selecting,
+                    modifier = Modifier.testTag("shelf-batch-toggle"))
+                IconButton(onClick = { panel = "filters" }, enabled = !state.batchBusy, modifier = Modifier.testTag("shelf-actions")
                     .semantics { contentDescription = "筛选与排序" }) { ReferenceIcon(ReferenceSymbol.OPTIONS) }
-                if (!selecting) IconButton(onClick = { model.layout(if (state.layout == ShelfLayout.GRID) ShelfLayout.LIST else ShelfLayout.GRID) },
+                IconButton(onClick = { model.layout(if (state.layout == ShelfLayout.GRID) ShelfLayout.LIST else ShelfLayout.GRID) },
                     modifier = Modifier.testTag("shelf-layout").semantics {
                         stateDescription = if (state.layout == ShelfLayout.GRID) "网格视图" else "列表视图"
                         contentDescription = if (state.layout == ShelfLayout.GRID) "切换列表视图" else "切换网格视图"
@@ -143,13 +145,17 @@ internal fun ReferenceShelfPage(
                         "仅收藏".takeIf { favoritesOnly }, downloadFilter.takeIf { it != ShelfDownloadFilter.ALL }?.label,
                         searchField.takeIf { it != LocalSearchField.ALL }?.label).joinToString(" · "),
                         Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    if (!selecting) TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); downloadFilter = ShelfDownloadFilter.ALL; searchField = LocalSearchField.ALL }, enabled = !state.batchBusy) { Text("重置") }
+                    TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); downloadFilter = ShelfDownloadFilter.ALL; searchField = LocalSearchField.ALL }, enabled = !state.batchBusy) { Text("重置") }
                 }
             }
             if (selecting) ShelfSelectionBar(
                 canEdit = canEdit, hasBooks = books.isNotEmpty(), hasSelection = selectedKeys.isNotEmpty(),
                 selectAll = { selectedKeys = visibleKeys }, clear = { selectedKeys = emptyList() },
                 unfavorite = { model.batch(selectedKeys.toSet(), ShelfBatchAction.UNFAVORITE) },
+                cancel = {
+                    if (state.batchBusy) model.cancelBatch()
+                    else { selecting = false; selectedKeys = emptyList() }
+                },
             )
             if (state.batchBusy) {
                 Text("正在处理 ${state.batchProcessed}/${state.batchTotal} 部")
@@ -215,8 +221,7 @@ internal fun ReferenceShelfPage(
             } else item(key = "query", span = { GridItemSpan(maxLineSpan) }) {
                 LibraryQueryField(query, { query = it }, "shelf-query", searchField.placeholder)
             }
-            if (selecting) stickyHeader(key = "collection-heading") { collectionHeader() }
-            else item(key = "collection-heading", span = { GridItemSpan(maxLineSpan) }) { collectionHeader() }
+            stickyHeader(key = "collection-heading") { collectionHeader() }
             if (state.loading && state.books.isEmpty()) item(key = "read-layout", span = { GridItemSpan(maxLineSpan) }) { ReadLayoutPlaceholder() }
             if (books.isEmpty() && !state.loading) item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
                 Column(Modifier.testTag("shelf-empty").semantics { liveRegion = LiveRegionMode.Polite }) {

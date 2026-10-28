@@ -5,7 +5,8 @@ import com.flux.manga.ui.navigation.PrototypeWorld
 data class MangaKey(val world: PrototypeWorld, val sourceId: String, val mangaId: String)
 // Online catalogs may omit a total; null must not be presented as a zero-page book.
 data class MangaCard(val key: MangaKey, val title: String, val pageCount: Int?, val available: Boolean, val favorite: Boolean = false, val progress: ReadingProgress? = null,
-                     val importedAt: Long? = null, val localMetadata: ComicInfo? = null, val author: String = "")
+                     val importedAt: Long? = null, val localMetadata: ComicInfo? = null, val author: String = "",
+                     val updatedAt: String? = null, val latestChapter: String? = null)
 data class MangaDetail(val card: MangaCard, val chapter: Chapter, val archiveBytes: Long, val sha256: String,
     val defaultTitle: String = card.title, val coverPageId: String? = null,
     val metadata: ComicInfo = ComicInfo())

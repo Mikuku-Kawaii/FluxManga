@@ -59,6 +59,25 @@ fn checked_themes(items: Vec<CopyTheme>) -> Result<Vec<CopyTheme>, SourceError> 
 struct ComicEntry {
     comic: Comic,
 }
+// Optional update-list information must not make an otherwise readable card fail.
+#[derive(Deserialize)]
+struct UpdateComic {
+    #[serde(flatten)]
+    base: Comic,
+    #[serde(default)]
+    datetime_updated: serde_json::Value,
+}
+#[derive(Deserialize)]
+struct UpdateEntry {
+    comic: UpdateComic,
+    #[serde(default)]
+    last_chapter: serde_json::Value,
+    #[serde(default)]
+    datetime_created: serde_json::Value,
+}
+fn update_text(value: &serde_json::Value) -> Option<String> {
+    value.as_str().map(str::trim).filter(|s| !s.is_empty() && s.len() <= 512).map(str::to_owned)
+}
 #[derive(Deserialize)]
 struct Page<T> {
     total: u32,
@@ -350,6 +369,8 @@ impl CopyMangaSource {
             },
             title: comic.name,
             page_count: None,
+            updated_at: None,
+            latest_chapter: None,
         })
     }
     fn key_check(&self, context: &SourceContext, key: &SourceMangaKey) -> Result<(), SourceError> {
@@ -478,15 +499,19 @@ impl CopyMangaSource {
     ) -> Result<SourceSearchPage, SourceError> {
         self.check(&context)?;
         let expected = offset(page)?;
-        let page: Page<ComicEntry> = parse(
+        let page: Page<UpdateEntry> = parse(
             self.http.copy_updates(context.clone(), expected, LIMIT).await?
         )?;
-        self.page(context, Page {
-            total: page.total,
-            limit: page.limit,
-            offset: page.offset,
-            list: page.list.into_iter().map(|entry| entry.comic).collect(),
-        }, expected)
+        let continuation = continuation(&page, expected)?;
+        let items = page.list.into_iter().map(|entry| {
+            let mut manga = self.manga(entry.comic.base)?;
+            manga.updated_at = update_text(&entry.datetime_created)
+                .or_else(|| update_text(&entry.comic.datetime_updated));
+            manga.latest_chapter = entry.last_chapter.get("name").and_then(update_text);
+            Ok(manga)
+        }).collect::<Result<Vec<_>, SourceError>>()?;
+        self.check(&context)?;
+        Ok(SourceSearchPage { context, items, continuation })
     }
     pub async fn search(
         &self,

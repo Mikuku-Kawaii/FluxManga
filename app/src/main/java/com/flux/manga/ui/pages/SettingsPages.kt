@@ -53,6 +53,8 @@ internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
             SettingsRow("阅读统计", "", "settings-statistics", SettingsSymbol.GROUPS, statistics)
         } }
         item("preferences") { SettingsGroup("内容与体验") {
+            StartupSettingsEntry()
+            SettingsDivider()
             SettingsRow("图源管理", "账号、收藏导入与连接", "settings-sources", SettingsSymbol.SOURCES, sources)
             SettingsDivider()
             SettingsRow("阅读设置", readingSummary, "settings-reading", SettingsSymbol.READING, reading)

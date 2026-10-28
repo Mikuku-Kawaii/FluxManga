@@ -17,6 +17,8 @@ import com.flux.manga.privacy.PrivacyController
 
 @Composable
 internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val startup = remember { com.flux.manga.privacy.StartupPreferences(context) }
     var pending by remember { mutableStateOf<LauncherStyle?>(null) }
     LaunchedEffect(Unit) { privacy.refresh() }
     LazyColumn(Modifier.fillMaxSize().testTag("privacy-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
@@ -24,7 +26,7 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
         item { SettingsHeading("隐私入口", "", back) }
         item { SettingsPanel {
             Text("当前空间保护", style = MaterialTheme.typography.titleMedium)
-            Text(if (privacy.privateSpace) "里世界 · 退出后回到表世界" else "当前位于表世界",
+            Text(if (privacy.privateSpace) if (startup.returnToPublic) "里世界 · 自动返回表世界已开启" else "里世界 · 保留上次空间" else "当前位于表世界",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (privacy.privateSpace) ReferenceButton(onClick = privacy::leavePrivateSpace,
                 modifier = Modifier.testTag("privacy-exit-now")) { Text("立即退出里世界") }
@@ -55,7 +57,7 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
         } } }
         item { SettingsPanel { SettingsDisclosure("保护范围与后台行为") {
             Text("退出里世界会返回表世界，书库和进度保留。")
-            Text("进入后台后遮挡内容，默认超过 30 秒返回表世界。启用生物识别后，每次返回均需验证。")
+            Text("进入后台后遮挡内容。自动返回行为可在设置的“启动与返回”中修改；启用生物识别后，每次返回均需验证。")
             Text("图源账号与权限请在“图源管理”中设置。")
         } } }
     }

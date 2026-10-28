@@ -32,7 +32,7 @@ internal data class JmAccount(val uid: String, val username: String, val cookie:
 }
 internal data class JmSettings(val api: String = JM_APIS.first(), val image: String = JM_IMAGES.first(), val account: JmAccount? = null)
 internal data class JmBook(val id: String, val title: String, val author: String = "", val description: String = "",
-    val tags: List<String> = emptyList(), val chapters: List<JmChapter> = emptyList())
+    val tags: List<String> = emptyList(), val chapters: List<JmChapter> = emptyList(), val updatedAt: String = "")
 internal data class JmChapter(val id: String, val title: String)
 internal data class JmFolder(val id: String, val title: String)
 internal data class JmPage(val books: List<JmBook>, val next: Int?, val folders: List<JmFolder> = emptyList())
@@ -200,7 +200,8 @@ internal class JmClient(private val session: WorldSession, private val settings:
             .map { JmChapter(it.getString("id").also { value -> require(jmId(value)) }, it.optString("name", "章节")) }
             .ifEmpty { listOf(JmChapter(id, data.getString("name"))) }
         return JmBook(id, data.getString("name"), strings(data.optJSONArray("author")).joinToString(" / "),
-            data.optString("description").takeUnless { data.isNull("description") }.orEmpty(), strings(data.optJSONArray("tags")), chapters)
+            data.optString("description").takeUnless { data.isNull("description") }.orEmpty(), strings(data.optJSONArray("tags")), chapters,
+            data.optString("update_at").takeUnless { it == "null" }.orEmpty())
     }
     suspend fun search(text: String, page: Int): JmPage {
         if (jmId(text.trim())) return JmPage(listOf(detail(text.trim())), null)
@@ -257,7 +258,7 @@ internal class JmClient(private val session: WorldSession, private val settings:
             (0 until folders.length()).map { folders.getJSONObject(it).let { row -> JmFolder(row.getString("FID"), row.getString("name")) } })
     }
     private fun summary(row: JSONObject) = JmBook(row.getString("id").also { require(jmId(it)) },
-        row.getString("name"), row.optString("author"))
+        row.getString("name"), row.optString("author"), updatedAt = row.optString("update_at").takeUnless { it == "null" }.orEmpty())
     private fun parsePage(json: JSONObject, field: String, number: Int, size: Int): JmPage {
         val array = json.getJSONArray(field)
         val books = (0 until array.length()).map { summary(array.getJSONObject(it)) }.distinctBy { it.id }

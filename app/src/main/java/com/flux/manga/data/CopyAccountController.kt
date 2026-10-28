@@ -55,12 +55,18 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
         val result = network.verify(c); check(ticket)
         if (result.userId != c.userId) throw SourceException.AuthenticationRequired()
     }
-    fun start() = run("正在读取并验证账号") { ticket ->
-        mutable.value = state.value.copy(verified = false, entries = emptyList(), entriesLoaded = false, nextOffset = null, reportedTotal = null)
-        val c = store.current { allowed(ticket) }; check(ticket); publish(c, ticket)
+    fun start() = start(refreshEntries = true)
+    fun reopen() = start(refreshEntries = false)
+    private fun start(refreshEntries: Boolean) = run("正在读取并验证账号") { ticket ->
+        mutable.value = state.value.copy(verified = false)
+        val c = store.current { allowed(ticket) }; check(ticket)
+        if (refreshEntries || c?.sourceId != state.value.source || c?.hasCredential != true) {
+            mutable.value = state.value.copy(entries = emptyList(), entriesLoaded = false, nextOffset = null, reportedTotal = null)
+        }
+        publish(c, ticket)
         if (c?.hasCredential != true) return@run
         verify(c, ticket); mutable.value = state.value.copy(verified = true)
-        loadEntries(0, ticket)
+        if (!state.value.entriesLoaded) loadEntries(0, ticket)
         // Reopening reads the checkpoint; it never silently resumes writes.
     }
     fun signIn(username: String, password: String) {
@@ -182,7 +188,7 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
         }
     }
     fun leave() { revision++; work?.cancel(); work = null; account = null
-        mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false, entries = emptyList(), entriesLoaded = false, nextOffset = null) }
+        mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false) }
     fun close() { leave(); closed = true; mutable.value = CopyAccountState() }
 }
 internal fun copyAccountFailure(error: Exception) = when (error) {

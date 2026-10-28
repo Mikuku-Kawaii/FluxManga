@@ -443,12 +443,13 @@ fun rememberPrototypeNavigation(world: PrototypeWorld, initialTab: MainTab, proc
         val restored = restoreNavigation(selected.value, listOf(home.toList(), library.toList(), tags.toList()),
             world, restoredProcess.value != processSession)
         listOf(home, library, tags).forEachIndexed { index, stack ->
-            val routes = restored.stacks.getValue(MainTab.primary[index])
+            val routes = if (restoredProcess.value != processSession && MainTab.primary[index] == initialTab)
+                listOf(TabRoot(initialTab)) else restored.stacks.getValue(MainTab.primary[index])
             if (stack.toList() != routes) { stack.clear(); stack.addAll(routes) }
         }
-        selected.value = restored.selected.name
+        selected.value = (if (restoredProcess.value != processSession) initialTab else restored.selected).name
         restoredProcess.value = processSession
-        onSelect(restored.selected)
+        onSelect(MainTab.valueOf(selected.value))
         PrototypeNavigation(selected, world, onSelect, mapOf(
             MainTab.HOME to home,
             MainTab.LIBRARY to library,

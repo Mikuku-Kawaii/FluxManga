@@ -490,6 +490,15 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         worldSession.resume()
         privacy.refresh()
+        if (worldSession.takePrivateStartup() && !pendingDownloadQueue && worldSession.identity.value.world == PrototypeWorld.SFW) {
+            protectWindow()
+            coverWindow()
+            privacy.enter({
+                protectWindow()
+                coverWindow()
+                worldSession.switch(fixtureStore, com.flux.manga.privacy.StartupPreferences(this).initialTab(PrototypeWorld.NSFW))
+            }, ::privacyReturnToPublic)
+        }
         if (::liquidMotion.isInitialized) liquidMotion.interrupt(worldSession.identity.value.world)
     }
 

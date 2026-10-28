@@ -102,6 +102,8 @@ pub struct SourceManga {
     pub key: SourceMangaKey,
     pub title: String,
     pub page_count: Option<u32>,
+    pub updated_at: Option<String>,
+    pub latest_chapter: Option<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -236,6 +238,8 @@ impl ContractFixture {
             key,
             title: title.into(),
             page_count: None,
+            updated_at: None,
+            latest_chapter: None,
         })
     }
     fn paginate<T: Clone>(

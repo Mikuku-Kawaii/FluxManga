@@ -1,7 +1,6 @@
 package com.flux.manga.ui.pages
 
 import android.app.Application
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
@@ -23,14 +22,21 @@ import com.flux.manga.data.*
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import org.json.JSONObject
 
-internal class MixedDiscoveryModel(app: Application, private val session: WorldSession, komgaId: String?,
+internal class MixedDiscoveryModel(private val app: Application, private val session: WorldSession, komgaId: String?,
     section: DiscoverySection?, targets: List<TagTarget> = emptyList(), tagLabel: String = "") : ViewModel() {
     private val identity = session.identity.value
     private val komga = komgaId?.let { KomgaAccess(app, session, it) }
     private val privateCatalog = if (identity.world == PrototypeWorld.NSFW) PrivateCatalog(app, session) else null
     val library = com.flux.manga.data.OnlineLibrary(app, session)
     private val selection = SourceSelection(app, identity.world)
+    val updateInfo = mutableStateMapOf<MangaKey, HomeUpdateInfo>()
+    val updateVersions = mutableStateMapOf<String, Int>()
+    private val updateLoaded = mutableMapOf<MangaKey, Int>()
+    private val updateRequests = Semaphore(2)
     private val tagQueries = if (section == null) mixedTagQueries(
         aggregateSearchSources(identity.world, komgaId).filter(selection::enabled), tagLabel, targets) else emptyList()
     private val sources = if (section == null) tagQueries.indices.map { "tag:$it" } else (if (privateCatalog != null) when (section) {
@@ -58,7 +64,7 @@ internal class MixedDiscoveryModel(app: Application, private val session: WorldS
         val tagQuery = if (section == null) tagQueries[feedId.removePrefix("tag:").toInt()] else null
         val target = tagQuery?.target
         val source = target?.sourceId ?: feedId
-        withContext(Dispatchers.IO) {
+        val result = withContext(Dispatchers.IO) {
             if (privateCatalog != null) privateCatalog.load(source, target?.id.orEmpty(), page, when {
                 target != null -> if (target.category) "category" else "search"
                 section == DiscoverySection.RECOMMENDATIONS -> "recommendations"
@@ -89,6 +95,45 @@ internal class MixedDiscoveryModel(app: Application, private val session: WorldS
                 else -> requireNotNull(komga).client().updates(page)
             }
         }
+        if (section == DiscoverySection.UPDATES) withContext(Dispatchers.Main.immediate) {
+            if (session.accepts(identity)) result.cards.map { it.key.sourceId }.distinct().forEach {
+                updateVersions[it] = (updateVersions[it] ?: 0) + 1
+            }
+        }
+        result
+    }
+    /** Fill missing list metadata only for visible cards, using existing detail/directory contracts. */
+    suspend fun loadUpdate(card: MangaCard, version: Int) {
+        val source = card.key.sourceId
+        if ((!isBaoziSource(source) && !isPicaSource(source) && !isJmSource(source)) || updateLoaded[card.key] == version) return
+        updateRequests.withPermit {
+            if (!session.accepts(identity) || !session.state.value.foreground) return@withPermit
+            val cache = CatalogPageCache(app, session, "home-update:${card.key.sourceId}:${card.key.mangaId}")
+            try {
+                if (updateInfo[card.key] == null) cache.read()?.let {
+                    updateInfo[card.key] = HomeUpdateInfo(it.optString("date"), it.optString("chapter"))
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* A missing cache must not block the source read. */ }
+            try {
+                val value = if (isBaoziSource(source)) {
+                    val book = session.baoziSources.client(app, source).source.detail(card.key.mangaId)
+                    HomeUpdateInfo(book.metadata.updatedAt.orEmpty(), book.chapters?.lastOrNull()?.title.orEmpty())
+                } else {
+                    val (date, chapter) = requireNotNull(privateCatalog).update(card)
+                    HomeUpdateInfo(date, chapter)
+                }
+                currentCoroutineContext().ensureActive()
+                if (!session.accepts(identity) || !session.state.value.foreground || (updateVersions[card.key.sourceId] ?: 0) != version) return@withPermit
+                updateInfo[card.key] = value
+                updateLoaded[card.key] = version
+                cache.write(JSONObject().put("date", value.date).put("chapter", value.chapter))
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                // Keep the readable card and any cached metadata; a feed refresh permits another attempt.
+                if (session.accepts(identity)) updateLoaded[card.key] = version
+            }
+        }
     }
     fun start() { if (feed.state.value.results.isEmpty()) feed.submit("", allowEmpty = true) else feed.resume() }
 }
@@ -112,7 +157,7 @@ internal fun mixedModel(session: WorldSession, komgaId: String?, section: Discov
 @Composable
 internal fun MixedFeedSummary(model: MixedDiscoveryModel, section: DiscoverySection, open: (String, String) -> Unit, sources: () -> Unit) {
     val state by model.feed.state.collectAsStateWithLifecycle()
-    val cards = mixedCards(model.feed.sources, state.results).take(3)
+    val cards = mixedCards(model.feed.sources, state.results)
     CompactFeedFeedback(model.feed, state, model.resultFeeds, sources, showAction = false)
     if (cards.isEmpty() && state.busy) ReadLayoutPlaceholder()
     if (cards.isEmpty() && !state.busy && state.results.values.any { it.error != null }) {
@@ -122,27 +167,7 @@ internal fun MixedFeedSummary(model: MixedDiscoveryModel, section: DiscoverySect
     }
     if (cards.isEmpty() && !hasMixedFeedback(state)) Text(if (model.feed.sources.isEmpty()) "当前没有启用支持此栏目的图源" else "暂无作品", style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
-    if (section == DiscoverySection.UPDATES) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        cards.take(3).forEach { card -> key("${card.key.sourceId}:${card.key.mangaId}") {
-            Row(Modifier.fillMaxWidth().clickable(role = androidx.compose.ui.semantics.Role.Button,
-                onClickLabel = "查看《${card.title}》详情", onClick = { open(card.key.sourceId, card.key.mangaId) }),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.width(104.dp)) { OnlineCover(model.library, card.key.sourceId, card.key.mangaId,
-                    fillWidth = true, coverRatio = 1.6f) }
-                Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(card.title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    if (card.author.isNotBlank()) Text(card.author, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                }
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        } }
-    } else DiscoveryPreviewGrid(cards, { "${it.key.sourceId}:${it.key.mangaId}" }) { card ->
-        DiscoveryGridBook(model.library, card, open)
-    }
+    key(section, cards.firstOrNull()?.key?.world) { HomeDiscoveryRail(model, cards, section, open) }
 }
 
 @Composable

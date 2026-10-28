@@ -100,9 +100,10 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         state.update { it.copy(books = result.books, folders = result.folders, folder = folder, page = page, next = result.next,
             message = if (result.books.isEmpty()) "此收藏夹为空" else null) }
     }
-    fun importPage() {
-        val rows = state.value.books; val source = state.value.source
-        work(::importPage) {
+    fun importPage() = importSelected(null)
+    fun importSelected(ids: Set<String>?) {
+        val rows = state.value.books.filter { ids == null || it.id in ids }; val source = state.value.source
+        work({ importSelected(ids) }) {
             val added = store.importPage(source, rows)
             state.update { it.copy(message = "新增 $added 本，保留已有 ${rows.size - added} 本；可继续读取其他页。") }
         }
@@ -215,6 +216,18 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
     } }
     val favoritesImport = rememberPrivateFavoritesImport(session, if (favorites && signedIn && state.source == state.settings.account?.source) state.source else null)
     val informationModel = if (favoritesImport != null) rememberBookInformation(session, state.source) else null
+    if (favorites) {
+        PrivateCollectionImportPage(session, state.source, "JMComic", signedIn,
+            state.books.map { ImportBook(it.id, it.id, it.title, it.author) }, state.busy, state.message, state.error,
+            favoritesImport, informationModel, back, settings, { open(state.source, it) }, library,
+            refresh = { model.favorites(page = state.page.coerceAtLeast(1)) }, stop = model::stop,
+            importSelected = { model.importSelected(it) },
+            scope = { enabled -> ImportScopePicker(state.folder, state.folders.map { it.id to it.title }, enabled) { model.favorites(it) } }, pagination = { enabled -> FlowRow {
+                if (state.page > 1) TextButton({ model.favorites(page = state.page - 1) }, enabled = enabled) { Text("上一页") }
+                state.next?.let { next -> TextButton({ model.favorites(page = next) }, enabled = enabled) { Text("下一页") } }
+            }, cover = { book -> PrivateSourceCover(session, state.source, book.manga, book.title) { model.cover(book.manga) } })
+        return
+    }
     BookResultsLayout(enabled = !favorites) { columns ->
         LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottom), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
@@ -234,20 +247,6 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                     state.history.forEach { query -> TextButton(feedbackAttempt({ model.query(query); model.search() }), enabled = !state.busy) { Text(query) } }
                 }
                 TextButton(model::clearHistory, enabled = !state.busy) { Text("清空当前账号搜索历史") }
-            }
-            informationModel?.let { info -> item { BookInformationPanel(info, enabled = !state.busy) } }
-            favoritesImport?.let { model -> item { PrivateFavoritesImportPanel(model, state.busy) } }
-            if (favorites) item {
-                AccountLibraryImportPanel("选择收藏文件夹并逐页导入；本次只保存当前页作品。", state.books.size,
-                    ready = state.ready, signedIn = signedIn, busy = state.busy,
-                    login = settings, importPage = model::importPage, library = library)
-                if (signedIn) {
-                    TextButton({ model.favorites(page = state.page.coerceAtLeast(1)) }, enabled = state.ready && !state.busy) { Text("刷新当前页") }
-                    FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        state.folders.forEach { folder -> FilterChip(selected = folder.id == state.folder,
-                            onClick = { model.favorites(folder.id) }, enabled = !state.busy, label = { Text(folder.title) }) }
-                    }
-                }
             }
             item { JmFeedback(model, state) }
             bookGridItems(state.books, columns, { it.id }) { book ->

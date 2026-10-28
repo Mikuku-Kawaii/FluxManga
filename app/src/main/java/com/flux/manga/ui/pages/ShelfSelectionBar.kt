@@ -20,13 +20,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun ShelfSelectionBar(
     canEdit: Boolean, hasBooks: Boolean, hasSelection: Boolean,
-    selectAll: () -> Unit, clear: () -> Unit, unfavorite: () -> Unit,
+    selectAll: () -> Unit, clear: () -> Unit, unfavorite: () -> Unit, cancel: () -> Unit,
 ) {
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
         itemVerticalAlignment = Alignment.CenterVertically) {
         ShelfTextButton("全选", selectAll, enabled = canEdit && hasBooks)
         ShelfTextButton("清空", clear, enabled = canEdit && hasSelection)
         ShelfTextButton("取消收藏", unfavorite, enabled = canEdit && hasSelection)
+        ShelfTextButton("取消", cancel, enabled = true)
     }
 }
 

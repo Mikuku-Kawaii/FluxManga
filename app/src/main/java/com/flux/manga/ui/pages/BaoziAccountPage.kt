@@ -32,7 +32,6 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     var selection by rememberSaveable(state.sourceId) { mutableStateOf(emptyList<String>()) }
     var previewQuery by rememberSaveable(state.sourceId) { mutableStateOf("") }
-    val visibleEntries = remember(state.entries, previewQuery) { filterImportEntries(state.entries, previewQuery) { it.card.title } }
     var favorite by rememberSaveable { mutableStateOf(false) }
     var confirm by remember { mutableStateOf<String?>(null) }
     DisposableEffect(model, lifecycle) {
@@ -45,6 +44,30 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
     val navigation = rememberSourceSettingsNavigation(back)
     val unfinished = (state.importJob?.remaining ?: 0) > 0
     val informationModel = state.sourceId?.let { rememberBookInformation(session, it) }
+    val coverLibrary = remember(session, identity) { com.flux.manga.data.OnlineLibrary(context, session) }
+    if (navigation.section == SourceSettingsSection.IMPORT) {
+        CollectionImportPage(session, state.sourceId, "包子漫画", state.username,
+            books = state.entries.map { ImportBook(it.card.key.mangaId, it.card.key.mangaId, it.card.title, it.card.author) }, signedIn = state.verified, busy = state.busy,
+            selected = selection, select = { selection = it }, query = previewQuery, changeQuery = { previewQuery = it },
+            back = navigation::back, login = { navigation.open(SourceSettingsSection.ACCOUNT) },
+            open = { id -> state.sourceId?.let { open(it, id) } },
+            primaryLabel = if (unfinished) "继续导入" else "导入已读取书架", canImport = state.loaded && !state.busy,
+            importBooks = { if (unfinished) model.resumeImport() else { confirm = if (selection.isEmpty()) "all" else "import" } }, pause = model::cancel, refresh = model::start,
+            scroll = navigation.scroll, error = state.error, notice = state.notice,
+            summary = state.importJob?.let { "${if (it.remaining == 0) "已完成" else "待处理 ${it.remaining}"} · 新增 ${it.added} · 已存在 ${it.existing}" },
+
+            favorite = favorite, changeFavorite = { favorite = it }, information = informationModel,
+            pagination = { TextButton(model::start, enabled = !state.busy) { Text("刷新网站书架") } },
+            options = {
+                state.importJob?.let { job -> SettingsDisclosure("任务详情") {
+                    ImportTaskProgress(job.cursor, job.items.size, job.remaining == 0)
+                    TextButton({ confirm = "finish" }, enabled = !state.busy) { Text(if (job.remaining == 0) "收起结果" else "结束任务") }
+                } }
+                TextButton(library, enabled = !state.busy) { Text("查看书库") }
+            },
+            footerExtra = { if (state.importJob != null && !unfinished) TextButton(library) { Text("查看书库") } },
+            cover = { book -> state.sourceId?.let { OnlineCover(coverLibrary, it, book.manga, fillWidth = true) } })
+    } else {
     ReferenceRefreshColumn(state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("baozi-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") { SettingsHeading(navigation.title("包子漫画"), "", navigation::back) }
@@ -53,7 +76,6 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
             imports = { navigation.open(SourceSettingsSection.IMPORT) },
             importSummary = if (unfinished) "有未完成任务，可继续导入" else "网站书架 · 选择作品导入")
 
-        if (navigation.section == SourceSettingsSection.IMPORT) informationModel?.let { info -> item("information") { SourceInformationEntry(info, enabled = !state.busy) } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("account") { AccountPanel(navigation.section.label) {
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
                 "我的书架（已读取部分）", state.username)
@@ -77,65 +99,22 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
         if (state.busy || state.error != null || state.notice != null) item("status") {
             AccountRequestStatus(state.busy, state.stage, state.error, state.notice, model::cancel, model::start)
         }
-        if (navigation.section == SourceSettingsSection.IMPORT) {
-        state.importJob?.let { job -> item("import-job") { AccountPanel("导入任务") {
-            Text(if (job.remaining > 0) "未完成的选中书目导入" else "本次选中书目已处理", style = MaterialTheme.typography.titleMedium)
-            Text("新增 ${job.added} · 已存在 ${job.existing} · 待处理 ${job.remaining}")
-            ImportTaskProgress(job.cursor, job.items.size, job.remaining == 0)
-            FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (job.remaining > 0) ReferenceButton(onClick = model::resumeImport, enabled = !state.busy && state.verified) { Text("继续此任务") }
-                TextButton(onClick = library, enabled = !state.busy) { Text("查看在线书库") }
-                AccountMoreActions("任务管理") { close ->
-                    TextButton(onClick = { close(); confirm = "finish" }, enabled = state.loaded && !state.busy) { Text(if (job.remaining > 0) "结束此任务" else "收起结果") }
-                    Text("本次选择 ${job.items.size} 本，已导入书目保留。")
-                }
-            }
-        } } }
-        item("snapshot") { AccountPanel("书库导入") {
-            if (!state.verified) {
-                Text("连接账号后，在这里选择书架中的作品并导入。", style = MaterialTheme.typography.bodyMedium)
-                TextButton({ navigation.open(SourceSettingsSection.ACCOUNT) }) { Text("连接账号") }
-                Text("已有书目与阅读进度保留。", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                Text("我的书架 · 已读取部分", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ImportPreviewFilter(previewQuery, { previewQuery = it }, state.entries.size, visibleEntries.size,
-                    selection.size, hiddenImportSelection(selection, visibleEntries.map { it.card.key.mangaId }), !state.busy,
-                    { selection = addImportSelection(selection, visibleEntries.map { it.card.key.mangaId }) })
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(favorite, enabled = !state.busy,
-                    role = Role.Checkbox, onValueChange = { favorite = it }), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(favorite, null, enabled = !state.busy)
-                    Text("同时收藏新书目", Modifier.weight(1f))
-                }
-                AccountMoreActions("导入说明") { _ ->
-                    Text("账号服务：网页登录时使用的包子官网")
-                    Text("仅导入已读取的书目，不下载正文。已有收藏和进度保留。")
-                }
-                if (unfinished) Text("请先继续或结束上次任务，再创建新的导入。")
-            }
-        } }
-        if (state.verified) {
-            selectionHeader("selection-actions") {
-                ImportSelectionActions(selection.size, !state.busy, !state.busy && !unfinished,
-                    { selection = state.entries.map { it.card.key.mangaId } }, { selection = emptyList() }, { confirm = "import" })
-            }
-            items(visibleEntries, key = { "book:${it.card.key.sourceId}:${it.card.key.mangaId}" }) { entry ->
-                val key = entry.card.key.mangaId
-                ImportPreviewRow(entry.card.title, null, key in selection, !state.busy,
-                    { checked -> selection = if (checked) addImportSelection(selection, listOf(key)) else selection - key },
-                    { open(entry.card.key.sourceId, entry.card.key.mangaId) })
-            }
-        }
-        }
+    }
     }
     if (confirm != null) ReferenceDialog(onDismissRequest = { confirm = null },
-        title = { Text(if (confirm == "import") "导入选中的书目？" else "结束此导入任务？") },
-        text = { Text(if (confirm == "import") "处理本次选中的 ${selection.size} 本。已有书目、收藏和阅读进度保持，不改写远端书架或下载正文。"
-            else "结束剩余导入，已导入书目和进度保留。", Modifier.verticalScroll(rememberScrollState())) },
-        confirmButton = { ReferenceDialogConfirm(if (confirm == "import") "导入所选书目" else "结束任务", onClick = {
+        title = { Text(if (confirm == "finish") "结束此导入任务？" else "导入书目") },
+        text = { Text(when (confirm) {
+            "all" -> "导入已读取书架的 ${state.entries.size} 部，保留已有收藏和阅读进度。"
+            "import" -> "导入选中的 ${selection.size} 部，保留已有收藏和阅读进度。"
+            else -> "结束剩余导入，已导入书目和进度保留。"
+        }, Modifier.verticalScroll(rememberScrollState())) },
+        confirmButton = { ReferenceDialogConfirm(if (confirm == "finish") "结束任务" else "导入", onClick = {
             val action = confirm; confirm = null
-            if (action == "import") model.importSelected(selection.toSet(), favorite) else model.finishTask()
+            when (action) {
+                "all" -> model.importSelected(state.entries.map { it.card.key.mangaId }.toSet(), favorite)
+                "import" -> model.importSelected(selection.toSet(), favorite)
+                else -> model.finishTask()
+            }
         }) },
         dismissButton = { TextButton(onClick = { confirm = null }) { Text("返回") } })
 }

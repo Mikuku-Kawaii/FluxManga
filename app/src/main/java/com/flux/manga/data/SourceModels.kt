@@ -48,7 +48,8 @@ internal class SourceModelMapper(
     fun card(value: SourceManga): MangaCard {
         val key = key(value.key)
         val count = value.pageCount?.also { require(it <= Int.MAX_VALUE.toUInt()) { "Source page count exceeds model range" } }?.toInt()
-        return MangaCard(key, value.title, count, available = true)
+        return MangaCard(key, value.title, count, available = true,
+            updatedAt = value.updatedAt, latestChapter = value.latestChapter)
     }
 
     fun tags(reply: SourceTagPage): SourceTagList {

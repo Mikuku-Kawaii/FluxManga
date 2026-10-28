@@ -82,7 +82,7 @@ internal fun detailJson(book: SourceDetail) = JSONObject().put("id", book.manga.
     .put("pages", book.manga.pageCount?.toLong() ?: JSONObject.NULL).put("description", book.description ?: JSONObject.NULL)
     .put("tags", book.tags.jsonStrings()).put("metadata", metadataJson(book.metadata))
 internal fun sourceDetail(j: JSONObject, context: SourceContext) = SourceDetail(context,
-    SourceManga(SourceMangaKey(context.world, context.sourceId, j.getString("id")), j.getString("title"), j.number("pages")),
+    SourceManga(SourceMangaKey(context.world, context.sourceId, j.getString("id")), j.getString("title"), j.number("pages"), null, null),
     j.text("description"), j.strings("tags"), metadata(j.getJSONObject("metadata")))
 internal fun chaptersJson(rows: List<SourceChapter>, next: SourceContinuation, total: Long?) = withContinuation(JSONObject()
     .put("chapters", rows.json { JSONObject().put("id", it.id).put("title", it.title).put("ordinal", it.ordinal.toLong()).put("pages", it.pageCount?.toLong() ?: JSONObject.NULL) })

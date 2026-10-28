@@ -41,7 +41,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
                         "category" -> client.catalog(number, category = query)
                         else -> client.search(query, number)
                     }
-                    SourceCardPage(batch.books.map { card(client.source, it.id, it.title, it.author) }, next(batch.next))
+                    SourceCardPage(batch.books.map { card(client.source, it.id, it.title, it.author).copy(updatedAt = it.updatedAt.takeIf(String::isNotBlank)) }, next(batch.next))
                 }
             }
             PICA -> {
@@ -53,7 +53,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
                         "category" -> client.catalog(query, number)
                         else -> client.search(query, number)
                     }
-                    SourceCardPage(batch.items.map { card(account.source, it.id, it.title, it.author) }, next(batch.next))
+                    SourceCardPage(batch.items.map { card(account.source, it.id, it.title, it.author).copy(updatedAt = it.updatedAt.takeIf(String::isNotBlank)) }, next(batch.next))
                 }
             }
             else -> {
@@ -66,6 +66,26 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
                     SourceCardPage(batch.books.map { card(site.source(config.account), it.id, it.title) },
                         batch.next?.let { SourceContinuation.Next(SourcePageRequest.Cursor(it)) } ?: SourceContinuation.End)
                 }
+            }
+        }
+        ensureActive(); active(); result
+    }
+    /** Reuse the existing directory contracts for visible home cards; never count image pages as episodes. */
+    suspend fun update(card: MangaCard): Pair<String, String> = coroutineScope {
+        active()
+        val result = if (isPicaSource(card.key.sourceId)) {
+            val account = PicaStore(app, session).account()?.takeIf { it.source == card.key.sourceId }
+                ?: throw IOException("请登录原账号")
+            PicaClient(session, account, this).use { client ->
+                val last = client.allChapters(card.key.mangaId).lastOrNull()
+                last?.updatedAt.orEmpty() to (last?.let { "第${it.order}话" }.orEmpty())
+            }
+        } else {
+            val settings = JmStore(app, session).settings()
+            if (card.key.sourceId != JM_SOURCE && card.key.sourceId != settings.account?.source) throw IOException("请登录原账号")
+            JmClient(session, if (card.key.sourceId == JM_SOURCE) settings.copy(account = null) else settings, card.key.sourceId, this).use { client ->
+                val book = client.detail(card.key.mangaId)
+                book.updatedAt to (if (book.chapters.size == 1) "第1话" else book.chapters.lastOrNull()?.title.orEmpty())
             }
         }
         ensureActive(); active(); result

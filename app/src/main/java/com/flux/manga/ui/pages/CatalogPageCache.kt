@@ -39,7 +39,9 @@ internal class CatalogPageCache(context: Context, private val session: WorldSess
         DiscoveryFeedState(cards = List(rows.length()) { index ->
             val row = rows.getJSONObject(index)
             MangaCard(MangaKey(identity.world, row.getString("source"), row.getString("id")), row.getString("title"),
-                if (row.isNull("pages")) null else row.getInt("pages"), row.getBoolean("available"), author = row.getString("author"))
+                if (row.isNull("pages")) null else row.getInt("pages"), row.getBoolean("available"), author = row.getString("author"),
+                updatedAt = row.optString("updatedAt").takeUnless { it.isBlank() || it == "null" },
+                latestChapter = row.optString("latestChapter").takeUnless { it.isBlank() || it == "null" })
         }, next = continuation(json), attempted = true, loaded = true)
     }
 
@@ -47,7 +49,8 @@ internal class CatalogPageCache(context: Context, private val session: WorldSess
         val cards = JSONArray()
         state.cards.forEach { card -> cards.put(JSONObject().put("source", card.key.sourceId).put("id", card.key.mangaId)
             .put("title", card.title).put("pages", card.pageCount ?: JSONObject.NULL)
-            .put("available", card.available).put("author", card.author)) }
+            .put("available", card.available).put("author", card.author)
+            .put("updatedAt", card.updatedAt ?: JSONObject.NULL).put("latestChapter", card.latestChapter ?: JSONObject.NULL)) }
         write(withContinuation(JSONObject().put("cards", cards), state.next), query)
     }
 }

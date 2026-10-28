@@ -89,7 +89,7 @@ internal class BaoziModel(private val app: Application, private val session: Wor
         mutable.value = detail.value.copy(saving = true, notice = null)
         viewModelScope.launch {
             try {
-                library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, book.card.key.mangaId), book.card.title, null), target)
+                library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, book.card.key.mangaId), book.card.title, null, null, null), target)
                 ensureActive(); if (active()) mutable.value = detail.value.copy(favorite = target, saving = false)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { if (active()) mutable.value = detail.value.copy(saving = false, notice = "收藏状态未确认，请刷新核对后重试") }
@@ -109,7 +109,7 @@ internal class BaoziModel(private val app: Application, private val session: Wor
                 val book = source().detail(mangaId)
                 ensureActive(); if (active() && ticket == revision) {
                     mutable.value = detail.value.copy(book = book, busy = false, attempted = true)
-                    library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, mangaId), book.card.title, null))
+                    library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, mangaId), book.card.title, null, null, null))
                     updateLocal()
                     detailCache?.write(detailJson(book))
                     detailCache?.information(detailInformation(book))

@@ -108,8 +108,10 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     fun clearHistory(): Unit = work(::clearHistory) {
         data.clearHistory(identity.world, "online:${state.value.source}", ::active); state.update { it.copy(history = emptyList()) }
     }
-    fun importPage(): Unit = work(::importPage) {
-        val books = state.value.batch?.books.orEmpty(); val added = store.importPage(state.value.source, books)
+    fun importPage() = importSelected(null)
+    fun importSelected(ids: Set<String>?): Unit = work({ importSelected(ids) }) {
+        val books = state.value.batch?.books.orEmpty().filter { ids == null || it.id in ids }
+        val added = store.importPage(state.value.source, books)
         state.update { it.copy(message = "新增 $added 本，保留已有 ${books.size - added} 本；可继续下一批") }
     }
     fun detail(id: String): Unit = work({ detail(id) }, readingDetail = true) {
@@ -320,6 +322,32 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     } }
     val favoritesImport = rememberPrivateFavoritesImport(session, if (favorites && signedIn && state.source == site.source(state.settings.account)) state.source else null)
     val informationModel = if (favoritesImport != null) rememberBookInformation(session, state.source) else null
+    if (favorites) {
+        PrivateCollectionImportPage(session, state.source, if (site == GallerySite.EX) "ExHentai" else "E-Hentai", signedIn,
+            state.batch?.books.orEmpty().map { ImportBook(it.id, it.id, it.title, it.category) }, state.busy, state.message, state.error,
+            favoritesImport, informationModel, back, settings, { open(state.source, it) }, library,
+            refresh = { model.browse(true) }, stop = model::stop, importSelected = { model.importSelected(it) },
+            extraOptions = {
+                tags?.let { TextButton(it) { Text("中文标签查找") } }
+                visits?.let { TextButton(it) { Text("最近浏览") } }
+                favoritesPage?.let { TextButton(it) { Text("云收藏") } }
+            },
+            scope = { enabled -> Column {
+                ImportScopePicker(state.folder, listOf("all" to "全部分类") + state.folders.map { it.id to it.title }, enabled, model::folder)
+                SettingsDisclosure("图源关键词筛选") {
+                    ReferenceSubmitSearchField(state.query, model::query, "关键词 / namespace:tag", { model.browse(true) },
+                        inputEnabled = enabled, submitEnabled = state.ready && signedIn && enabled)
+                }
+                if (site == GallerySite.EX && state.ehOverlap > 0) Text("${state.ehOverlap} 部已有 EH 记录，EX 独立保存", style = MaterialTheme.typography.bodySmall)
+            } }, pagination = { enabled -> state.batch?.let { batch -> FlowRow {
+                batch.previous?.let { TextButton({ model.browse(true, it) }, enabled = enabled) { Text("上一批") } }
+                batch.next?.let { TextButton({ model.browse(true, it) }, enabled = enabled) { Text("下一批") } }
+            } } }, cover = { entry ->
+                val book = state.batch!!.books.first { it.id == entry.key }
+                PrivateSourceCover(session, state.source, book.id, book.title) { model.cover(book) }
+            })
+        return
+    }
     BookResultsLayout(enabled = !favorites) { columns ->
         LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottom), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { if (heading == null) SettingsHeading(if (favorites) "${if (site == GallerySite.EX) "ExHentai" else "E-Hentai"} 书库导入" else "搜索画廊", "", back) else DiscoveryHeading("${site.prefix}-root-settings", back, heading) }
@@ -333,18 +361,6 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
             if (state.batch == null && state.history.isNotEmpty()) item { FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { state.history.forEach { text ->
                 TextButton({ model.query(text); model.browse(favorites) }, enabled = canBrowse && !state.busy) { Text(text) }
             } }; TextButton(model::clearHistory, enabled = !state.busy) { Text("清空当前来源搜索历史") } }
-            informationModel?.let { info -> item { BookInformationPanel(info, enabled = !state.busy) } }
-            favoritesImport?.let { model -> item { PrivateFavoritesImportPanel(model, state.busy) } }
-            if (favorites) item { FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                FilterChip(state.folder == "all", { model.folder("all") }, enabled = canBrowse && !state.busy, label = { Text("全部分类") })
-                state.folders.forEach { folder -> FilterChip(state.folder == folder.id, { model.folder(folder.id) }, enabled = canBrowse && !state.busy, label = { Text(folder.title) }) }
-            }
-                if (site == GallerySite.EX && state.batch != null) Text("其中 ${state.ehOverlap} 本已有 EH 记录，EX 将单独保存。")
-                AccountLibraryImportPanel("按收藏分类分批导入，关键词可缩小列表范围；本次只保存当前批作品。",
-                    state.batch?.books?.size ?: 0, batch = true,
-                    ready = state.ready, signedIn = signedIn, busy = state.busy,
-                    login = settings, importPage = model::importPage, library = library)
-            }
             bookGridItems(state.batch?.books.orEmpty(), columns, { it.id }) { book ->
                 BookResultCard(book.title, grid = !favorites, metadata = book.category, cover = {
                     PrivateSourceCover(session, state.source, book.id, book.title) { model.cover(book) }

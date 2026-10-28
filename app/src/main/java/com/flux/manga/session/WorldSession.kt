@@ -105,7 +105,15 @@ class WorldSession : ViewModel() {
     val state = mutableState.asStateFlow()
     lateinit var repository: com.flux.manga.data.SampleRepository
         private set
+    private var startup: com.flux.manga.privacy.StartupPreferences? = null
+    private var restorePrivateOnStart = false
+    fun takePrivateStartup(): Boolean = restorePrivateOnStart.also { restorePrivateOnStart = false }
     fun configure(context: android.content.Context) {
+        if (startup == null) {
+            startup = com.flux.manga.privacy.StartupPreferences(context)
+            restorePrivateOnStart = startup!!.restorePrivate()
+            PrototypeWorld.entries.forEach { tabs[it] = startup!!.initialTab(it) }
+        }
         if (!::repository.isInitialized) repository = com.flux.manga.data.SampleRepository(com.flux.manga.data.WorldDataStore(context))
     }
     private val tabs = mutableMapOf<PrototypeWorld, MainTab>()
@@ -123,9 +131,14 @@ class WorldSession : ViewModel() {
     }
     fun accepts(request: SessionIdentity) = request == identity.value && state.value.phase != SwitchPhase.Preparing
     fun selectedTab() = tabs[identity.value.world] ?: MainTab.HOME
-    fun selectTab(tab: MainTab) { tabs[state.value.target ?: identity.value.world] = tab }
+    fun selectTab(tab: MainTab) {
+        val world = state.value.target ?: identity.value.world
+        tabs[world] = tab
+        startup?.rememberTab(world, tab)
+    }
 
     private fun invalidate(world: PrototypeWorld) {
+        startup?.rememberWorld(world)
         pageCoverOwner?.second?.clear(); pageCoverOwner = null
         navigationEpoch++
         downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); baoziAccountOwner = null
@@ -138,10 +151,10 @@ class WorldSession : ViewModel() {
     }
 
     /** Caller installs the opaque cover and FLAG_SECURE before invoking this method. */
-    fun switch(store: FixtureWorldStore) {
+    fun switch(store: FixtureWorldStore, initialTab: MainTab = selectedTab()) {
         if (state.value.phase != SwitchPhase.Stable || !state.value.foreground) return
         val target = if (identity.value.world == PrototypeWorld.SFW) PrototypeWorld.NSFW else PrototypeWorld.SFW
-        val targetTab = selectedTab()
+        val targetTab = initialTab
         val fail = failNextPreparation.also { failNextPreparation = false }
         mutableState.value = state.value.copy(phase = SwitchPhase.Preparing, error = null, target = target)
         invalidate(identity.value.world)
@@ -152,6 +165,7 @@ class WorldSession : ViewModel() {
                 // Carry only the selected root tab; page state stays scoped to its world.
                 tabs[target] = targetTab
                 mutableIdentity.value = identity.value.copy(world = target)
+                startup?.rememberWorld(target)
                 Log.i("FluxSession", "commit world=$target generation=${identity.value.generation}")
                 // Visual progress is composition-owned; publishing the ready page needs no timer.
                 mutableState.value = state.value.copy(phase = SwitchPhase.Stable, target = null)
@@ -168,6 +182,7 @@ class WorldSession : ViewModel() {
     internal fun returnToPublicForPrivacy() {
         transaction?.cancel()
         invalidate(PrototypeWorld.SFW)
+        startup?.rememberWorld(PrototypeWorld.SFW)
         mutableState.value = state.value.copy(phase = SwitchPhase.Stable, target = null, error = null)
     }
 
@@ -183,7 +198,7 @@ class WorldSession : ViewModel() {
     }
 
     fun resume(now: Long = SystemClock.elapsedRealtime()) {
-        if (backgroundAt?.let { now - it > 30_000 } == true &&
+        if (startup?.returnToPublic != false && backgroundAt?.let { now - it >= (startup?.backgroundSeconds ?: 30) * 1_000L } == true &&
             !(identity.value.world == PrototypeWorld.SFW && downloadBackgroundOwner?.running == true)) invalidate(PrototypeWorld.SFW)
         backgroundAt = null
         mutableState.value = state.value.copy(foreground = true, visibilityEpoch = state.value.visibilityEpoch + 1)

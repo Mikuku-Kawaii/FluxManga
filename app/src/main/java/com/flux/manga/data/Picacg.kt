@@ -22,8 +22,9 @@ internal fun isPicaSource(source: String) = source.startsWith("picacg-user-") &&
 internal fun isPrivateComicSource(source: String) = isJmSource(source) || isPicaSource(source) || isEhSource(source) || isExSource(source)
 internal data class PicaAccount(val uid: String, val name: String, val token: String) { val source get() = "picacg-user-$uid" }
 internal data class PicaBook(val id: String, val title: String, val cover: String, val author: String = "", val artist: String = "",
-    val description: String = "", val tags: List<String> = emptyList(), val categories: List<String> = emptyList(), val finished: Boolean = false)
-internal data class PicaChapter(val order: Int, val title: String)
+    val description: String = "", val tags: List<String> = emptyList(), val categories: List<String> = emptyList(), val finished: Boolean = false,
+    val updatedAt: String = "")
+internal data class PicaChapter(val order: Int, val title: String, val updatedAt: String = "")
 internal data class PicaImage(val id: String, val ordinal: Int, val url: String)
 internal data class PicaPage<T>(val items: List<T>, val page: Int, val next: Int?)
 internal fun picaFailure(error: Exception) = when (error) {
@@ -120,7 +121,7 @@ internal class PicaClient(private val session: WorldSession, private val account
     }
     private fun book(row: JSONObject) = PicaBook(row.getString("_id").also { require(picaId(it)) }, row.getString("title"),
         image(row.getJSONObject("thumb")), row.text("author"), row.text("artist"), row.text("description"),
-        row.strings("tags"), row.strings("categories"), row.optBoolean("finished"))
+        row.strings("tags"), row.strings("categories"), row.optBoolean("finished"), row.text("update_at"))
     private fun <T> page(value: JSONObject, number: Int, parse: (JSONObject, Int) -> T): PicaPage<T> {
         val actual = value.getInt("page"); val last = value.getInt("pages")
         require(actual == number && number > 0 && last >= 0)
@@ -157,7 +158,7 @@ internal class PicaClient(private val session: WorldSession, private val account
     suspend fun chapters(id: String, number: Int): PicaPage<PicaChapter> {
         require(picaId(id))
         return page(request("comics/$id/eps?page=$number").getJSONObject("eps"), number) { row, _ ->
-            PicaChapter(row.getInt("order").also { require(it > 0) }, row.getString("title"))
+            PicaChapter(row.getInt("order").also { require(it > 0) }, row.getString("title"), row.text("updated_at"))
         }
     }
     suspend fun allChapters(id: String): List<PicaChapter> {

@@ -38,12 +38,11 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
     var password by remember { mutableStateOf("") }
     var selection by rememberSaveable(state.source) { mutableStateOf(emptyList<String>()) }
     var previewQuery by rememberSaveable(state.source) { mutableStateOf("") }
-    val visibleEntries = remember(state.entries, previewQuery) { filterImportEntries(state.entries, previewQuery) { it.title } }
     var favorite by rememberSaveable { mutableStateOf(true) }
     var confirm by remember { mutableStateOf<String?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
     DisposableEffect(model, lifecycle) {
-        if (lifecycle == Lifecycle.State.RESUMED) model.start()
+        if (lifecycle == Lifecycle.State.RESUMED) model.reopen()
         onDispose { password = ""; confirm = null; model.leave() }
     }
     LaunchedEffect(state.source) { if (state.username.isNotEmpty()) username = state.username }
@@ -54,6 +53,36 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
     val navigation = rememberSourceSettingsNavigation(back)
     val unfinished = state.task?.done == false
     val informationModel = state.source?.let { rememberBookInformation(session, it) }
+    val coverLibrary = remember(session, identity) { com.flux.manga.data.OnlineLibrary(context, session) }
+    if (navigation.section == SourceSettingsSection.IMPORT) {
+        CollectionImportPage(session, state.source, "拷贝漫画", state.username,
+            books = state.entries.map { ImportBook(it.collectionId, it.mangaId, it.title) }, signedIn = state.verified, busy = state.busy,
+            selected = selection, select = { selection = it }, query = previewQuery, changeQuery = { previewQuery = it },
+            back = navigation::back, login = { navigation.open(SourceSettingsSection.ACCOUNT) },
+            open = { id -> state.source?.let { open(it, id) } },
+            primaryLabel = if (unfinished) "继续导入" else "导入全部", canImport = state.loaded && !state.busy && (unfinished || state.entriesLoaded),
+            importBooks = { if (unfinished) model.resume() else { confirm = if (selection.isEmpty()) "all" else "import" } }, pause = model::cancel, refresh = model::start,
+            scroll = navigation.scroll, error = state.error, notice = state.notice,
+            summary = state.task?.let { "${if (it.done) "已完成" else "导入进度"} · 新增 ${it.added} · 已存在 ${it.existing}" },
+            total = state.reportedTotal,
+            favorite = favorite, changeFavorite = { favorite = it }, information = informationModel,
+            pagination = { if (!state.entriesLoaded || state.nextOffset != null) TextButton(model::moreEntries,
+                    enabled = state.loaded && !state.busy && state.entries.size < 1000) { Text("加载更多 / 重试本页") } },
+            options = {
+                if (state.task != null) {
+                    SettingsDisclosure("任务详情") {
+                        val job = state.task!!
+                        ImportTaskProgress(job.cursor, job.selection?.size, job.done)
+                        Text(job.selection?.let { "待处理 ${it.size - job.cursor} 条" } ?: "下一页 ${job.offset / 21 + 1}")
+                        if (job.selection == null) TextButton({ confirm = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
+                        TextButton({ confirm = "finish" }, enabled = !state.busy) { Text(if (job.done) "收起结果" else "结束任务") }
+                    }
+                }
+                TextButton(library, enabled = !state.busy) { Text("查看书库") }
+            },
+            footerExtra = { if (state.task != null && !unfinished) TextButton(library) { Text("查看书库") } },
+            cover = { book -> state.source?.let { OnlineCover(coverLibrary, it, book.manga, fillWidth = true) } })
+    } else {
     ReferenceRefreshColumn(state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("copy-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") { SettingsHeading(navigation.title("拷贝漫画"), "", navigation::back) }
@@ -62,7 +91,6 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
             imports = { navigation.open(SourceSettingsSection.IMPORT) },
             importSummary = if (unfinished) "有未完成任务，可继续导入" else "云收藏 · 支持全部或选中导入", connectionSummary = "其他账号连接方式")
 
-        if (navigation.section == SourceSettingsSection.IMPORT) informationModel?.let { info -> item("information") { SourceInformationEntry(info, enabled = !state.busy) } }
         if (navigation.section == SourceSettingsSection.ACCOUNT || navigation.section == SourceSettingsSection.CONNECTION) item("account") { AccountPanel(navigation.section.label) {
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
                 "云收藏（当前接口范围）", state.username)
@@ -85,65 +113,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
         if (state.busy || state.error != null || state.notice != null) item("status") {
             AccountRequestStatus(state.busy, state.stage, state.error, state.notice, model::cancel, model::start)
         }
-        if (navigation.section == SourceSettingsSection.IMPORT) {
-        state.task?.let { job -> item("import-job") { AccountPanel("导入任务") {
-            Text(if (job.done) "本次导入已完成" else "可恢复的云收藏导入", style = MaterialTheme.typography.titleMedium)
-            Text("新增 ${job.added} · 已存在 ${job.existing}")
-            ImportTaskProgress(job.cursor, job.selection?.size, job.done)
-            Text(job.selection?.let { "待处理 ${it.size - job.cursor} 条" }
-                ?: if (job.done) "已读至当前范围末页" else "下一页 ${job.offset / 21 + 1} · 剩余数量待读取")
-            FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!job.done) ReferenceButton(onClick = { model.resume() }, enabled = !state.busy && state.verified && state.loaded) { Text("继续此任务") }
-                TextButton(onClick = library, enabled = !state.busy) { Text("查看在线书库") }
-                AccountMoreActions("任务管理") { close ->
-                    if (job.selection == null) TextButton(onClick = { close(); confirm = "rescan" }, enabled = state.loaded && state.verified && !state.busy) { Text("从头重扫去重") }
-                    TextButton(onClick = { close(); confirm = "finish" }, enabled = state.loaded && state.verified && !state.busy) { Text(if (job.done) "收起结果" else "结束此任务") }
-                    Text("列表有变化时可重新扫描，自动跳过已导入书目。")
-                }
-            }
-        } } }
-        item("snapshot") { AccountPanel("书库导入") {
-            if (!state.verified) {
-                Text("连接账号后，在这里选择云收藏并导入。", style = MaterialTheme.typography.bodyMedium)
-                TextButton({ navigation.open(SourceSettingsSection.ACCOUNT) }) { Text("连接账号") }
-                Text("已有书目与阅读进度保留。", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                Text("云收藏 · 当前范围", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ImportPreviewFilter(previewQuery, { previewQuery = it }, state.entries.size, visibleEntries.size,
-                    selection.size, hiddenImportSelection(selection, visibleEntries.map { it.collectionId }), !state.busy,
-                    { selection = addImportSelection(selection, visibleEntries.map { it.collectionId }) })
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(favorite, enabled = !state.busy,
-                    role = Role.Checkbox, onValueChange = { favorite = it }), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(favorite, null, enabled = !state.busy)
-                    Text("同时收藏新书目", Modifier.weight(1f))
-                }
-                ReferenceButton(onClick = { confirm = "all" }, enabled = state.loaded && state.entriesLoaded && !state.busy && !unfinished,
-                    modifier = Modifier.fillMaxWidth()) { Text("导入当前范围") }
-                AccountMoreActions("导入选项与说明") { _ ->
-                    state.reportedTotal?.let { Text("当前范围共 $it 条。") }
-                    Text("选择书目或导入当前范围，仅保存书目，不下载正文。已有记录保留。")
-                }
-                if (state.entriesLoaded && state.entries.isEmpty()) Text(if (state.nextOffset == null) "当前范围没有收藏。" else "本页无可显示条目，可继续读取下一页。")
-                if (!state.entriesLoaded || state.nextOffset != null) TextButton(onClick = model::moreEntries,
-                    enabled = state.loaded && !state.busy && state.entries.size < 1000) { Text("加载更多 / 重试本页") }
-                if (unfinished) Text("请先继续或结束上次任务，再创建新的导入。")
-            }
-        } }
-        if (state.verified) {
-            selectionHeader("selection-actions") {
-                ImportSelectionActions(selection.size, !state.busy, state.loaded && !state.busy && !unfinished,
-                    { selection = state.entries.map { it.collectionId } }, { selection = emptyList() }, { confirm = "import" })
-            }
-            items(visibleEntries, key = { "book:${it.collectionId}" }) { entry ->
-                val key = entry.collectionId
-                ImportPreviewRow(entry.title, null, key in selection, !state.busy,
-                    { checked -> selection = if (checked) addImportSelection(selection, listOf(key)) else selection - key },
-                    { state.source?.let { open(it, entry.mangaId) } })
-            }
-        }
-        }
+    }
     }
     if (confirm != null) ReferenceDialog(onDismissRequest = { confirm = null },
         title = { Text("确认操作") }, text = { Text(when (confirm) {

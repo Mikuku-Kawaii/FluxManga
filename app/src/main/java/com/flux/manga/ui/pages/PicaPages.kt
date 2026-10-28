@@ -108,8 +108,9 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         data.clearHistory(identity.world, "online:${requireNotNull(state.value.source)}", ::active)
         state.update { it.copy(history = emptyList()) }
     }
-    fun importPage(): Unit = work(::importPage) {
-        val rows = state.value.books; val source = requireNotNull(state.value.source)
+    fun importPage() = importSelected(null)
+    fun importSelected(ids: Set<String>?): Unit = work({ importSelected(ids) }) {
+        val rows = state.value.books.filter { ids == null || it.id in ids }; val source = requireNotNull(state.value.source)
         val added = store.importPage(source, rows)
         state.update { it.copy(message = "新增 $added 本，保留已有 ${rows.size - added} 本；可继续读取其他页") }
     }
@@ -245,6 +246,20 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     val label = when (kind) { "favorites" -> "PicACG 书库导入"; "categories" -> "分类目录"; "category" -> initial; "rank" -> "热门榜单"; "latest" -> "最新作品"; else -> "搜索漫画" }
     val favoritesImport = rememberPrivateFavoritesImport(session, if (kind == "favorites" && state.account != null && state.source == state.account?.source) state.source else null)
     val informationModel = if (favoritesImport != null) rememberBookInformation(session, state.source) else null
+    if (kind == "favorites") {
+        PrivateCollectionImportPage(session, state.source, "PicACG", state.account != null,
+            state.books.map { ImportBook(it.id, it.id, it.title, it.author) }, state.busy, state.message, state.error,
+            favoritesImport, informationModel, back, settings, { id -> state.source?.let { open(it, id) } }, library,
+            refresh = { model.browse("favorites", initial, state.page.coerceAtLeast(1)) }, stop = model::stop,
+            importSelected = { model.importSelected(it) }, pagination = { enabled -> FlowRow {
+                if (state.page > 1) TextButton({ model.browse("favorites", initial, state.page - 1) }, enabled = enabled) { Text("上一页") }
+                state.next?.let { next -> TextButton({ model.browse("favorites", initial, next) }, enabled = enabled) { Text("下一页") } }
+            }, cover = { entry -> state.source?.let { source ->
+                val book = state.books.first { it.id == entry.key }
+                PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) }
+            } })
+        return
+    }
     BookResultsLayout(enabled = kind != "favorites") { columns ->
         LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottom), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { if (heading != null) DiscoveryHeading("pica-root-settings", back, heading) else SettingsHeading(label, "", back) }
@@ -268,13 +283,6 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             } } }
             if (kind != "search") item {
                 TextButton({ model.browse(kind, initial, state.page.coerceAtLeast(1)) }, enabled = state.ready && state.account != null && !state.busy) { Text("刷新当前列表") }
-            }
-            informationModel?.let { info -> item { BookInformationPanel(info, enabled = !state.busy) } }
-            favoritesImport?.let { model -> item { PrivateFavoritesImportPanel(model, state.busy) } }
-            if (kind == "favorites") item {
-                AccountLibraryImportPanel("导入当前页的云收藏，更多作品请继续翻页。", state.books.size,
-                    ready = state.ready, signedIn = state.account != null, busy = state.busy,
-                    login = settings, importPage = model::importPage, library = library)
             }
             items(state.categories, key = { "category:$it" }) { category -> TextButton({ list("category", category, state.source) }) { Text(category) } }
             bookGridItems(state.books, columns, { it.id }) { book ->

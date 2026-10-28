@@ -14,6 +14,8 @@ const PAGE_SIZE: u32 = 20;
 struct Metadata {
     title: String,
     summary: Option<String>,
+    #[serde(default, rename = "lastModified")]
+    modified: serde_json::Value,
 }
 #[derive(Deserialize)]
 struct Series {
@@ -35,8 +37,6 @@ struct DetailMetadata {
     tags: Option<Vec<String>>,
     #[serde(default)]
     status: serde_json::Value,
-    #[serde(default, rename = "lastModified")]
-    modified: serde_json::Value,
 }
 fn detail_tags(tags: Option<Vec<String>>) -> Result<Option<Vec<String>>, SourceError> {
     tags.map(|mut values| {
@@ -235,6 +235,8 @@ impl KomgaSource {
             },
             title: value.metadata.title,
             page_count: None,
+            updated_at: value.metadata.modified.as_str().filter(|v| !v.trim().is_empty()).map(str::to_owned),
+            latest_chapter: None,
         })
     }
     async fn book(
@@ -817,7 +819,7 @@ impl MangaSource for KomgaSource {
                 .clone()
                 .filter(|s| !s.trim().is_empty());
             let mut metadata = crate::detail_metadata::komga_metadata(
-                &series.books_metadata["authors"], &series.metadata.status, &series.metadata.modified);
+                &series.books_metadata["authors"], &series.metadata.status, &series.metadata.base.modified);
             if !series.books_metadata.is_null() && !series.books_metadata.is_object() { metadata.partial = true; }
             let tags = detail_tags(series.metadata.tags)?;
             let manga = self.manga(Series {

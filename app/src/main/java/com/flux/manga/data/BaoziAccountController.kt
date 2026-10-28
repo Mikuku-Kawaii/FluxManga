@@ -39,6 +39,9 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
     private fun now() = System.nanoTime() / 1_000_000
     private fun allowed(ticket: Long) = !closed && active() && ticket == revision
     private fun publish(account: BaoziSavedAccount?) {
+        if (account?.sourceId != state.value.sourceId || account?.token == null) {
+            mutable.value = state.value.copy(entries = emptyList())
+        }
         mutable.value = state.value.copy(loaded = true, sourceId = account?.sourceId, username = account?.username.orEmpty(),
             hasCredential = account?.token != null, importJob = account?.job,
             autoLoginAvailable = account?.autoLogin != null)
@@ -78,7 +81,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
         val account = store.current { allowed(ticket) }
         currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
         publish(account)
-        mutable.value = state.value.copy(verified = false, entries = emptyList())
+        mutable.value = state.value.copy(verified = false)
         if (account?.token != null) showSnapshot(snapshot(account, ticket))
     }
     fun signIn(username: String, password: String) {
@@ -270,7 +273,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
     }
     fun leave() {
         revision++; work?.cancel(); work = null
-        mutable.value = state.value.copy(busy = false, stage = null, verified = false, entries = emptyList(), loaded = false,
+        mutable.value = state.value.copy(busy = false, stage = null, verified = false, loaded = false,
             notice = "已停止，可重新读取并继续导入。")
     }
     fun close() {
