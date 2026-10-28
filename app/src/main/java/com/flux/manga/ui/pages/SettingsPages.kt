@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
     sources: () -> Unit, about: () -> Unit, reading: () -> Unit,
-    library: () -> Unit, privacyMaintenance: () -> Unit,
+    library: () -> Unit, privacyMaintenance: () -> Unit, startup: () -> Unit,
     session: com.flux.manga.session.WorldSession? = null, effects: DockEffects? = null,
     downloads: () -> Unit = library, history: () -> Unit = library, statistics: () -> Unit = library,
     storage: () -> Unit = library) {
@@ -48,12 +48,12 @@ internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
         item("tools") { SettingsGroup("常用工具") {
             SettingsRow("下载管理", "", "settings-downloads", SettingsSymbol.DOWNLOAD, downloads)
             SettingsDivider()
-            SettingsRow("阅读记录", "", "settings-history", SettingsSymbol.READING, history)
+            SettingsRow("最近观看", "", "settings-history", SettingsSymbol.READING, history)
             SettingsDivider()
             SettingsRow("阅读统计", "", "settings-statistics", SettingsSymbol.GROUPS, statistics)
         } }
         item("preferences") { SettingsGroup("内容与体验") {
-            StartupSettingsEntry()
+            StartupSettingsEntry(startup)
             SettingsDivider()
             SettingsRow("图源管理", "账号、收藏导入与连接", "settings-sources", SettingsSymbol.SOURCES, sources)
             SettingsDivider()

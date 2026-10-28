@@ -196,10 +196,7 @@ fun LocalReaderPage(session: WorldSession, mangaId: String, back: () -> Unit, bo
         onDispose { owner.lifecycle.removeObserver(observer); model.flush() }
     }
     if (state.loading || state.error != null) {
-        Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)) {
-            SettingsHeading("阅读器", "", leave)
-            if (state.loading) CircularProgressIndicator()
-            state.error?.let { RequestFeedback(it, Modifier.testTag("reader-error")); ReferenceButton(onClick = feedbackAttempt(model::load)) { Text("重试") } }
+        ReaderLoadingScreen(state.error, state.loading, leave, model::load) {
             if (bookmarkId != null && state.error != null) TextButton(onClick = model::continueProgress) { Text("继续上次阅读") }
         }
     } else state.detail?.let { detail ->

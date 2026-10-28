@@ -107,7 +107,7 @@ internal fun SettingsDisclosure(title: String, summary: String? = null, content:
     }
 }
 
-internal enum class SettingsSymbol { APPEARANCE, READING, SOURCES, GROUPS, DOWNLOAD, PRIVACY, PROTECTION, STORAGE, UPDATE, ABOUT }
+internal enum class SettingsSymbol { STARTUP, APPEARANCE, READING, SOURCES, GROUPS, DOWNLOAD, PRIVACY, PROTECTION, STORAGE, UPDATE, ABOUT }
 
 @Composable
 internal fun SettingsRow(title: String, summary: String, tag: String, symbol: SettingsSymbol?,
@@ -195,6 +195,10 @@ private fun SettingsGlyph(symbol: SettingsSymbol, modifier: Modifier) {
         fun box(x: Float, y: Float, w: Float, h: Float) = drawRoundRect(color, point(x,y), Size(size.width*w/24,size.height*h/24),
             androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()), style = stroke)
         when (symbol) {
+            SettingsSymbol.STARTUP -> {
+                drawArc(color, -60f, 300f, false, point(3f,3f), Size(size.width*18/24,size.height*18/24), style=stroke)
+                line(12f,2f,12f,12f)
+            }
             SettingsSymbol.APPEARANCE -> { circle(9f,9f,7f); circle(15f,15f,7f) }
             SettingsSymbol.READING -> { box(2f,4f,20f,16f); line(12f,4f,12f,20f); line(5f,8f,9f,8f); line(15f,8f,19f,8f) }
             SettingsSymbol.SOURCES -> repeat(3) { i -> val y=2f+i*7; box(2f,y,20f,6f); circle(6f,y+3,0.6f) }

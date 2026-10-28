@@ -2,13 +2,13 @@ package com.flux.manga.ui.pages
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,42 +50,66 @@ private fun updateDate(raw: String?, suffix: String): String {
 internal fun HomeDiscoveryRail(model: MixedDiscoveryModel, cards: List<MangaCard>, section: DiscoverySection,
     open: (String, String) -> Unit) {
     if (cards.isEmpty()) return
-    val scroll = rememberLazyListState()
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val scale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // A partial next cover reveals the horizontal gesture; large fonts get wider cards.
-        val width = (maxWidth / 2.65f * scale.coerceAtMost(1.5f)).coerceIn(108.dp, 200.dp).coerceAtMost(maxWidth)
-        LazyRow(state = scroll, modifier = Modifier.fillMaxWidth().testTag("home-rail-${section.name}"),
-            horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
-            items(cards, key = { "${it.key.sourceId}:${it.key.mangaId}" }, contentType = { "home-book" }) { card ->
-                Column(Modifier.width(width).clickable(role = Role.Button,
-                    onClickLabel = "查看《${card.title}》详情", onClick = { open(card.key.sourceId, card.key.mangaId) }),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true)
-                    Text(card.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface,
-                        minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (section == DiscoverySection.UPDATES) {
-                        val version = model.updateVersions[card.key.sourceId] ?: 0
-                        LaunchedEffect(card.key, version, lifecycle) {
-                            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { model.loadUpdate(card, version) }
+        val updates = section == DiscoverySection.UPDATES
+        // Restore the original three-column preview sizing and its narrow-screen / large-text layout.
+        val fontScale = LocalDensity.current.fontScale
+        val columns = when {
+            fontScale >= 2f -> 1
+            fontScale >= 1.5f || maxWidth < 300.dp -> 2
+            else -> 3
+        }
+        val groups = cards.chunked(if (updates) 3 else columns)
+        val pager = rememberPagerState { groups.size }
+        val coverWidth = 104.dp.coerceAtMost(maxWidth * .32f)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            HorizontalPager(state = pager, beyondViewportPageCount = 0, pageSpacing = 12.dp,
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.fillMaxWidth().testTag("home-rail-${section.name}"),
+                key = { page -> groups[page].first().key.let { "${it.sourceId}:${it.mangaId}" } }) { page ->
+                if (updates) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    groups[page].forEach { card -> key(card.key) {
+                        Row(Modifier.fillMaxWidth().clickable(role = Role.Button,
+                            onClickLabel = "查看《${card.title}》详情", onClick = { open(card.key.sourceId, card.key.mangaId) }),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Box(Modifier.width(coverWidth)) {
+                                OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true, coverRatio = 1.6f)
+                            }
+                            Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(card.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface,
+                                    minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                HomeUpdateMetadata(model, card)
+                            }
                         }
-                        val extra = model.updateInfo[card.key]
-                        val source = card.key.sourceId
-                        val dateSuffix = if (isCopySource(source) || isBaoziSource(source) || isPrivateComicSource(source)) "更新" else "资料更新"
-                        Text(updateDate(card.updatedAt ?: extra?.date, dateSuffix), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        val chapter = card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter?.takeIf(String::isNotBlank)
-                        Text(chapter?.let { if (it.startsWith("更新")) it else "更新至 $it" }
-                            ?: if (isEhSource(source) || isExSource(source)) "单篇画廊" else "章节未提供",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    } else if (card.author.isNotBlank()) {
-                        Text(card.author, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                    } }
+                } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    groups[page].forEach { card -> key(card.key) {
+                        Column(Modifier.weight(1f)) { DiscoveryGridBook(model.library, card, open) }
+                    } }
+                    repeat(columns - groups[page].size) { Spacer(Modifier.weight(1f)) }
                 }
             }
+            if (groups.size > 1) Text("${pager.currentPage + 1} / ${groups.size}", Modifier.align(Alignment.End),
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+@Composable
+internal fun HomeUpdateMetadata(model: MixedDiscoveryModel, card: MangaCard) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val version = model.updateVersions[card.key.sourceId] ?: 0
+    LaunchedEffect(card.key, version, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { model.loadUpdate(card, version) }
+    }
+    val extra = model.updateInfo[card.key]
+    val source = card.key.sourceId
+    val dateSuffix = if (isCopySource(source) || isBaoziSource(source) || isPrivateComicSource(source)) "更新" else "资料更新"
+    Text(updateDate(card.updatedAt ?: extra?.date, dateSuffix), style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val chapter = card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter?.takeIf(String::isNotBlank)
+    Text(chapter?.let { if (it.startsWith("更新")) it else "更新至 $it" }
+        ?: if (isEhSource(source) || isExSource(source)) "单篇画廊" else "章节未提供",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2, overflow = TextOverflow.Ellipsis)
 }

@@ -50,55 +50,8 @@ internal fun SourceDiscoveryPage(session: WorldSession, tags: Boolean, bottomCle
         PrivateTagsPage(session, bottomClearance, settings, sources, search, reportScroll, openTags)
         return
     }
-    val visits = if (!tags) visitsModel(session, true) else null
-    // Own both feeds outside lazy items so pulling at the top also refreshes off-screen sections.
-    val recommendations = if (!tags) mixedModel(session, null, DiscoverySection.RECOMMENDATIONS) else null
-    val updates = if (!tags && state.status != DiscoveryStatus.LOADING)
-        mixedModel(session, state.sourceId, DiscoverySection.UPDATES) else null
-    val recommendationState = recommendations?.feed?.state?.collectAsStateWithLifecycle()?.value
-    val updateState = updates?.feed?.state?.collectAsStateWithLifecycle()?.value
-    val visitState = visits?.state?.collectAsStateWithLifecycle()?.value
-    val scroll = rememberLazyListState()
-    SideEffect { reportScroll(scroll) }
-    ReferenceRefreshColumn(refreshing = state.status == DiscoveryStatus.LOADING || state.refreshing || recommendationState?.busy == true ||
-        updateState?.busy == true || visitState?.busy == true,
-        refresh = {
-            model.refresh(); visits?.refresh()
-            listOfNotNull(recommendations, updates).forEach { feed -> feed.feed.sources.forEach { feed.feed.refresh(it) } }
-        }, modifier = Modifier.fillMaxSize().testTag(if (tags) "list-TAGS" else "discovery-home"), state = scroll,
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottomClearance),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item(key = "heading") {
-          Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            DiscoveryHeading(if (tags) "tags-more" else "home-more", settings, if (tags) "标签" else "发现")
-            switchError?.let { RequestFeedback(it, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            if (!tags) ReferenceSearchEntry("搜索书名或作者", search, Modifier.testTag("open-search"))
-          }
-        }
-        if (tags) {
-            item(key = "query") { ReferenceSearchField("", {}, "查找标签", enabled = false) }
-            item(key = "tags") { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("按题材探索", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                DiscoveryCapabilityPanel("图源标签", "标签目录与按标签查询", state, "source-tags-status")
-                Text("全部标签", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                Text("此空间的图源标签暂未开放。", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } }
-        } else {
-            item(key = "recommendations") {
-                DiscoveryHomeFeed(session, state, DiscoverySection.RECOMMENDATIONS, "recommendations-status",
-                    { section(DiscoverySection.RECOMMENDATIONS) }, openBook, sources, model::refresh, recommendations)
-            }
-            item(key = "updates") {
-                DiscoveryHomeFeed(session, state, DiscoverySection.UPDATES, "source-updates-status",
-                    { section(DiscoverySection.UPDATES) }, openBook, sources, model::refresh, updates)
-            }
-            item(key = "visits") { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                DiscoverySectionHeading("最近观看", "open-visits") { section(DiscoverySection.VISITS) }
-                VisitsSummary(requireNotNull(visits), visit)
-            } }
-        }
-    }
+    DiscoveryHomeShowcase(session, model, state, bottomClearance, search, sources, settings, switchError,
+        section, openBook, reportScroll)
 }
 
 @Composable

@@ -36,7 +36,7 @@ import java.util.Date
 @Composable
 internal fun VisitedPage(session: WorldSession, kind: String, source: String, manga: String, content: @Composable () -> Unit) {
     val app = LocalContext.current.applicationContext as Application
-    val model: VisitRecorderModel = viewModel(factory = viewModelFactory { initializer { VisitRecorderModel(app, session) } })
+    val model: VisitRecorderModel = viewModel(key = "visit:${kind.length}:$kind:${source.length}:$source:$manga", factory = viewModelFactory { initializer { VisitRecorderModel(app, session) } })
     val failed by model.failed.collectAsStateWithLifecycle()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(model, lifecycle) { if (lifecycle == Lifecycle.State.RESUMED) model.record(kind, source, manga) }

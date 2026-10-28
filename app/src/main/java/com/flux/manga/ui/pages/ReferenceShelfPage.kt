@@ -80,10 +80,9 @@ internal fun ReferenceShelfPage(
     var searchField by rememberSaveable(initialAuthor) { mutableStateOf(if (initialAuthor.isBlank()) LocalSearchField.ALL else LocalSearchField.AUTHOR) }
     var favoritesOnly by rememberSaveable { mutableStateOf(false) }
     val isRoot = section == null && !searchMode
-    var downloadFilter by rememberSaveable { mutableStateOf(ShelfDownloadFilter.ALL) }
-    val books = remember(state.books, downloadFilter, isRoot, favoritesOnly, section, filter, state.sort, query, searchField) {
-        shelfResults(filterShelfDownloads(state.books, downloadFilter), isRoot || favoritesOnly,
-            section == ShelfSection.HISTORY, filter, state.sort, query, searchField)
+    val books = remember(state.books, isRoot, favoritesOnly, section, filter, state.sort, state.sortDirection, query, searchField) {
+        shelfResults(state.books, isRoot || favoritesOnly,
+            section == ShelfSection.HISTORY, filter, state.sort, query, searchField, state.sortDirection)
     }
     val visibleKeys = books.map { it.stableKey }
     LaunchedEffect(visibleKeys) { selectedKeys = selectedKeys.filter { it in visibleKeys } }
@@ -139,13 +138,13 @@ internal fun ReferenceShelfPage(
                 }
             }
             if (isRoot) ShelfReadingFilters(filter, model::filter, enabled = !state.batchBusy)
-            if (!isRoot && (filter != ShelfFilter.ALL || favoritesOnly || downloadFilter != ShelfDownloadFilter.ALL || searchField != LocalSearchField.ALL)) {
+            if (!isRoot && (filter != ShelfFilter.ALL || favoritesOnly || searchField != LocalSearchField.ALL)) {
                 FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
                     Text(listOfNotNull(filter.takeIf { it != ShelfFilter.ALL }?.label,
-                        "仅收藏".takeIf { favoritesOnly }, downloadFilter.takeIf { it != ShelfDownloadFilter.ALL }?.label,
+                        "仅收藏".takeIf { favoritesOnly },
                         searchField.takeIf { it != LocalSearchField.ALL }?.label).joinToString(" · "),
                         Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); downloadFilter = ShelfDownloadFilter.ALL; searchField = LocalSearchField.ALL }, enabled = !state.batchBusy) { Text("重置") }
+                    TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); searchField = LocalSearchField.ALL }, enabled = !state.batchBusy) { Text("重置") }
                 }
             }
             if (selecting) ShelfSelectionBar(
@@ -229,16 +228,15 @@ internal fun ReferenceShelfPage(
                         state.errors.isNotEmpty() -> "部分书目暂不可用，请重试"
                         searchMode && state.books.isEmpty() -> "还没有可搜索的本机书目"
                         searchMode -> "没有符合当前查询与筛选的书目"
-                        query.isNotBlank() || favoritesOnly || filter != ShelfFilter.ALL || downloadFilter != ShelfDownloadFilter.ALL -> "没有符合条件的书目"
+                        query.isNotBlank() || favoritesOnly || filter != ShelfFilter.ALL -> "没有符合条件的书目"
                         section == ShelfSection.HISTORY -> "尚无阅读记录"
                         isRoot -> "还没有收藏，去全部书目添加喜欢的故事"
                         else -> "还没有书目"
                     })
                     if (state.errors.isNotEmpty()) TextButton(onClick = feedbackAttempt(model::refresh)) { Text("重试读取书库") }
-                    else if (!isRoot && (favoritesOnly || filter != ShelfFilter.ALL || query.isNotBlank() || downloadFilter != ShelfDownloadFilter.ALL || searchField != LocalSearchField.ALL))
-                        TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); query = ""; downloadFilter = ShelfDownloadFilter.ALL; searchField = LocalSearchField.ALL }) { Text("清除全部筛选") }
+                    else if (!isRoot && (favoritesOnly || filter != ShelfFilter.ALL || query.isNotBlank() || searchField != LocalSearchField.ALL))
+                        TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); query = ""; searchField = LocalSearchField.ALL }) { Text("清除全部筛选") }
                     else if (filter != ShelfFilter.ALL || query.isNotBlank()) TextButton(onClick = { model.filter(ShelfFilter.ALL); query = "" }) { Text("清除筛选") }
-                    else if (downloadFilter != ShelfDownloadFilter.ALL) TextButton(onClick = { downloadFilter = ShelfDownloadFilter.ALL }) { Text("清除下载筛选") }
                     else if (isRoot || section == ShelfSection.HISTORY) TextButton(onClick = { list(ShelfSection.ALL) }) { Text("查看全部书目") }
                     else TextButton(onClick = { panel = "add" }) { Text("添加书目") }
                 }
@@ -277,15 +275,15 @@ internal fun ReferenceShelfPage(
                     ShelfReadingFilters(filter, model::filter)
                     FilterChip(favoritesOnly, { favoritesOnly = !favoritesOnly }, label = { Text("仅收藏") })
                 }
-                if (public) {
-                    Text("下载状态", style = MaterialTheme.typography.titleMedium)
-                    FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ShelfDownloadFilter.entries.forEach { value -> FilterChip(downloadFilter == value, { downloadFilter = value }, label = { Text(value.label) }) }
-                    }
-                }
                 Text("排序", style = MaterialTheme.typography.titleMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ShelfSort.entries.forEach { value -> FilterChip(state.sort == value, { model.sort(value) }, label = { Text(value.label) }) }
+                }
+                Text("顺序", style = MaterialTheme.typography.titleMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ShelfSortDirection.entries.forEach { value ->
+                        FilterChip(state.sortDirection == value, { model.sortDirection(value) }, label = { Text(value.label) })
+                    }
                 }
                 if (state.sort == ShelfSort.IMPORTED) Text("本地书目按导入时间排列，在线书目列在其后。", style = MaterialTheme.typography.bodySmall)
                 if (filter == ShelfFilter.READ) Text("本地读到末页计为已读；在线总量未知时计为在读。", style = MaterialTheme.typography.bodySmall)

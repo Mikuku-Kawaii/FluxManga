@@ -470,7 +470,7 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
         onDispose { owner.lifecycle.removeObserver(observer); model.leave() }
     }
     var tools by remember { mutableStateOf(false) }
-    val chrome = tools || state.loading || state.pages.isEmpty() || state.error != null
+    val chrome = state.pages.isNotEmpty() && (tools || state.error != null)
     ReaderImmersive(chrome || tool != null || chaptersOpen)
     LaunchedEffect(state.saveError, state.boundaryMessage) {
         if (state.saveError != null || state.boundaryMessage != null) tools = true
@@ -491,7 +491,9 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
     }
     CompositionLocalProvider(LocalReadingTime provides statistics,
         LocalReaderTap provides { tools = !tools }, LocalReaderChromeVisible provides chrome) {
-        Box(Modifier.fillMaxSize().testTag(if (syntheticPrivate) "private-synthetic-reader" else if (isBaoziSource(sourceId)) "baozi-reader" else if (isCopySource(sourceId)) "copy-reader" else "komga-reader")) {
+        Box(Modifier.fillMaxSize().background(ReaderBackground).testTag(if (syntheticPrivate) "private-synthetic-reader" else if (isBaoziSource(sourceId)) "baozi-reader" else if (isCopySource(sourceId)) "copy-reader" else "komga-reader")) {
+            if (state.pages.isEmpty()) ReaderLoadingScreen(state.error ?: state.saveError,
+                state.loading || (state.error == null && state.saveError == null), leave, model::retry, model::cancel)
             if (state.pages.isNotEmpty()) ReaderCanvas(Modifier.fillMaxSize().background(WorldColors.DarkBackground)) {
                 val width = with(LocalDensity.current) { maxWidth.roundToPx() }
                 key(state.pages.first().chapterId, state.mode) {

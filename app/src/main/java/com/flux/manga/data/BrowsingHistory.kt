@@ -36,8 +36,8 @@ internal class BrowsingHistory(private val context: Context, private val session
 
     suspend fun record(kind: String, source: String, manga: String) {
         active()
-        // Private adapters record visits after their own account/session-bound detail load.
-        if (identity.world != PrototypeWorld.SFW) return
+        // Private visits use the encrypted world DB; synthetic and unrelated sources stay excluded.
+        if (identity.world != PrototypeWorld.SFW && (kind != "online" || !isPrivateComicSource(source))) return
         require(kind == "local" || kind == "online")
         data.worldData(identity.world, { session.accepts(identity) }) { dao ->
             active()

@@ -18,7 +18,8 @@ internal data class ShelfState(val books: List<ShelfBook> = emptyList(), val loa
     val errors: List<String> = emptyList(), val saving: Set<String> = emptySet(),
     val layout: ShelfLayout = ShelfLayout.GRID, val sort: ShelfSort = ShelfSort.RECENT,
     val batchBusy: Boolean = false, val batchProcessed: Int = 0, val batchTotal: Int = 0,
-    val batchCompleted: Set<String> = emptySet(), val batchMessage: String? = null)
+    val batchCompleted: Set<String> = emptySet(), val batchMessage: String? = null,
+    val sortDirection: ShelfSortDirection = ShelfSort.RECENT.defaultDirection)
 
 internal enum class ShelfBatchAction { FAVORITE, UNFAVORITE, REMOVE_LOCAL }
 
@@ -56,10 +57,14 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
     }
     private fun readPresentation() {
         // Preferences contain only presentation enums; never titles, identities or queries.
+        val sort = ShelfSort.entries.firstOrNull { it.name == preferences.getString(shelfPreferenceKey(identity.world, "sort"), null) } ?: ShelfSort.RECENT
         mutable.value = state.value.copy(
             layout = ShelfLayout.entries.firstOrNull { it.name == preferences.getString(shelfPreferenceKey(identity.world, "layout"), null) } ?: ShelfLayout.GRID,
-            sort = ShelfSort.entries.firstOrNull { it.name == preferences.getString(shelfPreferenceKey(identity.world, "sort"), null) } ?: ShelfSort.RECENT)
+            sort = sort, sortDirection = savedDirection(sort))
     }
+    private fun savedDirection(sort: ShelfSort) = ShelfSortDirection.entries.firstOrNull {
+        it.name == preferences.getString(shelfPreferenceKey(identity.world, "sort-direction.${sort.name}"), null)
+    } ?: sort.defaultDirection
     fun layout(value: ShelfLayout) {
         if (!active()) return
         mutable.value = state.value.copy(layout = value)
@@ -67,8 +72,13 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
     }
     fun sort(value: ShelfSort) {
         if (!active()) return
-        mutable.value = state.value.copy(sort = value)
+        mutable.value = state.value.copy(sort = value, sortDirection = savedDirection(value))
         preferences.edit { putString(shelfPreferenceKey(identity.world, "sort"), value.name) }
+    }
+    fun sortDirection(value: ShelfSortDirection) {
+        if (!active()) return
+        mutable.value = state.value.copy(sortDirection = value)
+        preferences.edit { putString(shelfPreferenceKey(identity.world, "sort-direction.${state.value.sort.name}"), value.name) }
     }
     val filter = saved.getStateFlow("shelf-filter", ShelfFilter.ALL.name)
     fun filter(value: ShelfFilter) { if (active()) saved["shelf-filter"] = value.name }

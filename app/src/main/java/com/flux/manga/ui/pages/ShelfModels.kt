@@ -4,7 +4,9 @@ import com.flux.manga.data.*
 import com.flux.manga.ui.navigation.PrototypeWorld
 
 internal enum class ShelfFilter(val label: String) { ALL("全部"), READING("在读"), UNREAD("未读"), READ("已读") }
-internal enum class ShelfSort(val label: String) { RECENT("最近阅读优先"), TITLE("书名排序"), IMPORTED("本地导入时间") }
+internal enum class ShelfSort(val label: String) { RECENT("阅读时间"), TITLE("书名排序"), IMPORTED("本地导入时间") }
+internal enum class ShelfSortDirection(val label: String) { ASCENDING("正序"), DESCENDING("倒序") }
+internal val ShelfSort.defaultDirection get() = if (this == ShelfSort.TITLE) ShelfSortDirection.ASCENDING else ShelfSortDirection.DESCENDING
 internal enum class ShelfLayout { GRID, LIST }
 internal data class ShelfBook(val key: MangaKey, val title: String, val favorite: Boolean, val available: Boolean,
     val pageCount: Int?, val ordinal: Int?, val chapterId: String?, val readAt: Long?,
@@ -44,15 +46,23 @@ internal fun readingDay(book: ShelfBook, zone: java.time.ZoneId = java.time.Zone
     book.readAt?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate().toString() } ?: "日期未知"
 internal fun shelfResults(books: List<ShelfBook>, favoritesOnly: Boolean, historyOnly: Boolean,
                           filter: ShelfFilter, sort: ShelfSort, query: String = "",
-                          field: LocalSearchField = LocalSearchField.ALL) =
-    books.filter { book -> (!favoritesOnly || book.favorite) && (!historyOnly || book.hasProgress) &&
+                          field: LocalSearchField = LocalSearchField.ALL,
+                          direction: ShelfSortDirection = sort.defaultDirection): List<ShelfBook> {
+    val byValue = when (sort) {
+        ShelfSort.TITLE -> compareBy<ShelfBook, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
+        ShelfSort.RECENT -> compareBy<ShelfBook> { it.readAt }
+        ShelfSort.IMPORTED -> compareBy<ShelfBook> { if (it.online) null else it.importedAt }
+    }
+    val order = compareBy<ShelfBook> { when (sort) {
+        ShelfSort.TITLE -> false
+        ShelfSort.RECENT -> it.readAt == null
+        ShelfSort.IMPORTED -> it.online || it.importedAt == null
+    } }.then(if (direction == ShelfSortDirection.DESCENDING) byValue.reversed() else byValue).thenBy { it.stableKey }
+    return books.filter { book -> (!favoritesOnly || book.favorite) && (!historyOnly || book.hasProgress) &&
         (filter == ShelfFilter.ALL || book.status == filter) && (if (book.online) matchesOnlineInformation(book.title, book.information, query, field)
         else matchesLocalMetadata(book.title, if (book.key.world == PrototypeWorld.SFW) book.local?.localMetadata else null, query, field)) }
-        .sortedWith(when (sort) {
-            ShelfSort.TITLE -> compareBy<ShelfBook, String>(String.CASE_INSENSITIVE_ORDER) { it.title }.thenBy { it.stableKey }
-            ShelfSort.RECENT -> compareByDescending<ShelfBook> { it.readAt ?: 0L }.thenBy { it.stableKey }
-            ShelfSort.IMPORTED -> compareByDescending<ShelfBook> { if (it.online) null else it.importedAt }.thenBy { it.stableKey }
-        })
+        .sortedWith(order)
+}
 
 internal fun shelfColumns(widthDp: Float, fontScale: Float, layout: ShelfLayout): Int =
     if (layout == ShelfLayout.LIST) 1 else ((widthDp - 44f + 12f) / (100f * fontScale.coerceAtLeast(1f) + 12f)).toInt().coerceIn(1, 6)

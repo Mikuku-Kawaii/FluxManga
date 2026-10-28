@@ -71,7 +71,7 @@ class SettingsUiTest {
                 MaterialTheme(colorScheme = WorldColors.scheme(world)) {
                     Box(Modifier.width(320.dp).fillMaxHeight()) {
                         SettingsPage(action("back"), action("appearance"), action("sources"), action("about"),
-                            action("reading"), action("library"), action("maintenance"))
+                            action("reading"), action("library"), action("maintenance"), action("startup"))
                     }
                 }
             }
