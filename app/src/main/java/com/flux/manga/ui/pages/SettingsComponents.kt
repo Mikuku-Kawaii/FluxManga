@@ -226,6 +226,6 @@ private fun SettingsDarkPreview() { SettingsPreview(PrototypeWorld.NSFW) }
 @Composable
 private fun SettingsPreview(world: PrototypeWorld) {
     MaterialTheme(colorScheme = WorldColors.scheme(world)) {
-        Surface { SettingsPage({}, {}, {}, {}, {}, {}, {}) }
+        Surface { SettingsPage({}, {}, {}, {}, {}, {}, {}, {}) }
     }
 }

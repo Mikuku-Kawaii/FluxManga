@@ -143,6 +143,7 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surface) {
         BoxWithConstraints(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = .08f), MaterialTheme.colorScheme.surface))).padding(16.dp)) {
+            val availableWidth = maxWidth
             @Composable fun Info(modifier: Modifier) {
                 Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(card.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold,
@@ -161,13 +162,13 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
                     TextButton({ open(card.key.sourceId, card.key.mangaId) }) { Text("查看作品") }
                 }
             }
-            if (maxWidth < 290.dp || scale >= 1.5f) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.width(168.dp.coerceAtMost(maxWidth)).align(Alignment.CenterHorizontally)) {
+            if (availableWidth < 290.dp || scale >= 1.5f) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Box(Modifier.width(168.dp.coerceAtMost(availableWidth)).align(Alignment.CenterHorizontally)) {
                     OnlineCover(model.library, card.key.sourceId, card.key.mangaId, open = { open(card.key.sourceId, card.key.mangaId) }, fillWidth = true)
                 }
                 Info(Modifier.fillMaxWidth())
             } else Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width((maxWidth * .43f).coerceAtMost(180.dp))) {
+                Box(Modifier.width((availableWidth * .43f).coerceAtMost(180.dp))) {
                     OnlineCover(model.library, card.key.sourceId, card.key.mangaId, open = { open(card.key.sourceId, card.key.mangaId) }, fillWidth = true)
                 }
                 Info(Modifier.weight(1f))
