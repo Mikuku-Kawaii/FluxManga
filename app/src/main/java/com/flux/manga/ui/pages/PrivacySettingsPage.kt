@@ -39,7 +39,7 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
             Text(privacy.availability, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SettingsDisclosure("验证帮助与系统设置") {
                 TextButton(onClick = privacy::enroll, enabled = !privacy.busy) { Text("系统生物识别设置") }
-                Text("取消或失败不会获得授权。若无法完成验证，可继续使用表世界；需要先恢复系统生物识别才能关闭验证。")
+                Text("无法验证时可继续使用表世界。关闭此功能需先恢复系统生物识别。")
                 Text("无障碍可使用切换键的长按动作。长按与生物识别设置即时生效，默认均关闭。")
             }
         } }
@@ -50,18 +50,18 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
                     Text(if (style == LauncherStyle.STANDARD) "恢复 FluxManga" else "使用随手记图标与名称")
                 }
             }
-            Text("仅改变桌面启动入口。系统应用列表、通知和最近任务仍可能显示 FluxManga，桌面缓存刷新可能延迟；旧快捷方式由桌面管理。",
+            Text("仅更换桌面入口，系统应用列表、通知和最近任务仍可能显示 FluxManga。桌面刷新可能稍有延迟。",
                 style = MaterialTheme.typography.bodyMedium)
         } } }
         item { SettingsPanel { SettingsDisclosure("保护范围与后台行为") {
-            Text("退出里世界会撤销本次验证、清除页面与内存资源，并回到表世界；书库、进度和密钥保留。")
-            Text("切到后台立即遮挡并释放内存资源；默认超过 30 秒回表世界。开启生物识别后，短时返回也需重新验证。")
-            Text("里世界支持 JMComic、PicACG、E-Hentai 与 ExHentai；EH / EX 权限独立。此处不更换数据库密钥，不清理书库、进度或原文件。桌面默认 FluxManga。")
+            Text("退出里世界会返回表世界，书库和进度保留。")
+            Text("进入后台后遮挡内容，默认超过 30 秒返回表世界。启用生物识别后，每次返回均需验证。")
+            Text("图源账号与权限请在“图源管理”中设置。")
         } } }
     }
     pending?.let { style -> ReferenceDialog(onDismissRequest = { pending = null },
         title = { Text("更改桌面入口") },
-        text = { Text("改为${style.title}后，系统桌面可能短暂关闭应用或延迟刷新。仅改变桌面入口，系统应用列表、通知和最近任务仍可能显示 FluxManga。可在此页恢复，已有数据保留。",
+        text = { Text("改为${style.title}，桌面可能稍后刷新或关闭应用。仅更换桌面入口，系统其他位置仍可能显示 FluxManga。",
             Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm("更改桌面入口", onClick = { pending = null; privacy.setLauncher(style) }, enabled = !privacy.busy) },
         dismissButton = { TextButton(onClick = { pending = null }) { Text("取消") } }) }

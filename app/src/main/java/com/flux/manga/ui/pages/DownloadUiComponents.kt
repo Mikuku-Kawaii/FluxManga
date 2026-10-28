@@ -100,7 +100,7 @@ internal fun DownloadTitleFilter(query: String, change: (String) -> Unit, visibl
 @Composable
 internal fun DownloadSelectionSummary(selected: List<String>, visible: List<String>) {
     val hidden = hiddenDownloadSelection(selected, visible)
-    Text("已选 ${selected.size} 项" + if (hidden > 0) "，其中 $hidden 项在筛选外；选中操作仍包含这些项目。" else "",
+    Text("已选 ${selected.size} 项" + if (hidden > 0) "，包含筛选外的 $hidden 项" else "",
         style = MaterialTheme.typography.bodySmall)
 }
 

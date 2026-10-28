@@ -118,7 +118,7 @@ internal class BaoziAccountStore(private val database: AccountImportDatabase) {
     private fun AccountImportRows.active(): BaoziSavedAccount? {
         val bytes = read(activeSlot) ?: return null
         val source = try { bytes.toString(Charsets.UTF_8) } finally { bytes.fill(0) }
-        return account(source) ?: throw IOException("账号记录不完整；未重置原配置")
+        return account(source) ?: throw IOException("账号记录不完整，请重新登录。")
     }
     private fun AccountImportRows.save(account: BaoziSavedAccount) {
         val bytes = BaoziAccountCodec.encode(account)

@@ -135,10 +135,10 @@ internal fun DownloadChaptersPage(session: WorldSession, source: String, manga: 
             TextButton(onClick = { selection = chapters.items.take(200).map { it.id }; showTools = false }, enabled = !state.controlling) { Text("选择已加载章节（最多 200）") }
             Text(if (chapters.next is SourceContinuation.End) "完整目录已缓存" else "目录尚未完整缓存")
             if (chapters.next is SourceContinuation.Next) TextButton(onClick = feedbackAttempt({ model.load(true); showTools = false }), enabled = !chapters.busy) { Text("缓存完整章节目录") }
-            Text("单次最多选择 200 章，相同章节不会重复添加。下载保存应用副本，保留收藏、进度和原文件。")
-            Text("后台下载需在队列开启；否则离开前台暂停。切换空间始终暂停。只有下载完成的章节可离线阅读。")
+            Text("每次最多下载 200 章，已有任务自动跳过。")
+            Text("后台下载需在队列中开启，切换空间会暂停。已完成章节可离线阅读。")
         } }, confirmButton = { TextButton(onClick = { showTools = false }) { Text("关闭") } })
-    if(confirm) ReferenceDialog(onDismissRequest={confirm=false},title={Text("下载选中的章节？")},text={Text("将保存 ${selection.size} 章的图片副本，可能使用移动网络。已有下载去重；原书目和阅读位置保持。", Modifier.verticalScroll(rememberScrollState()))},
+    if(confirm) ReferenceDialog(onDismissRequest={confirm=false},title={Text("下载选中的章节？")},text={Text("下载选中的 ${selection.size} 章，可能使用移动流量。已有下载自动跳过。", Modifier.verticalScroll(rememberScrollState()))},
         confirmButton={ReferenceDialogConfirm("加入下载队列", onClick={confirm=false; owner.enqueue(source,manga,chapters.items.filter { it.id in selection }.map { it.id to it.title })},
             enabled = state.loaded && !state.controlling && selection.isNotEmpty())},
         dismissButton={TextButton(onClick={confirm=false}) { Text("返回") }})
@@ -248,7 +248,7 @@ internal fun DownloadQueuePage(session: WorldSession, back: () -> Unit, catalog:
                     SettingsChoiceRow(value.label, policy == value, { network.set(value) })
                 }
             }
-            Text("条件恢复只继续本轮排队任务；手动暂停、失败与重开队列不会自动续办。计费网络可能产生流量费用。")
+            Text("网络恢复后继续本轮排队任务；暂停或失败的任务需手动继续。移动网络可能产生费用。")
             Text("已保存 ${state.jobs.sumOf { it.bytes } / 1024} KiB。取消或删除只清理下载副本，保留原文件与阅读进度。")
         } }, confirmButton = { TextButton(onClick = { showPolicy = false }) { Text("关闭") } })
     state.jobs.firstOrNull { it.id == actionJobId }?.let { job ->
@@ -263,7 +263,7 @@ internal fun DownloadQueuePage(session: WorldSession, back: () -> Unit, catalog:
             } }, confirmButton = { TextButton(onClick = { actionJobId = null }) { Text("关闭") } })
     }
     if(clearSelected) ReferenceDialog(onDismissRequest={clearSelected=false},title={Text("移除选中下载？")},
-        text={Text("清理所选 ${selected.size} 章的下载副本及队列记录；保留书目、收藏、目录、进度和原文件。中断时已完成的清理不会回滚，请重新读取核对。", Modifier.verticalScroll(rememberScrollState()))},
+        text={Text("删除选中的 ${selected.size} 章下载及任务记录，保留书目、进度和原文件。已删除内容无法撤销。", Modifier.verticalScroll(rememberScrollState()))},
         confirmButton={ReferenceDialogConfirm("移除所选下载", onClick={clearSelected=false;owner.batch(selected.toSet(),DownloadBatchAction.REMOVE);selected=emptyList()}, destructive = true)},
         dismissButton={TextButton(onClick={clearSelected=false}) { Text("返回") }})
     confirm?.let { job -> ReferenceDialog(onDismissRequest={confirm=null},title={Text(when(job.status) { DownloadStatus.COMPLETE -> "删除下载副本？"; DownloadStatus.CANCELLED -> "移除已取消记录？"; else -> "取消下载？" })},
@@ -293,7 +293,7 @@ private fun DownloadBackgroundPanel(session: WorldSession) {
         state.message?.let { RequestFeedback(it) }
         if (state.running || state.starting) TextButton(onClick = { background.stop() }) { Text("暂停全部并关闭后台下载") }
         TransferDisclosure("后台下载与通知设置") {
-            Text("先允许通知并开始或继续任务，再开启本轮后台下载。结束、切空间或系统停止后需重新开启；不会自动续办。切换空间始终暂停。")
+            Text("允许通知并启动任务后，可开启本轮后台下载。任务结束、切换空间或被系统停止后需重新开启。")
             if (!permitted) {
                 Text("下载通知未允许或已关闭；前台队列仍可使用。")
                 if (Build.VERSION.SDK_INT >= 33) TextButton(onClick = { permission.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text("允许进度通知") }

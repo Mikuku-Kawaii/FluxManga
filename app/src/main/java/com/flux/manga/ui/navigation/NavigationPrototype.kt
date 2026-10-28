@@ -65,7 +65,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
     val sessionState by session.state.collectAsState()
     val identity by session.identity.collectAsState()
     val preloaded = com.flux.manga.ui.pages.preloadedPages(session)
-    com.flux.manga.ui.pages.BaoziSessionRecovery(session) { preloaded.configurationChanged() }
+    com.flux.manga.ui.pages.BaoziSessionRecovery(session) { preloaded.baoziRecovered() }
     val currentRoute = navigation.currentStack.last()
     val routeMotion = rememberNavigationMotion(currentRoute, navigation.selectedTab)
     var previousRoute by remember(identity) { mutableStateOf<NavKey?>(null) }

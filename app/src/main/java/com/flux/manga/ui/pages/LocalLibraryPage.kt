@@ -103,7 +103,7 @@ class LocalLibraryViewModel(context: Context, private val session: WorldSession,
                 message = message ?: coverError ?: when {
                     key != null && detail == null -> "未找到本地书目"
                     state.value.batch.isNotEmpty() -> cbzBatchSummary(state.value.batch)
-                    savedState.get<Boolean>("cbz-batch-running") == true -> "上次导入可能已中断；已提交的书目保留，请核对书库并重新选择未完成文件，重复选择不会重置进度。"
+                    savedState.get<Boolean>("cbz-batch-running") == true -> "请核对上次导入结果，重新选择未完成文件。重复导入会保留进度。"
                     else -> null
                 })
             else cover?.recycle()
@@ -230,7 +230,7 @@ class LocalLibraryViewModel(context: Context, private val session: WorldSession,
                 interrupted = true
                 if (session.accepts(identity)) mutableState.value = state.value.copy(batch = state.value.batch.map {
                     if (it.status == CbzBatchStatus.IMPORTING || it.status == CbzBatchStatus.PREVIEW) it.copy(status = CbzBatchStatus.INTERRUPTED,
-                        message = "可能已完成入库；刷新核对，重试会按内容去重并保留进度。") else it
+                        message = "导入结果待确认，请刷新书库。重试会自动去重。") else it
                 })
                 throw cancelled
             } finally {
@@ -247,7 +247,7 @@ class LocalLibraryViewModel(context: Context, private val session: WorldSession,
     private fun fail(message: String) { if (session.accepts(identity)) mutableState.value = mutableState.value.copy(loading = false, importing = false, savingFavorite = false, removing = false, message = message) }
     fun cancelImport() {
         if (state.value.importing && !state.value.cancellingImport) {
-            mutableState.value = state.value.copy(cancellingImport = true, message = "正在停止导入并清理本项临时副本；已提交书目保留…")
+            mutableState.value = state.value.copy(cancellingImport = true, message = "正在停止导入…")
             work?.cancel()
         }
     }
@@ -460,7 +460,7 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
             ShelfReadingFilters(readingFilter, select = { readingFilter = it })
             FilterChip(state.favoritesOnly, { model.favoritesOnly(!state.favoritesOnly) }, label = { Text("仅收藏") }, modifier = Modifier.testTag("local-favorites"))
             if (readingFilter == ShelfFilter.READ) Text("本地读到末页计为已读。", style = MaterialTheme.typography.bodySmall)
-            Text("条件同时满足才显示；清除筛选保留搜索文字。", style = MaterialTheme.typography.bodySmall)
+            Text("同时匹配所选条件，清除筛选会保留关键词。", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = ::clearFilters, enabled = hasFilters) { Text("清除筛选") }
         } })
     state.importPreview?.let { preview -> ComicInfoImportDialog(preview, { model.confirmImportMetadata(preview, it) }, model::cancelImport) }
@@ -471,9 +471,9 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
         dismiss = { showBookmarks = false }, open = { bookmark -> readBookmark?.invoke(bookmark.mangaId, bookmark.id) })
     if (showImportHelp) ReferenceDialog(onDismissRequest = { showImportHelp = false }, title = { Text("导入 CBZ") },
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("支持多选，每批最多 $MAX_CBZ_BATCH 个文件。逐本校验后预览元数据，确认后才入库；单本失败不影响后续文件。")
-            Text("保留原文件、已有收藏和阅读进度；相同内容不会重复添加。")
-            Text("重试只处理失败、中断和未开始的项目。进程结束后需重新选择文件，不会自动恢复导入。")
+            Text("每批最多 $MAX_CBZ_BATCH 个文件，逐本预览确认后导入。")
+            Text("保留原文件和已有记录，重复内容自动跳过。")
+            Text("重试未完成项目。应用关闭后需重新选择文件。")
         } }, confirmButton = { TextButton(onClick = { showImportHelp = false }) { Text("知道了") } })
     if (showManagement) state.detail?.let { detail ->
         ReferenceSheet(onDismissRequest = { showManagement = false }, title = { Text("书目管理") },

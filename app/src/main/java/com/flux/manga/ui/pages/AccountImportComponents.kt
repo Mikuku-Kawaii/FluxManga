@@ -119,7 +119,7 @@ internal fun AccountCredentials(prefix: String, username: String, password: Stri
                 TextButton(onClick = { close(); editing = true; visible = false; changePassword("") }, enabled = enabled) { Text("切换账号") }
             }
             if (logout != null) TextButton(onClick = { close(); visible = false; changePassword(""); logout() }, enabled = enabled) { Text("退出登录") }
-            Text("仅加密保存已验证的会话，不保存密码。换账号或退出登录保留已导入书目、进度和未完成任务。")
+            Text("登录会话加密保存，不保存密码。退出后书库和进度保留。")
         }
     }
 }
@@ -156,7 +156,7 @@ internal fun ImportPreviewFilter(query: String, changeQuery: (String) -> Unit, l
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (query.isNotBlank()) {
         if (hiddenSelected > 0) Text("筛选外已选条目仍会导入。", style = MaterialTheme.typography.bodySmall)
-        if (visible == 0) Text("已读取书目中没有匹配结果；可清除筛选或继续读取。")
+        if (visible == 0) Text("暂无匹配书目，可清除筛选或继续读取。")
         FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = selectVisible, enabled = enabled && visible > 0) { Text("选择筛选结果") }
         }
@@ -196,7 +196,7 @@ internal fun AccountLibraryImportPanel(
             Text("先登录原有账号，返回本页后读取云端收藏。")
             ReferenceButton(feedbackAttempt(login), enabled = !busy) { Text("登录账号") }
         } else {
-            Text("新增书目加入本机收藏；已有书目保留收藏状态、阅读方式和进度。导入不会改动云端收藏或下载正文。",
+            Text("新书目加入本机收藏，已有记录保持。仅导入书目，不下载正文。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ReferenceButton(importPage, enabled = !busy && count > 0) {
                 Text("导入当前${if (batch) "批" else "页"} $count 本")

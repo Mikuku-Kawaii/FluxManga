@@ -59,7 +59,7 @@ internal class EhInteractionModel(app: Application, private val session: WorldSe
         job = viewModelScope.launch {
             try { action(); ensureActive() }
             catch (_: CancellationException) { if (active()) state.update { it.copy(message = if (it.uncertain) "已停止等待；网站可能已更新，请先重新读取。" else "读取已停止，内容与草稿保留。") } }
-            catch (error: Exception) { if (active()) state.update { it.copy(message = if (it.uncertain) "${ehFailure(error, site)}。写入结果待确认，请先重新读取网站状态；不会自动重发。" else ehFailure(error, site)) } }
+            catch (error: Exception) { if (active()) state.update { it.copy(message = if (it.uncertain) "${ehFailure(error, site)}。操作结果待确认，请先刷新网站状态。" else ehFailure(error, site)) } }
             finally { if (active()) state.update { it.copy(busy = false) } }
         }
     }
@@ -244,7 +244,7 @@ internal class EhInteractionModel(app: Application, private val session: WorldSe
                 item { ReferencePanel {
                     Text("网站当前：" + (remote.category?.let { id -> remote.folders.firstOrNull { it.id == id.toString() }?.title } ?: "未收藏"))
                     Text("当前备注：${remote.note.ifBlank { "无" }}")
-                    Text("此处修改 ${model.site.label} 网站收藏，不会更改本机收藏、书目或阅读进度。")
+                    Text("仅修改 ${model.site.label} 网站收藏，本机收藏保持不变。")
                 } }
                 item { FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     remote.folders.forEach { folder -> FilterChip(state.category?.toString() == folder.id, { model.category(folder.id.toInt()) },
@@ -323,7 +323,7 @@ internal class EhInteractionModel(app: Application, private val session: WorldSe
         confirmButton = { TextButton({ voteConfirm = null; model.voteComment(comment, direction) }, enabled = !state.busy && !state.uncertain) { Text("确认投票") } },
         dismissButton = { TextButton({ voteConfirm = null }) { Text("取消") } }) }
     if (reviewConfirm) ReferenceDialog(onDismissRequest = { reviewConfirm = false }, title = { Text("已核对网站结果？") },
-        text = { Text("刚才的操作可能已经生效。继续编辑会保留草稿，再次发布可能产生重复评论；此操作不会重新提交。") },
+        text = { Text("刚才的评论可能已发布，请先刷新确认，避免重复发布。草稿保留。") },
         confirmButton = { TextButton({ reviewConfirm = false; model.acknowledgeReview() }) { Text("已核对，继续") } },
         dismissButton = { TextButton({ reviewConfirm = false }) { Text("返回核对") } })
     if (leaveConfirm) ReferenceDialog(onDismissRequest = { leaveConfirm = false }, title = { Text("离开评论页？") },

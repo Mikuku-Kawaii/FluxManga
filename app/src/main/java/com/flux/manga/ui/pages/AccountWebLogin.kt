@@ -27,6 +27,11 @@ import com.flux.manga.data.BaoziBrowserSession
 import com.flux.manga.data.BaoziAccountOrigins
 import com.flux.manga.data.BaoziSavedAccount
 import com.flux.manga.data.BaoziAutoLogin
+import com.flux.manga.data.BaoziBrowserProfile
+import com.flux.manga.data.baoziAccountId
+import com.flux.manga.data.BaoziVerificationRequired
+import com.flux.manga.data.BaoziLoginExpired
+import com.flux.manga.data.BaoziLoginRejected
 import com.flux.manga.data.jmId
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -34,18 +39,14 @@ import org.json.JSONTokener
 import java.io.IOException
 import kotlin.coroutines.resume
 
-/** One disposable login at a time; this directory is never used for the reader or external browser. */
+/** One login at a time; Baozi retains its own profile, other sources use disposable storage. */
 private object AccountWebStorage {
-    private var initialized = false
     var occupied by mutableStateOf(false)
         private set
 
     fun acquire(): Boolean {
         if (occupied) return false
-        if (!initialized) {
-            WebView.setDataDirectorySuffix("source-account-login")
-            initialized = true
-        }
+        BaoziBrowserProfile.initialize()
         occupied = true
         return true
     }
@@ -58,7 +59,9 @@ private object AccountWebStorage {
         }
     }
 
-    fun release() = clean { occupied = false }
+    fun release(persistent: Boolean = false) {
+        if (persistent) occupied = false else clean { occupied = false }
+    }
 }
 
 internal fun accountWebLoginOccupied(): Boolean = AccountWebStorage.occupied
@@ -88,6 +91,7 @@ internal val BaoziWebSite = AccountWebSite("包子漫画网页账号",
 /** A reference to the current page, not an authentication result. Never put it in saved state. */
 internal class AccountWebPage(private val view: WebView, private val site: AccountWebSite,
     val baoziAutoLogin: BaoziAutoLogin? = null, private val current: () -> Boolean) {
+    private val cookies get() = BaoziBrowserProfile.cookies(view)
     private fun checkPage() {
         if (!current()) throw CancellationException()
         if (!site.accepts(view.url)) throw IOException("请先返回本站登录页面")
@@ -96,7 +100,7 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
     fun cookie(url: String, name: String): String {
         checkPage()
         require(site.accepts(url))
-        return CookieManager.getInstance().getCookie(url).orEmpty().split(';').firstNotNullOfOrNull { entry ->
+        return cookies.getCookie(url).orEmpty().split(';').firstNotNullOfOrNull { entry ->
             val key = entry.substringBefore('=').trim()
             if (key == name) entry.substringAfter('=', "").takeIf { value ->
                 value.isNotBlank() && value.length <= 16384 && value.none { it == '\r' || it == '\n' }
@@ -114,7 +118,7 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
         val origin = baoziOrigin()
         val token = cookie(origin, "TSID")
         if (token.isBlank()) throw IOException("请先完成官网验证与登录，再连接书架")
-        val cookies = CookieManager.getInstance().getCookie(origin).orEmpty().split(';')
+        val cookies = this.cookies.getCookie(origin).orEmpty().split(';')
             .map(String::trim).filter { part ->
                 val name = part.substringBefore('=')
                 name == "TSID" || name.matches(Regex("__Host-gk_[A-Za-z0-9_]+"))
@@ -168,15 +172,17 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
             }
             checkPage()
             val token = result.optString("token")
+            if (token.isEmpty() && result.optInt("status") == 403) throw BaoziVerificationRequired()
+            if (token.isEmpty() && result.optInt("status") in setOf(200, 400, 401, 422)) throw BaoziLoginRejected()
             if (token.isEmpty()) throw IOException(when (result.optInt("status")) {
                 403 -> "网站验证已过期，请重新完成网站验证"
                 0 -> "自动登录连接未完成，请检查网络后重试"
                 429 -> "登录过于频繁，请稍后重试"
-                else -> "自动登录未成功，请核对密码或使用官网登录"
+                else -> "登录服务暂不可用，请稍后重试"
             })
             BaoziBrowserSession("TSID=$token", view.settings.userAgentString, origin).validate(token)
             suspendCancellableCoroutine<Unit> { continuation ->
-                CookieManager.getInstance().setCookie(origin, "TSID=$token; Path=/; Secure; HttpOnly; SameSite=Lax") { accepted ->
+                cookies.setCookie(origin, "TSID=$token; Path=/; Secure; HttpOnly; SameSite=Lax") { accepted ->
                     if (continuation.isActive) {
                         if (accepted) continuation.resume(Unit)
                         else continuation.resumeWith(Result.failure(IOException("浏览器未保存登录会话")))
@@ -210,7 +216,7 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
         checkPage()
         require(site == BaoziWebSite)
         val result = suspendCancellableCoroutine<String> { continuation ->
-            view.evaluateJavascript("document.getElementById('status')?.textContent === '验证通过'") { value ->
+            view.evaluateJavascript("document.getElementById('status')?.textContent?.trim() === '验证通过'") { value ->
                 if (continuation.isActive) continuation.resume(value)
             }
         }
@@ -222,7 +228,7 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
         baoziOrigin()
         if (Uri.parse(view.url).path?.trimEnd('/') == "/user/signin") return true
         val result = suspendCancellableCoroutine<String> { continuation ->
-            view.evaluateJavascript("!!document.querySelector('input[type=password]')") { value ->
+            view.evaluateJavascript("Array.from(document.querySelectorAll('input[type=password]')).some(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden')") { value ->
                 if (continuation.isActive) continuation.resume(value)
             }
         }
@@ -341,7 +347,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     autoConnectKey: (suspend (AccountWebPage, String, String) -> String?)? = null,
     accountNameLabel: String? = null, initialAccountName: String = "",
     restoreBaozi: (suspend () -> BaoziSavedAccount?)? = null, setupBaoziAutoLogin: Boolean = false,
-    backgroundRecoveryFailure: ((String) -> Unit)? = null) {
+    backgroundRecoveryFailure: ((String, Boolean) -> Unit)? = null) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val latestClose by rememberUpdatedState(close)
@@ -370,6 +376,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     var loginUrl by remember(site) { mutableStateOf(site.url) }
     var chooseLoginUrl by remember { mutableStateOf(false) }
     var verifyingBrowser by remember { mutableStateOf(false) }
+    var recoveryNeedsUser by remember { mutableStateOf(false) }
     var attemptedKey by remember { mutableStateOf<String?>(null) }
 
     // A recovery may need human verification. End quietly instead of keeping a hidden
@@ -377,11 +384,20 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     LaunchedEffect(backgroundRecovery) {
         if (backgroundRecovery) {
             delay(45_000)
-            if (alive) latestRecoveryFailure?.invoke("自动恢复未完成，可在此打开网页登录完成验证。")
+            if (alive) latestRecoveryFailure?.invoke("自动恢复未完成，可打开网页登录完成验证。", verifyingBrowser)
         }
     }
     LaunchedEffect(error, backgroundRecovery) {
-        if (backgroundRecovery && alive) error?.let { latestRecoveryFailure?.invoke(it) }
+        if (backgroundRecovery && alive) error?.let { latestRecoveryFailure?.invoke(it, recoveryNeedsUser) }
+    }
+
+    fun openGate(browser: WebView): Boolean {
+        if (site != BaoziWebSite || gateAttempted || verifyingBrowser) return false
+        gateAttempted = true; attemptedKey = null; baoziMemory.automaticAttempted = false
+        val origin = "https://${Uri.parse(browser.url).host}/"
+        if (origin !in BaoziAccountOrigins) return false
+        browser.loadUrl("${origin}__gatekeeper_challenge/start?return=%2Fuser%2Fmy_bookshelf")
+        return true
     }
 
     fun connectAccount() {
@@ -394,9 +410,21 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             try {
                 action(AccountWebPage(browser, site, baoziMemory.candidate) { alive && ready && version == pageVersion }, uid, username)
                 ensureActive()
-                if (alive) { latestClose(); latestConnected() }
-            } catch (_: CancellationException) {
-                if (alive) error = "连接已停止，可返回图源管理核对账号状态"
+                if (alive) {
+                    if (site == BaoziWebSite) BaoziBrowserProfile.accepted(context, baoziAccountId(username))
+                    latestClose(); latestConnected()
+                }
+            } catch (cancelled: CancellationException) {
+                if (alive && currentCoroutineContext().isActive && version == pageVersion) error = "连接已停止，可返回图源管理核对账号状态"
+                throw cancelled
+            } catch (_: BaoziVerificationRequired) {
+                if (alive && !openGate(browser)) { recoveryNeedsUser = true; error = "请打开包子网页完成网站验证。" }
+            } catch (_: BaoziLoginExpired) {
+                if (alive && !baoziMemory.automaticAttempted)
+                    browser.loadUrl("https://${Uri.parse(browser.url).host}/user/signin")
+                else if (alive) { recoveryNeedsUser = true; error = "请在包子官网重新登录。" }
+            } catch (_: BaoziLoginRejected) {
+                if (alive) { recoveryNeedsUser = true; error = "浏览器账号与已保存账号不一致，请打开包子网页登录核对。" }
             } catch (failure: Exception) {
                 if (alive) error = failure.message?.takeIf { failure is IOException } ?: "账号验证未完成，请确认已登录并重试"
             } finally { if (alive) busy = false }
@@ -416,10 +444,17 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 baoziMemory.candidate = login
                 action(page, "", login.username)
                 ensureActive()
-                if (alive) { baoziPassword = ""; latestClose(); latestConnected() }
+                if (alive) {
+                    BaoziBrowserProfile.accepted(context, baoziAccountId(login.username))
+                    baoziPassword = ""; latestClose(); latestConnected()
+                }
             } catch (_: TimeoutCancellationException) {
                 if (alive) error = "自动登录超时，请检查网络后重试"
             } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: BaoziVerificationRequired) {
+                if (alive && !openGate(browser)) { recoveryNeedsUser = true; error = "请打开包子网页完成网站验证。" }
+            }
+            catch (_: BaoziLoginRejected) { if (alive) { recoveryNeedsUser = true; error = "请核对包子自动登录密码或重新网页登录。" } }
             catch (failure: Exception) {
                 if (alive) error = if (failure is IOException) failure.message else "自动登录未完成，请重新登录"
             } finally { if (alive) busy = false }
@@ -448,18 +483,22 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     username = page.baoziLoginEmail()
                         ?: baoziMemory.restored?.takeIf { it.browserSession?.origin == page.baoziOrigin() }?.username.orEmpty()
                     val login = baoziMemory.restored?.autoLogin
-                    if (!showBaoziPassword && !baoziMemory.automaticAttempted && page.baoziNeedsLogin()) {
+                    val needsLogin = page.baoziNeedsLogin()
+                    if (!showBaoziPassword && !baoziMemory.automaticAttempted && needsLogin) {
                         if (login != null && login.origin == page.baoziOrigin()) {
                             baoziMemory.automaticAttempted = true
                             loginBaozi(login)
                             delay(1000)
                             continue
                         } else if (backgroundRecovery) {
+                            recoveryNeedsUser = true
                             error = if (login == null) "登录已过期，请在此登录或设置一次自动登录。"
                                 else "官网地址已变化，请在此重新登录。"
                             return@LaunchedEffect
                         }
                     }
+                    // A stale TSID on a sign-in form is not evidence of an authenticated session.
+                    if (needsLogin) { delay(1000); continue }
                 }
                 val candidate = try { latestAutoKey?.invoke(page, uid, username) }
                 catch (cancelled: CancellationException) { throw cancelled }
@@ -476,6 +515,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
 
     DisposableEffect(site, owner) {
         var ownsStorage = false
+        var persistent = false
         var browser: WebView? = null
         var disposed = false
         var preparing: Job? = null
@@ -485,11 +525,12 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             disposed = true; alive = false; connection?.cancel(); preparing?.cancel()
             uid = ""; username = ""; baoziPassword = ""; baoziMemory.clear()
             browser?.apply {
+                BaoziBrowserProfile.detach(this)
                 (parent as? android.view.ViewGroup)?.removeView(this)
-                stopLoading(); clearHistory(); clearCache(true); removeAllViews(); destroy()
+                stopLoading(); clearHistory(); if (!persistent) clearCache(true); removeAllViews(); destroy()
             }
             view = null
-            if (ownsStorage) AccountWebStorage.release()
+            if (ownsStorage) AccountWebStorage.release(persistent)
         }
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
@@ -503,6 +544,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             if (!ownsStorage) error = "上一登录窗口仍在清理，请关闭后重新打开"
             else {
                 browser = WebView(context).apply {
+                    persistent = site == BaoziWebSite && BaoziBrowserProfile.attach(this)
                     importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
                     if (backgroundRecovery) {
                         isFocusable = false
@@ -515,14 +557,14 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         allowFileAccess = false
                         allowContentAccess = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                        cacheMode = WebSettings.LOAD_NO_CACHE
+                        cacheMode = if (persistent) WebSettings.LOAD_DEFAULT else WebSettings.LOAD_NO_CACHE
                         setSupportMultipleWindows(false)
                         javaScriptCanOpenWindowsAutomatically = false
                         @Suppress("DEPRECATION")
                         saveFormData = false
                     }
-                    CookieManager.getInstance().setAcceptCookie(true)
-                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
+                    BaoziBrowserProfile.cookies(this).setAcceptCookie(true)
+                    BaoziBrowserProfile.cookies(this).setAcceptThirdPartyCookies(this, false)
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(web: WebView, value: Int) { if (alive) progress = value }
                     }
@@ -531,7 +573,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             if (!request.isForMainFrame) return false
                             if (site.accepts(request.url.toString())) return false
                             val target = request.url
-                            error = "本站跳转到了未接入的地址（${target.scheme}://${target.host.orEmpty()}），已停止；请返回或重试"
+                            error = "无法打开此地址（${target.scheme}://${target.host.orEmpty()}），请返回重试。"
                             return true
                         }
                         override fun onPageStarted(web: WebView, url: String?, icon: android.graphics.Bitmap?) {
@@ -560,7 +602,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                                     else -> "网页加载失败"
                                 }
                                 error = "$reason（${failure.errorCode}）。" +
-                                    if (loginUrls.isNotEmpty()) "可切换网页登录线路后重试；这与 API 线路独立。" else "请检查网络后重试。"
+                                    if (loginUrls.isNotEmpty()) "请切换网页登录线路后重试。" else "请检查网络后重试。"
                             }
                         }
                         override fun onReceivedHttpError(web: WebView, request: WebResourceRequest, response: WebResourceResponse) {
@@ -568,11 +610,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                                 ready = false
                                 if (site == BaoziWebSite && response.statusCode == 403 && !gateAttempted && !verifyingBrowser &&
                                     site.accepts(request.url.toString())) {
-                                    gateAttempted = true
-                                    val origin = "https://${request.url.host}/"
-                                    web.post { if (alive) web.loadUrl("${origin}__gatekeeper_challenge/start?return=%2Fuser%2Fmy_bookshelf") }
+                                    web.post { if (alive) openGate(web) }
                                     return
                                 }
+                                if (site == BaoziWebSite && response.statusCode == 403) recoveryNeedsUser = true
                                 error = "网站返回 HTTP ${response.statusCode}；请在网页完成验证或稍后重试"
                             }
                         }
@@ -585,26 +626,29 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             return true
                         }
                     }
-                    clearCache(true)
+                    if (!persistent) clearCache(true)
                 }
                 view = browser
-                AccountWebStorage.clean {
+                fun prepareStorage(done: () -> Unit) { if (persistent) done() else AccountWebStorage.clean(done) }
+                prepareStorage {
                     if (alive) preparing = scope.launch {
                         try {
                             val saved = if (site == BaoziWebSite) latestRestoreBaozi?.invoke() else null
                             ensureActive()
                             if (!alive) return@launch
                             baoziMemory.restored = saved
+                            val seedCookies = if (persistent) BaoziBrowserProfile.prepare(context, saved) else true
                             if (backgroundRecovery && saved?.browserSession == null) {
+                                recoveryNeedsUser = true
                                 error = "尚无可恢复的网页会话，请在此完成一次网页登录。"
                                 return@launch
                             }
                             saved?.browserSession?.let { profile ->
                                 profile.validate(requireNotNull(saved.token))
                                 browser?.settings?.userAgentString = profile.userAgent
-                                for (cookie in profile.cookie.split(';').map(String::trim)) {
+                                for (cookie in if (seedCookies) profile.cookie.split(';').map(String::trim) else emptyList()) {
                                     suspendCancellableCoroutine<Unit> { continuation ->
-                                        CookieManager.getInstance().setCookie(profile.origin, "$cookie; Path=/; Secure; HttpOnly") { accepted ->
+                                        BaoziBrowserProfile.cookies(requireNotNull(browser)).setCookie(profile.origin, "$cookie; Path=/; Secure; HttpOnly") { accepted ->
                                             if (continuation.isActive) {
                                                 if (accepted) continuation.resume(Unit)
                                                 else continuation.resumeWith(Result.failure(IOException("浏览器会话恢复失败")))
@@ -616,7 +660,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             }
                             if (alive && site.accepts(loginUrl)) browser?.loadUrl(loginUrl)
                         } catch (cancelled: CancellationException) { throw cancelled }
-                        catch (_: Exception) { if (alive) error = "已保存账号读取未完成，请关闭后重试；原账号保留" }
+                        catch (_: Exception) { if (alive) error = "账号读取失败，请关闭后重试。" }
                     }
                 }
             }
@@ -686,7 +730,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     if (site == BaoziWebSite) {
                         TextButton(onClick = { showBaoziPassword = !showBaoziPassword }, enabled = !busy) { Text("设置自动登录") }
                         if (showBaoziPassword) {
-                            Text("复用官网邮箱，密码加密保存在本机；掉线后自动重登，退出账号时删除。",
+                            Text("密码加密保存在本机，用于掉线重登；退出账号时删除。",
                                 style = MaterialTheme.typography.bodySmall)
                             OutlinedTextField(baoziPassword, { baoziPassword = it }, Modifier.fillMaxWidth(),
                                 label = { Text("自动登录密码") }, enabled = !busy, singleLine = true,
@@ -702,7 +746,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         }
                     }
                     if (jmIdentityFields) SettingsDisclosure("补充 / 更正账号信息") {
-                        Text("可先打开网页个人资料。仍无法读取时，填写资料中的数字 UID 和登录用户名；软件会向 JM 核对，失败不会替换原账号。", style = MaterialTheme.typography.bodySmall)
+                        Text("请打开网页个人资料，或手动填写数字 UID 和登录用户名。", style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(uid, { uid = it }, Modifier.fillMaxWidth(), label = { Text("JM UID") }, enabled = !busy, singleLine = true)
                         OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("登录用户名") }, enabled = !busy, singleLine = true)
                     }
@@ -717,11 +761,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         }
                         if (busy) TextButton({ connection?.cancel() }) { Text("取消连接") }
                     }
-                    Text(if (connect == null) "请使用网页上的登录 / 注册入口；注册由网站完成，返回不代表已连接软件账号。"
-                        else if (autoConnectKey != null) "网页登录成功后自动验证并保存；未接回时可手动重试连接。"
-                        else "网页登录后点击连接。只有账号与本站权限确认成功才会替换软件中的登录。",
+                    Text(if (connect == null) "请在网页中登录或注册，完成后返回账号设置连接。"
+                        else if (autoConnectKey != null) "登录后自动连接，失败时可手动重试。"
+                        else "网页登录后，请点击连接。",
                         style = MaterialTheme.typography.bodySmall)
-                    Text("网页会话临时保存于应用登录目录，关闭或进入后台时清理。", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

@@ -272,7 +272,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             informationModel?.let { info -> item { BookInformationPanel(info, enabled = !state.busy) } }
             favoritesImport?.let { model -> item { PrivateFavoritesImportPanel(model, state.busy) } }
             if (kind == "favorites") item {
-                AccountLibraryImportPanel("云收藏按页读取；导入当前页后可继续翻页，不代表已导入全部账号收藏。", state.books.size,
+                AccountLibraryImportPanel("导入当前页的云收藏，更多作品请继续翻页。", state.books.size,
                     ready = state.ready, signedIn = state.account != null, busy = state.busy,
                     login = settings, importPage = model::importPage, library = library)
             }

@@ -55,7 +55,7 @@ internal class DownloadController(private val scope: CoroutineScope, private val
         val e=epoch; mutable.value=state.value.copy(controlling=true,error=null)
         control=scope.launch {
             try { action(e) } catch(c: CancellationException) { throw c }
-            catch(_: Exception) { if(allowed(e)) { pauseAll(); mutable.value=state.value.copy(error="队列操作未确认，请重新读取后重试；已有书目与原文件保留。") } }
+            catch(_: Exception) { if(allowed(e)) { pauseAll(); mutable.value=state.value.copy(error="队列操作结果待确认，请刷新后重试。") } }
             finally { if(allowed(e)) { mutable.value=state.value.copy(controlling=false); launchWorker() } }
         }
     }

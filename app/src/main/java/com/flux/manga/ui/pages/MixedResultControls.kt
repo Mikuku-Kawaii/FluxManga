@@ -227,7 +227,7 @@ internal fun MixedSourceStatusDialog(controller: AggregateSearchController, stat
     feeds: List<ResultFeed>, sources: () -> Unit, dismiss: () -> Unit) {
     ReferenceDialog(onDismissRequest = dismiss, title = { Text("来源状态") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("切换来源仅筛选结果；下拉刷新当前筛选来源，滑到底部自动读取后续作品。数量为已加载作品。",
+            Text("按来源筛选，下拉刷新，滑到底部自动加载更多。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (feeds.isEmpty()) Text("暂无可用来源")
             feeds.forEach { feed ->

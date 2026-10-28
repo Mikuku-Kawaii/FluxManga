@@ -63,7 +63,7 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
                     TextButton(onClick = { close(); settings() }, enabled = !state.busy) { Text("账号设置 / 重新登录") }
                 }
                 state.user?.let { Text("服务器账号 ID：$it") }
-                Text("导入账号有权访问的服务器书库、系列集合或阅读列表；这些列表不等于个人喜欢或收藏。")
+                Text("选择服务器书库、系列集合或阅读列表进行导入。")
             }
         } }
         if (state.busy || state.error != null || state.notice != null) item("status") {
@@ -82,7 +82,7 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
                 AccountMoreActions("任务管理") { close ->
                     if (task.selection == null) TextButton(onClick = { close(); confirmation = "rescan" }, enabled = state.verified && state.loaded && !state.busy) { Text("从第一页重扫去重") }
                     TextButton(onClick = { close(); confirmation = "finish" }, enabled = state.verified && state.loaded && !state.busy) { Text(if (task.done) "收起结果" else "结束此任务") }
-                    Text("失败页整页保留待办，不跳过异常项；阅读列表多卷可对应同一系列。")
+                    Text("失败页可继续导入，同一系列可包含多卷。")
                 }
             }
         } } }
@@ -142,8 +142,8 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
     }
     if (confirmation != null) ReferenceDialog(onDismissRequest = { confirmation = null }, title = { Text("确认操作") },
         text = { Text(when (confirmation) {
-            "all" -> "导入当前列表的全部授权条目，按页执行；列表变化时可重扫去重。仅保存摘要和在线引用，不下载正文或改写服务器。"
-            "selected" -> "导入本次选择的 ${selected.size} 条；已有收藏、阅读方式、进度和原文件保持。"
+            "all" -> "导入当前列表的全部可访问书目，不下载正文。已有书目自动跳过。"
+            "selected" -> "导入选中的 ${selected.size} 条，已有记录保留。"
             "rescan" -> "从第一页重新扫描并去重，保留已经导入的作品；本次统计将重新计算。"
             else -> "结束当前任务，保留已提交书目、收藏、进度和原文件。"
         }, Modifier.verticalScroll(rememberScrollState())) }, confirmButton = { ReferenceDialogConfirm(when (confirmation) {

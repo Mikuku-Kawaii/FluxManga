@@ -57,13 +57,10 @@ internal fun ComicInfoImportDialog(preview: CbzImportPreview, confirm: (Boolean)
             Text(preview.metadata.message)
             preview.metadata.info?.let { ComicInfoFields(it) }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Text(if (preview.existing) "已存在相同内容；继续只检查或修复应用副本，保留书名、封面、元数据、阅读进度与书签。可在详情中编辑显示信息。"
-                else "采用后以识别书名显示（缺失时沿用文件名），默认书名仍保留文件名。作者、卷号和简介存入应用，原 CBZ 不改写。",
+            Text(if (preview.existing) "此漫画已导入。继续将检查应用副本，保留已有资料和进度。"
+                else "采用识别出的书名、作者、卷号和简介；缺少书名时使用文件名，原 CBZ 保留。",
                 style = MaterialTheme.typography.bodySmall)
             if (canAdopt) TextButton(onClick = { confirm(false) }, modifier = Modifier.testTag("comic-info-import-skip")) { Text("不采用元数据，按文件名导入") }
-            SettingsDisclosure("导入与停止说明") {
-                Text("等待确认时关闭预览或停止本批，不会提交这一项；此前已导入的书目保留。", style = MaterialTheme.typography.bodySmall)
-            }
         } })
 }
 
@@ -134,7 +131,7 @@ internal fun ComicInfoSupplementDialog(session: WorldSession, manga: String, dis
                 result.info?.let { ComicInfoFields(it, state.current) }
                 if (!state.canFill && result.info != null) Text("没有空白字段需要补充，已有信息保留。")
             }
-            Text("只填充空白元数据。识别书名另存，不替换显示书名；自选封面、默认书名、阅读进度与书签保持。", style = MaterialTheme.typography.bodySmall)
+            Text("仅补充空白资料，保留显示书名、自选封面和阅读进度。", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = feedbackAttempt(model::load), enabled = !state.busy) { Text("重新读取") }
         } })
 }

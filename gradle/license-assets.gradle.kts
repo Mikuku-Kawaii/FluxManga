@@ -67,6 +67,9 @@ tasks.register("generateLicenseAssets") {
             "https://github.com/sqlcipher/sqlcipher-android/tree/ffe6c588b06ab042d60264f1f0da79a7ac56db0f",
             listOf(file("src/main/assets/licenses/sqlcipher-adapter-BSD-3-Clause.txt"), file("src/main/assets/licenses/sqlcipher-adapter-NOTICE.txt")))
         val deltaLicenses = rootProject.file("docs/third-party/update-delta")
+        entry("android:androidx.webkit:webkit:1.14.0", "AndroidX WebKit 1.14.0 · 独立浏览器会话", "android", "Apache-2.0",
+            "https://developer.android.com/jetpack/androidx/releases/webkit#1.14.0",
+            listOf(rootProject.file("docs/third-party/licenses/Apache-2.0.txt")))
         entry("android:net.lingala.zip4j:zip4j:2.11.5", "Zip4j 2.11.5 · 加密书库备份", "android", "Apache-2.0",
             "https://github.com/srikanth-lingala/zip4j/tree/8e2b74980b0f12a6fe6a4a8cdbfed626782a15c8",
             listOf(rootProject.file("docs/third-party/portable-backup/LICENSE.txt"), rootProject.file("docs/third-party/portable-backup/NOTICE.txt")))

@@ -82,11 +82,11 @@ internal class PortableBackupModel(app: Application, private val session: WorldS
                 val message = action()
                 if (active()) state.update { it.copy(message = message) }
             } catch (_: CancellationException) {
-                state.update { it.copy(message = "操作已停止。导出目标可能不完整，请另选新文件；恢复若已提交，可再次合并而不重复覆盖记录。") }
+                state.update { it.copy(message = "已停止。导出文件可能不完整；恢复可重新选择备份继续合并。") }
             } catch (failure: Exception) {
                 val detail = generateSequence<Throwable>(failure) { it.cause }
                     .firstOrNull { it is IllegalArgumentException || it is IllegalStateException }?.message
-                state.update { it.copy(message = detail ?: "操作失败，请核对恢复码、备份完整性、文件权限和可用空间。原有书库保持；导出目标可能不完整。") }
+                state.update { it.copy(message = detail ?: "操作失败，请检查恢复码、备份文件、文件权限和剩余空间。") }
             } finally {
                 state.update { it.copy(busy = false, cancelling = false, stage = "") }; job = null
             }
@@ -145,7 +145,7 @@ internal class PortableBackupModel(app: Application, private val session: WorldS
             withContext(Dispatchers.IO) { check(file.delete() || !file.exists()) { "记录已合并，密文暂存文件清理失败，可点击清理暂存" } }
             staged = null
             state.update { it.copy(summary = null, restoreCode = "") }
-            "恢复完成：新增 ${result.inserted} 条记录，保留或合并 ${result.retained} 条已有记录。账号需重新配置 / 登录，离线章节需重新下载。"
+            "恢复完成：新增 ${result.inserted} 条，合并保留 ${result.retained} 条。请重新登录账号、下载离线章节。"
         }
     }
     fun discard() {
@@ -153,7 +153,7 @@ internal class PortableBackupModel(app: Application, private val session: WorldS
         uri = null; state.update { it.copy(selected = false, summary = null) }
         run {
             withContext(Dispatchers.IO) { backup.clearStaging(); staged = null }
-            "已清理备份密文暂存；书库、原文件和外部备份保持。"
+            "备份临时文件已清理。"
         }
     }
     fun cancel() {
@@ -191,10 +191,10 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
             Text("书库与阅读记录", style = MaterialTheme.typography.titleMedium)
             Text("备份当前空间，恢复时保留已有记录。", color = MaterialTheme.colorScheme.onSurfaceVariant)
             SettingsDisclosure("范围与恢复码") {
-                Text("包含书目、书签、进度、分组、历史、统计和本地 CBZ 应用副本；同内容漫画合并。")
-                Text("不含账号凭据、图源配置、设备密钥、全局设置、合成样本内部状态、离线下载与缓存。账号需重新配置 / 登录，离线章节需重新下载。")
+                Text("包含书目、书签、进度、分组、历史、统计及本地 CBZ，重复漫画自动合并。")
+                Text("不含账号、图源配置、密钥、全局设置、离线下载和缓存。恢复后需重新登录并下载离线章节。")
                 Text("恢复码只在本页内存中保留，请单独安全保存。备份文件加密，但文件大小与条目数量可见。")
-                Text("只支持同空间恢复；恢复使用目标设备的密钥，不修复已损坏或丢失的原密钥，也不会开放真实里世界来源。")
+                Text("仅支持恢复到相同空间，使用目标设备的密钥。")
             }
         } }
         if (state.busy) item {
@@ -207,7 +207,7 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
             Text("恢复预览", style = MaterialTheme.typography.titleMedium)
             Text("${DateFormat.getDateTimeInstance().format(Date(summary.createdAt))} · ${summary.books} 本 · ${summary.records} 条记录")
             Text("正文 ${android.text.format.Formatter.formatFileSize(app, summary.contentBytes)}")
-            Text("同键记录以本机已有内容为准；统计的同一计时检查点取较长时长，不重复相加。")
+            Text("已有记录优先保留，重复阅读统计取较长时长。")
             ReferenceButton(onClick = { confirm = true }, enabled = enabled) { Text("合并恢复") }
             TextButton(onClick = model::discard, enabled = enabled) { Text("放弃并清理暂存") }
         } } }
@@ -240,13 +240,13 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
         item {
             TextButton(onClick = model::discard, enabled = enabled) { Text(if (state.selected) "放弃所选文件" else "清理备份暂存") }
             SettingsDisclosure("中断与空间需求") {
-                Text("备份读取期间请停留本页。离页、后台或空间切换会停止操作；文件提供方无响应时需要等待。导出失败留下的文件可能不完整，请另选新文件重试。")
-                Text("恢复需要容纳密文备份及新增正文的空间；进程结束后不会自动重放。重新选择同一备份可再次合并，暂存密文可在此清理。原 CBZ 文件始终保留。")
+                Text("备份时请停留本页。中断可能留下不完整文件，请重新导出。")
+                Text("请预留备份与新增漫画所需空间。中断后可重新选择备份继续合并，原 CBZ 文件保留。")
             }
         }
     }
     if (confirm) ReferenceDialog(onDismissRequest = { confirm = false }, title = { Text("合并到当前空间？") },
-        text = { Text("将加入缺失的记录和正文，同键记录保留本机内容。不会删除书目、原文件或修改原设备密钥。") },
+        text = { Text("补充缺少的记录与漫画，重复记录保留本机内容，原文件保留。") },
         confirmButton = { ReferenceDialogConfirm("开始恢复", { confirm = false; model.restore() }, enabled = enabled) },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("取消") } })
 }

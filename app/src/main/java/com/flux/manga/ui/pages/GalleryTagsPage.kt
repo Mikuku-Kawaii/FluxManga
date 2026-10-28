@@ -146,8 +146,8 @@ internal val LocalGalleryTagsPicker = staticCompositionLocalOf<(GalleryTagsModel
             Text("EH 与 EX 共用词库；选择中文候选后，使用原标签搜索。账号与搜索结果仍各自独立。")
         } }
         item { SettingsDisclosure("导入、更新与许可") {
-            Text("从 EhTagTranslation 发布页下载 db.text.json（v7，最多 16 MiB），在下方选择。重新导入可更新或回退；确认前不会替换。")
-            Text("数据归 EhTagTranslation 编辑者，采用 CC BY-NC-SA 3.0 CN；本应用未内置完整数据。仅保存名称索引，不载入说明图片。")
+            Text("下载 EhTagTranslation 的 db.text.json（v7，最多 16 MiB），选择文件后确认导入。")
+            Text("词库来自 EhTagTranslation，许可为 CC BY-NC-SA 3.0 CN。仅导入名称索引。")
             FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 TextButton({ context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GALLERY_TAG_RELEASES))) }) { Text("获取词库") }
                 TextButton({ context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GALLERY_TAG_LICENSE))) }) { Text("查看数据许可") }

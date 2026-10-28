@@ -105,7 +105,7 @@ internal class DataProtectionModel(app: Application, private val session: WorldS
             try {
                 val cleared = store.clearDiagnosticCopy(owner.world)
                 if (active()) mutable.update { it.copy(cleanupRequired = !cleared,
-                    diagnosticMessage = if (cleared) "检查副本已清理；原数据库和密钥保持。" else "检查副本未能全部清理，请稍后重试。") }
+                    diagnosticMessage = if (cleared) "检查副本已清理。" else "部分检查副本未清理，请重试。") }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
                 if (active()) mutable.update { it.copy(cleanupRequired = true, diagnosticMessage = storageMessage(failure)) }
@@ -160,22 +160,21 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
                         .semantics { liveRegion = LiveRegionMode.Polite })
                     if (report.migrationChecked) Text("副本迁移通过：${report.originalVersion} → ${report.version}，原库版本保持。")
                     Text(when {
-                        report.version == WORLD_DATABASE_VERSION -> "版本与当前应用一致；仍需验证实际升级、业务数据保留与密钥恢复。"
-                        report.version != null && report.version in 1 until WORLD_DATABASE_VERSION -> "这是旧版数据库；本次未运行迁移，升级与数据保留仍待验收。"
-                        report.version != null && report.version > WORLD_DATABASE_VERSION -> "数据库来自更新的应用版本；请使用兼容版本，不尝试降级或重建。"
-                        else -> "数据库版本无法识别；结构可读不代表可以作为当前书库使用。"
+                        report.version == WORLD_DATABASE_VERSION -> "数据库版本与当前应用一致。"
+                        report.version != null && report.version in 1 until WORLD_DATABASE_VERSION -> "数据库版本较旧，可检查副本迁移。"
+                        report.version != null && report.version > WORLD_DATABASE_VERSION -> "数据库版本较新，请更新应用后重试。"
+                        else -> "数据库版本不兼容，暂时无法使用。"
                     })
                 }
                 SettingsDisclosure("检查详情") {
                     if (report.error == null) {
-                        report.encryptedRecords?.let { Text("已验证 $it 条加密记录；没有显示或导出记录内容。") }
+                        report.encryptedRecords?.let { Text("已验证 $it 条加密记录。") }
                         Text("副本大小：${android.text.format.Formatter.formatFileSize(app, report.snapshotBytes)}")
                     }
-                    Text("结论只对应本次副本，不代表后续写入、密钥恢复或真实里世界准入已经通过。")
                 }
             }
             state.diagnosticMessage?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            if (state.cleanupRequired) RequestFeedback("仍有检查副本待清理。可重试下方清理操作，不会删除原数据库。", color = MaterialTheme.colorScheme.error)
+            if (state.cleanupRequired) RequestFeedback("仍有有临时检查副本待清理。", color = MaterialTheme.colorScheme.error)
             if (!state.diagnosticBusy) {
                 ReferenceButton(onClick = { requestedDiagnostic = false }, enabled = !state.busy,
                     modifier = Modifier.testTag("protection-diagnostic-start")) { Text("检查数据库副本") }
@@ -187,33 +186,33 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
                     modifier = Modifier.testTag("protection-migration-start")) { Text("检查副本迁移") }
                 if (!state.cleanupRequired) TextButton(onClick = model::clearCopy, enabled = !state.busy && !state.diagnosticBusy,
                     modifier = Modifier.testTag("protection-diagnostic-cleanup")) { Text("清理检查副本") }
-                Text("检查副本的结构、关联与加密记录，也可核对迁移至当前版本是否可行。需要额外存储空间；原库不修复、不迁移。")
-                Text("结束或取消后会尝试清理。若应用被强制结束，可能留下副本；可在此清理，下次检查也会先清理。里世界副本保持加密。")
+                Text("在临时副本上检查数据结构与版本兼容性，需要额外空间。原数据库保持不变。")
+                Text("结束后清理临时副本；异常退出留下的副本可手动清理。里世界副本保持加密。")
             }
         } } }
         item { SettingsPanel { SettingsDisclosure("异常处理与恢复说明") {
-            Text("暂时不可用：解锁手机、检查可用空间后重试。密钥缺失、永久失效或文件校验失败：保留现有安装、数据库与密钥文件，当前没有自动恢复旧密钥的功能。")
-            Text("读取、迁移或损坏处理失败会停止打开，不删除原库、不重新生成密钥覆盖旧数据。文件与密钥检查不代替数据库结构检查；两项均不代表迁移与恢复已验收。")
-            Text("文件与密钥检查不读取书名、账号或正文，不打开数据库，也不创建或修复文件。")
+            Text("请先解锁手机、检查剩余空间再重试。密钥丢失或失效时无法自动恢复，请保留现有安装和文件。")
+            Text("打开失败时保留原数据库与密钥。请勿卸载应用或清除数据。")
+            Text("仅检查文件与密钥状态，数据内容请使用副本检查。")
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         TextButton(onClick = backup, enabled = !state.busy && !state.diagnosticBusy) { Text("加密备份与恢复") }
         SettingsDisclosure("备份与换机", "按空间备份，使用单独保存的恢复码") {
-            Text("书库菜单或设置的书库管理中可导出当前空间的书目、书签和进度 JSON；这是明文记录导出，不包含正文与密钥，也不提供导入恢复。")
-            Text("加密备份包含书库记录、分组、历史、统计及本地 CBZ 应用副本，支持合并恢复。账号凭据、设备密钥、全局设置和离线下载不迁移。平台自动备份保持关闭；卸载、清除应用数据不能用于排查存储问题。")
-            Text("本地漫画原文件不由此页删除。已有阅读进度、分组、下载和密钥保持；缓存与记录清理仍在独立的存储与清理页。")
+            Text("记录导出生成明文 JSON，包含书目、书签和进度，仅供查看，不能用于恢复。")
+            Text("换设备请使用加密备份，可合并恢复书库记录和本地 CBZ。账号、设备密钥、全局设置和离线下载需另行配置。")
+            Text("清理缓存或记录，请前往“存储与清理”。")
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         SettingsDisclosure("里世界来源", "已接入 JMComic / PicACG / E-Hentai / ExHentai") {
-            Text("账号、书库记录、图片缓存与离线正文使用当前空间加密存储；EH / EX 账号与权限分别确认。本页诊断结果只对应所选副本。")
+            Text("账号、书库、图片缓存与离线正文按空间加密保存。")
         } } }
     }
     requestedDiagnostic?.let { migration -> ReferenceDialog(
         onDismissRequest = { requestedDiagnostic = null },
         title = { Text(if (migration) "检查副本迁移？" else "检查当前空间数据库？") },
         text = { Text(if (migration)
-            "只在临时副本上运行现有迁移并核对结构，不更新原库。需要更多空间；取消时会等待当前迁移步骤停止并清理副本，不会回写原库。离页或后台会请求取消。"
-            else "会复制当前数据库及日志，核对结构、关联与加密记录，需要额外存储空间。原库与密钥保持；不修复数据、不导出备份。离开此页或切到后台会取消检查。",
+            "在临时副本上检查版本迁移，原数据库不变。需要额外空间，离页或进入后台会取消。"
+            else "复制数据库进行结构检查，需要额外空间，原数据不变。离页或进入后台会取消。",
             Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm("开始检查", onClick = { requestedDiagnostic = null; model.diagnose(migration) },
             enabled = !state.busy && !state.diagnosticBusy) },

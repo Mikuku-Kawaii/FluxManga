@@ -109,7 +109,7 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
         }
         if (navigation.section == SourceSettingsSection.CONNECTION) item { AccountMoreActions("账号管理") { close ->
             if (model.sourceId != null) TextButton(onClick = { close(); model.logout() }, enabled = !model.busy && model.loaded) { Text("退出账号 · 保留书目与进度") }
-            Text("连接你自己的漫画服务，目前支持一个 Komga 服务。验证成功后加密保存网页会话、API Key 或 Basic 密码，用于后续阅读。")
+            Text("可连接一个 Komga 服务。验证成功后，登录信息加密保存在本机。")
             Text("API Key 或邮箱密码连接信息不变时，凭据可以留空沿用；网页会话失效后需重新登录。")
             Text("支持在线阅读和章节下载，进度保存在本机；服务端进度同步尚未开放。")
         } }
@@ -153,7 +153,7 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
                 if (mangaId != null) DetailHeading(back, backModifier = Modifier.testTag("komga-back"))
                 else SourceBrowseHeading("Komga", back,
                     "浏览全部作品", { changeQuery(""); model.search() }, sources,
-                    "搜索当前 Komga 服务的作品，包含尚未加入本机书库的漫画。留空搜索或选择浏览全部作品可返回服务目录。刷新使用已提交的搜索词，修改输入后需再次搜索。阅读进度保存在本机。",
+                    "搜索服务器作品，留空可浏览全部。修改关键词后请重新搜索，阅读进度保存在本机。",
                     backTag = "komga-back")
             }
             if (mangaId == null) {

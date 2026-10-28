@@ -103,15 +103,15 @@ class WorldDataStore(context: Context, private val namespace: String = "business
         val stores = purposes.map { keys(world, it) }
         if (!file.exists() && DatabaseArtifacts.sidecars(file).none { it.exists() } &&
             stores.none { SecretEnvelope.hasArtifacts(it.envelopeFile) }) {
-            ProtectionReport(ProtectionState.NOT_CREATED, "尚未建立此空间存储；检查没有创建数据库或密钥。")
+            ProtectionReport(ProtectionState.NOT_CREATED, "此空间尚未建立存储。")
         } else try {
             DatabaseArtifacts.requireUsableMain(file)
             if (!file.exists()) ProtectionReport(ProtectionState.INCOMPLETE,
-                "存在密钥文件但没有主数据库；仅保留现场，本次检查没有建库。")
+                "数据库文件缺失，现有密钥保留。")
             else {
                 stores.forEach { it.loadExistingReadOnly().fill(0) }
                 ProtectionReport(ProtectionState.KEYS_READABLE,
-                    "现有密钥文件可解封；本次未打开数据库，完整性与迁移尚未检查。")
+                    "密钥可用，数据库尚未检查。")
             }
         } catch (failure: Exception) {
             if (failure is CancellationException) throw failure

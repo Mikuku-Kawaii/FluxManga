@@ -82,7 +82,7 @@ internal fun SourceDiscoveryPage(session: WorldSession, tags: Boolean, bottomCle
                 Text("按题材探索", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
                 DiscoveryCapabilityPanel("图源标签", "标签目录与按标签查询", state, "source-tags-status")
                 Text("全部标签", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                Text("真实图源准入完成后开放，不展示示意标签。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("此空间的图源标签暂未开放。", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } }
         } else {
             item(key = "recommendations") {
@@ -171,7 +171,7 @@ internal fun LegacyTagPage(back: () -> Unit, tags: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp)) {
         item {
             ReferenceHeading("标签入口已调整", "旧用户标签与关联数据已保留", back)
-            Text("标签页现在用于发现图源已有标签。此旧链接不会转换为在线标签查询。")
+            Text("此入口已停用，请返回标签页浏览。")
             TextButton(onClick = tags) { Text("前往图源标签") }
         }
     }

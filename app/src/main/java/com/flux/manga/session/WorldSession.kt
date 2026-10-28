@@ -87,7 +87,8 @@ class WorldSession : ViewModel() {
             { accepts(ownerIdentity) },
             com.flux.manga.data.BaoziAccountStore(com.flux.manga.data.WorldDataStore(context).accountImportDatabase()),
             com.flux.manga.data.WorldBaoziAccountNetwork(this),
-            credentialsChanged = { baoziSources.close() }).also { baoziAccountOwner = it }
+            credentialsChanged = { baoziSources.credentialsChanged() },
+            clearBrowserSession = { com.flux.manga.data.BaoziBrowserProfile.clear(context.applicationContext) }).also { baoziAccountOwner = it }
     }
     internal val baoziSources = com.flux.manga.data.WorldBaoziSources(this)
     internal fun recoverBaoziAccount(context: android.content.Context, owner: SessionIdentity) {

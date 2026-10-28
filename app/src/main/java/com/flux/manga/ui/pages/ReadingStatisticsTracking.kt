@@ -133,5 +133,5 @@ internal fun ReadingImageVisibility(visible: Boolean) {
 internal fun ReadingTimeFeedback(model: ReadingTimeModel?) {
     if (model == null) return
     val failed by model.error.collectAsState()
-    if (failed) TextButton(onClick = feedbackAttempt(model::retry)) { Text("阅读统计未保存 · 重试（不影响阅读进度）") }
+    if (failed) TextButton(onClick = feedbackAttempt(model::retry)) { Text("统计未保存 · 重试") }
 }

@@ -86,7 +86,7 @@ internal class KomgaAccountStore(private val db: AccountImportDatabase,
     private fun AccountImportRows.config(): KomgaConfiguration? {
         val bytes = read(slot) ?: return null
         return try { if (bytes.firstOrNull() == '{'.code.toByte()) legacy(bytes) else KomgaAccountCodec.configuration(bytes) }
-        catch (_: Exception) { throw IOException("配置无法读取；原记录保留") } finally { bytes.fill(0) }
+        catch (_: Exception) { throw IOException("配置读取失败，请重试。") } finally { bytes.fill(0) }
     }
     private fun AccountImportRows.save(c: KomgaConfiguration) {
         val bytes = KomgaAccountCodec.configuration(c)

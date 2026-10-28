@@ -48,7 +48,7 @@ internal fun ehFailure(error: Exception, site: GallerySite = GallerySite.EH) = w
     is SourceException.RateLimited -> "服务请求限流，请稍后重试"
     is SourceException.NotFound -> "画廊或图片已不可用"
     is SourceException.Timeout -> "${site.label} 请求超时，请重试"
-    else -> "${site.label} 请求或解析失败；已有记录保留"
+    else -> "${site.label} 加载失败，请重试。"
 }
 
 internal class EhStore(context: Context, private val session: WorldSession, private val site: GallerySite = GallerySite.EH) {
@@ -122,7 +122,7 @@ internal class EhClient(private val session: WorldSession, val account: EhAccoun
             currentCoroutineContext().ensureActive(); active()
             val body = reply.body.toString(Charsets.UTF_8)
             if (site == GallerySite.EX && URI(url).host == site.host && (body.isBlank() || reply.contentType?.startsWith("image/") == true || body.contains("/img/kokomade.jpg"))) {
-                throw IOException("EX 未返回可访问页面：会话已失效或权限不足，请检查 igneous；未切换到 EH")
+                throw IOException("EX 登录失效或权限不足，请检查 igneous。")
             }
             val doc = Jsoup.parse(body, url)
             val text = doc.text()

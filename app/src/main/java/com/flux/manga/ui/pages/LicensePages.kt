@@ -75,7 +75,7 @@ internal fun OpenSourceLicensesPage(back: () -> Unit, open: (String) -> Unit) {
             }
         } } }
         item("scope") { SettingsPanel { SettingsDisclosure("目录范围与来源", "随应用提供的离线许可材料") {
-            Text("包含项目、协议适配与依赖材料。Android 清单含元数据组件；Rust 清单含宿主、可选及其他平台依赖，不等于最终 APK 链接组成。正式发布源码取得方式仍待发布渠道落实。",
+            Text("包含项目及依赖的许可与来源，也列出构建工具和可选组件。",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             loaded.value?.let { Text("快照：${it.snapshot}", style = MaterialTheme.typography.bodySmall) }
         } } }

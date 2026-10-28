@@ -142,11 +142,11 @@ internal fun ReaderToolDialog(tool: ReaderTool, identity: String, page: Int, tot
                         Text(optionsSummary, style = MaterialTheme.typography.bodySmall)
                         ReaderOptionControls(options, changeOptions, online, enabled)
                         SettingsDisclosure("操作说明") {
-                        Text("双击在 1× / 2× 间切换，也可捏合与拖动；放大 / 还原按钮始终可用。",
+                        Text("双击放大或还原，也可捏合缩放、拖动查看。",
                             style = MaterialTheme.typography.bodySmall)
                         Text("宽屏双页用于至少 600dp 的横向阅读区域，竖屏与条漫保持原方式。",
                             style = MaterialTheme.typography.bodySmall)
-                        if (online) Text("跨章节连读遇到缺章会停下，离线阅读不会因此联网。", style = MaterialTheme.typography.bodySmall)
+                        if (online) Text("缺少相邻章节时停止连读。", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -232,7 +232,7 @@ internal fun ReaderChapterDialog(state: OnlineReaderState, offlineOnly: Boolean,
                     if (state.chapterBusy) { RequestLoading(); Text("正在读取章节…") }
                     if (state.chapterNext is SourceContinuation.Next) TextButton(onClick = feedbackAttempt(more),
                         enabled = enabled && !state.chapterBusy) { Text(if (state.chapterError == null) "加载更多章节" else "重试章节") }
-                    if (offlineOnly) Text("仅可打开已下载章节，缺章时不会联网。", style = MaterialTheme.typography.bodySmall)
+                    if (offlineOnly) Text("离线模式仅阅读已下载章节。", style = MaterialTheme.typography.bodySmall)
                 }
             }
         })

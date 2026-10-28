@@ -114,7 +114,7 @@ internal class KomgaAccountController(private val scope: CoroutineScope, private
             task = store.commit(c, task, items, result?.nextPage?.toInt()) { allowed(ticket) }; check(ticket)
             mutable.value = state.value.copy(task = task); yield()
         }
-        mutable.value = state.value.copy(notice = "本次导入已完成，正文仍按需在线读取；未改写服务器。")
+        mutable.value = state.value.copy(notice = "书目已导入，可在线阅读。")
     }
     fun finish() {
         if (!state.value.verified) return
@@ -126,7 +126,7 @@ internal class KomgaAccountController(private val scope: CoroutineScope, private
             val c = store.current { allowed(ticket) }; check(ticket)
             val task = c?.let { store.task(it.sourceId) { allowed(ticket) } }; check(ticket)
             mutable.value = state.value.copy(loaded = true, source = c?.sourceId, user = c?.userId, task = task,
-                notice = "已停止，已提交书目保留；重新验证后可显式继续。")
+                notice = "已停止，重新验证后可继续导入。")
         }
     }
     fun leave() { revision++; work?.cancel(); work = null; configuration = null; mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false) }
@@ -134,13 +134,13 @@ internal class KomgaAccountController(private val scope: CoroutineScope, private
     fun close() { leave(); closed = true; mutable.value = KomgaAccountState() }
 }
 internal fun komgaAccountFailure(error: Exception) = when (error) {
-    is SourceException.AuthenticationRequired -> "账号认证已失效，请更新认证信息；已有书目和任务保留。"
-    is SourceException.HttpStatus -> if (error.status.toInt() == 403) "当前账号无权读取此列表，请检查服务器权限。" else "服务器返回 HTTP ${error.status}；本页未提交，可重试。"
-    is SourceException.NotFound -> "列表已不存在或不可见；可选择其他列表，已有书目保留。"
+    is SourceException.AuthenticationRequired -> "登录已失效，请更新账号信息。"
+    is SourceException.HttpStatus -> if (error.status.toInt() == 403) "当前账号无权读取此列表，请检查服务器权限。" else "读取失败（HTTP ${error.status}），请重试。"
+    is SourceException.NotFound -> "列表不可用，请选择其他列表。"
     is SourceException.Timeout -> "请求超时，已提交批次保留，可重试。"
     is SourceException.Transport -> "无法连接 Komga，请检查网络、地址和证书。"
     is SourceException.InvalidResponse -> "响应或分页不符合已支持协议，未当作空列表或跳过异常项。"
     is java.io.IOException -> "配置或提交结果尚未确认，请重新读取核对后继续。"
-    is IllegalArgumentException -> "预览或导入状态超出支持范围；预览最多 1000 项，可使用整列表分页导入。"
+    is IllegalArgumentException -> "最多预览 1000 项，更多作品可选择整列表导入。"
     else -> "操作未完成，已提交书目保留，请重试或重新验证账号。"
 }

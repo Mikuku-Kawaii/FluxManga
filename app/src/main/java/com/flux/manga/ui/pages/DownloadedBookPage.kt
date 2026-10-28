@@ -143,7 +143,7 @@ internal fun DownloadedBookPage(session: WorldSession, source: String, manga: St
             }
         } }, confirmButton = { TextButton(onClick = { showActions = false }) { Text("关闭") } })
     if(confirm) ReferenceDialog(onDismissRequest={confirm=false},title={Text("清理本作全部下载副本？")},
-        text={Text("仅清理此来源作品的 ${state.jobs.size} 项下载及队列记录，保留目录、书目、收藏、进度和原文件；其他来源同名作品不受影响。", Modifier.verticalScroll(rememberScrollState()))},
+        text={Text("删除此作品的 ${state.jobs.size} 项下载及任务记录，保留书目、进度和原文件。", Modifier.verticalScroll(rememberScrollState()))},
         confirmButton={ReferenceDialogConfirm("清理下载副本", onClick={confirm=false;controller.batch(state.jobs.map { it.id }.toSet(),DownloadBatchAction.REMOVE)},
             enabled = queueState.loaded && !queueState.controlling && state.jobs.isNotEmpty(), destructive = true)},
         dismissButton={TextButton(onClick={confirm=false}) { Text("返回") }})

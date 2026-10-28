@@ -98,7 +98,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                 AccountMoreActions("任务管理") { close ->
                     if (job.selection == null) TextButton(onClick = { close(); confirm = "rescan" }, enabled = state.loaded && state.verified && !state.busy) { Text("从头重扫去重") }
                     TextButton(onClick = { close(); confirm = "finish" }, enabled = state.loaded && state.verified && !state.busy) { Text(if (job.done) "收起结果" else "结束此任务") }
-                    Text("列表变化时可从头重扫去重；已经导入的书目和本机进度保留。")
+                    Text("列表有变化时可重新扫描，自动跳过已导入书目。")
                 }
             }
         } } }
@@ -109,7 +109,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                 Text("已有书目与阅读进度保留。", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                Text("当前范围的云收藏 · 其他类别尚未确认", style = MaterialTheme.typography.bodySmall,
+                Text("云收藏 · 当前范围", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 ImportPreviewFilter(previewQuery, { previewQuery = it }, state.entries.size, visibleEntries.size,
                     selection.size, hiddenImportSelection(selection, visibleEntries.map { it.collectionId }), !state.busy,
@@ -120,10 +120,10 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                     Text("同时收藏新书目", Modifier.weight(1f))
                 }
                 ReferenceButton(onClick = { confirm = "all" }, enabled = state.loaded && state.entriesLoaded && !state.busy && !unfinished,
-                    modifier = Modifier.fillMaxWidth()) { Text("一键导入全部收藏 · 当前接口范围") }
+                    modifier = Modifier.fillMaxWidth()) { Text("导入当前范围") }
                 AccountMoreActions("导入选项与说明") { _ ->
-                    state.reportedTotal?.let { Text("接口本次报告 $it 条；列表可能变化，不代表其他收藏类别。") }
-                    Text("可导入选中条目，或从第一页逐页导入当前范围。只保存书目引用，不下载正文；已有收藏、阅读方式和进度保持。")
+                    state.reportedTotal?.let { Text("当前范围共 $it 条。") }
+                    Text("选择书目或导入当前范围，仅保存书目，不下载正文。已有记录保留。")
                 }
                 if (state.entriesLoaded && state.entries.isEmpty()) Text(if (state.nextOffset == null) "当前范围没有收藏。" else "本页无可显示条目，可继续读取下一页。")
                 if (!state.entriesLoaded || state.nextOffset != null) TextButton(onClick = model::moreEntries,
@@ -147,9 +147,9 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
     }
     if (confirm != null) ReferenceDialog(onDismissRequest = { confirm = null },
         title = { Text("确认操作") }, text = { Text(when (confirm) {
-            "all" -> "从第一页读取当前接口范围的云收藏。列表可能变化，可重扫去重；不保证覆盖其他收藏类别。"
-            "import" -> "导入选中的 ${selection.size} 条书目引用，已有收藏、阅读方式、进度和原文件保持。"
-            "rescan" -> "从第一页重新扫描并去重，保留已导入作品；本次统计重新计算。"
+            "all" -> "从第一页导入当前范围的云收藏，自动跳过已有书目。"
+            "import" -> "导入选中的 ${selection.size} 条书目，已有记录保留。"
+            "rescan" -> "从第一页重新扫描，跳过已有书目并重新统计。"
             else -> "结束任务，保留已提交书目和进度，未处理部分不再继续。"
         }, Modifier.verticalScroll(rememberScrollState())) }, confirmButton = { ReferenceDialogConfirm(when (confirm) {
             "all" -> "导入当前范围"; "import" -> "导入所选书目"; "rescan" -> "重新扫描"; else -> "结束任务"

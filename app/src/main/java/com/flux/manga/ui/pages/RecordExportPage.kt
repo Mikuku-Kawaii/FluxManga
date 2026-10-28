@@ -153,8 +153,8 @@ internal fun RecordExportContent(model: RecordExportModel, session: WorldSession
             Text("书目 · 书签与备注 · 阅读进度", style = MaterialTheme.typography.titleMedium)
             Text("导出为明文 JSON，包含书名和备注。请保存到可信位置。")
             SettingsDisclosure("导出范围", "仅当前空间的已保存记录") {
-                Text("包含本空间已保存的本地与在线书目、阅读方式、页内位置和逐章记录。缺失副本不会阻止导出，不联网补全内容。")
-                Text("不包含漫画正文、原文件、账号凭据、密钥、分组、阅读统计或图片缓存；当前不提供导入恢复。")
+                Text("导出当前空间已保存的书目、书签、备注和阅读进度。")
+                Text("仅导出记录，不含漫画与账号信息，不能用于恢复。")
             }
         } }
         state.counts?.let { counts -> item { SettingsGroup("最近读取的记录") {
@@ -166,20 +166,20 @@ internal fun RecordExportContent(model: RecordExportModel, session: WorldSession
             RecordCountRow("阅读进度", counts.localProgress + counts.onlineProgress)
             SettingsDivider()
             RecordCountRow("逐章记录", counts.chapterReadings)
-            Text("实际导出以开始写入时的快照为准。空空间可导出空记录文件。", Modifier.padding(16.dp),
+            Text("导出开始时已保存的记录。", Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } } }
         if (state.loading || writing) item { RequestLoading() }
         state.message?.let { message -> item { RequestFeedback(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite }) } }
         if (writing) item {
-            Text("已处理 ${state.written} 条记录；文件关闭成功前不算导出完成。")
+            Text("正在导出，已处理 ${state.written} 条。")
             TextButton(onClick = model::cancel, enabled = state.phase == RecordExportPhase.WRITING) {
                 Text(if (state.phase == RecordExportPhase.CANCELLING) "正在停止…" else "停止导出")
             }
         } else if (state.phase == RecordExportPhase.READY) item {
             ReferenceButton(onClick = feedbackAttempt(model::start), enabled = enabled && acknowledged, modifier = Modifier.fillMaxWidth()) { Text("开始导出当前空间记录") }
             TextButton(onClick = model::abandonSelection) { Text("放弃此文件") }
-        } else if (state.phase == RecordExportPhase.PICKING) item { Text("等待系统返回保存位置；若进程重启或空间失效，请重新发起导出。") }
+        } else if (state.phase == RecordExportPhase.PICKING) item { Text("请选择保存位置。") }
         else item {
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(acknowledged, role = Role.Checkbox,
                 onValueChange = { acknowledged = it }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -193,7 +193,7 @@ internal fun RecordExportContent(model: RecordExportModel, session: WorldSession
             if (state.phase == RecordExportPhase.COMPLETE) Text("已导出 ${state.written} 条记录。")
         }
         item { SettingsDisclosure("中断与失败处理", "离开或进入后台会停止写入") {
-            Text("离开页面、切换空间或导出时进入后台会停止写入。文件提供方停止响应时，取消可能需要等待。失败或强杀可能留下不完整文件，请自行检查。重试不会改写上一次文件。",
+            Text("导出时请停留本页。中断可能留下不完整文件，请删除后重新导出。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } }
     }

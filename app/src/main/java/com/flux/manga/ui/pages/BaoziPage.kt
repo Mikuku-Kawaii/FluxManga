@@ -62,7 +62,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = feedbackAttempt({ submit("") })) { Text("浏览作品目录") }
                     }
-                    Text(when (model.submitted) { null -> "主动搜索后加载；作品目录可分页浏览。"; "" -> "当前为作品目录，按图源顺序显示。"; else -> "当前关键词：${model.submitted}；此来源搜索结果无后续页。" })
+                    Text(when (model.submitted) { null -> "输入关键词搜索，留空可浏览目录。"; "" -> "按图源顺序显示作品目录。"; else -> "关键词：${model.submitted} · 暂不支持翻页" })
                 } }
                 item("status") {
                     if (feed.busy && feed.cards.isEmpty()) ReadLayoutPlaceholder()

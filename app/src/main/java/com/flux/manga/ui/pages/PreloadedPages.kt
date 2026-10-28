@@ -154,6 +154,19 @@ internal class PreloadedPages(private val app: Application, private val session:
         reading().load(); statistics().refresh(); storage().refresh()
     }
 
+    fun baoziRecovered() {
+        if (!running || !session.accepts(identity)) return
+        // Pending reads replay themselves. Only retry already-failed Baozi feeds, preserving other sources.
+        (feeds.values.map { it.feed } + searches.values.map { it.search }).forEach { controller ->
+            controller.state.value.results.forEach { (source, result) ->
+                if (com.flux.manga.data.isBaoziSource(source) && !result.busy && result.notice == null) {
+                    if (result.appendError != null) controller.more(source)
+                    else if (result.error != null) controller.refresh(source)
+                }
+            }
+        }
+    }
+
     /** Merely opening a settings page must not throw away loaded feeds. */
     fun configurationChanged() {
         val previousCheck = configurationCheck

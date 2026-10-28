@@ -12,10 +12,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 internal fun baoziFailure(error: Exception): String = when (error) {
-    is SourceException.AuthenticationRequired -> "站点要求浏览器验证，暂时无法读取；可打开网站确认后重试"
+    is SourceException.AuthenticationRequired -> "请打开网页登录，完成网站验证。"
     is SourceException.InvalidResponse -> "包子页面无法识别，可能是验证页或站点结构已变化，请稍后重试"
     is SourceException.Timeout -> "包子漫画请求超时，可以重试"
-    is SourceException.Transport -> "无法连接包子漫画，请检查网络；固定服务地址可能不可用"
+    is SourceException.Transport -> "无法连接包子漫画，请检查网络后重试。"
     is SourceException.NotFound -> "包子漫画未找到此作品"
     is SourceException.RateLimited -> "请求过于频繁，请稍后重试"
     is SourceException.InvalidRequest -> "请求无效，请检查输入或返回重新进入"
@@ -49,7 +49,24 @@ internal class BaoziModel(private val app: Application, private val session: Wor
     val detail = mutable.asStateFlow()
     private var work: Job? = null
     private var revision = 0L
+    private var visible = false
+    init {
+        viewModelScope.launch {
+            session.baoziAccount(app).state.map { it.recoveryVersion }.distinctUntilChanged().drop(1).collect {
+                if (visible && active()) {
+                    if (detail.value.error != null && detail.value.notice == null) refreshDetail()
+                    val result = feed.state.value
+                    if (!result.busy && result.notice == null) {
+                        if (result.appendError != null) feed.more()
+                        else if (result.error != null) feed.refresh()
+                    }
+                }
+            }
+        }
+    }
     fun start() {
+        visible = true
+        session.baoziAccount(app).retryRecovery()
         if (mangaId != null && !detail.value.attempted) refreshDetail()
         else if (mangaId != null && !detail.value.busy) work = viewModelScope.launch {
             try { updateLocal() } catch (cancelled: CancellationException) { throw cancelled }
@@ -108,5 +125,5 @@ internal class BaoziModel(private val app: Application, private val session: Wor
         val old = detail.value
         mutable.value = old.copy(busy = false, notice = if (old.busy) "请求已取消，可重试加载" else old.notice)
     }
-    fun leave() { feed.cancel(); cancelDetail() }
+    fun leave() { visible = false; feed.cancel(); cancelDetail() }
 }

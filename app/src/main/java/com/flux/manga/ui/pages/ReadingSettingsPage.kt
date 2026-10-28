@@ -118,8 +118,8 @@ internal fun ReadingSettingsContent(world: PrototypeWorld, state: ReadingSetting
         }
         item { ReaderOptionsSettings(world) }
         item { SettingsPanel { SettingsDisclosure("默认方式如何生效") {
-            Text("保存后用于下次打开尚未选定方式的作品；已有作品选择与阅读位置保持。阅读器内仍可单独调整。")
-            Text("默认方式按空间保存，选择后需点击保存；阅读操作中的开关则即时保存。")
+            Text("用于尚未设置阅读方式的作品，也可在阅读器中单独调整。")
+            Text("默认方式需点击保存，阅读操作开关即时生效。")
         } } }
     }
 }

@@ -46,9 +46,9 @@ internal class BookInformationModel(app: Application, private val session: World
                     catch (_: Exception) { state.update { it.copy(failed = it.failed + 1) } }
                     state.update { it.copy(processed = it.processed + 1, revision = it.revision + 1) }
                 }
-                state.update { it.copy(message = if (it.failed == 0) "作品资料已补齐；源未提供的字段保持为空" else "${it.failed} 本资料或封面未补齐，可检查图源账号后重试") }
+                state.update { it.copy(message = if (it.failed == 0) "资料已更新。" else "${it.failed} 本资料或封面未补齐，可检查图源账号后重试") }
             } catch (cancelled: CancellationException) {
-                state.update { it.copy(message = "已停止，已保存资料保留；可继续补齐") }; throw cancelled
+                state.update { it.copy(message = "已停止，可继续补齐。") }; throw cancelled
             } catch (_: Exception) { state.update { it.copy(message = "无法读取待补齐书目，请重试") } }
             finally { state.update { it.copy(running = false, stopping = false, title = "", revision = it.revision + 1) } }
         }
@@ -77,7 +77,7 @@ internal fun rememberBookInformation(session: WorldSession, source: String? = nu
 internal fun BookInformationPanel(model: BookInformationModel, enabled: Boolean = true) {
     val state by model.state.collectAsStateWithLifecycle()
     AccountPanel("导入书目的资料") {
-        Text("补齐封面、作者、简介和源标签。已保存资料可直接复用；不改收藏、阅读位置或自定义分组。",
+        Text("补齐封面、作者、简介和图源标签，保留收藏与进度。",
             style = MaterialTheme.typography.bodySmall)
         if (state.running) {
             Text("已处理 ${state.processed} / ${state.total} 本 · 未补齐 ${state.failed} 本")

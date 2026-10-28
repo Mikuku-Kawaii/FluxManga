@@ -377,7 +377,7 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
                     mutable.value = state.value.copy(loading = false, atSeriesEnd = direction > 0 || state.value.atSeriesEnd,
                         boundaryMessage = if (direction > 0) null else "已到第一章")
                 } else {
-                    if (offlineOnly && target.id !in repository.offlineIds()) throw IOException("相邻章节尚未下载；已停留当前章，不会跳过缺章或联网")
+                    if (offlineOnly && target.id !in repository.offlineIds()) throw IOException("相邻章节尚未下载。")
                     retryChapter = target.id; retryAtEnd = direction < 0; retryResume = false
                     changeChapter(target.id, retryAtEnd, resume = false)
                 }

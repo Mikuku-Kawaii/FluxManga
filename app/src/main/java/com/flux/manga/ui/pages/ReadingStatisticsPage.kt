@@ -157,7 +157,7 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
     }
     if (help) ReferenceDialog(onDismissRequest = { help = false }, title = { Text("统计说明") },
         confirmButton = { TextButton(onClick = { help = false }) { Text("关闭") } },
-        text = { Text("仅记录正文已显示、窗口有焦点时的前台停留时间；加载、弹窗和后台暂停。每 10 秒及离开时保存，异常退出可能丢失尚未保存的时长。日期按阅读时的本地时区划分。统计按空间独立保存，在线与离线的同一作品合计；同名不同来源分别统计。移除书目或清除阅读进度不删除统计。合成验证样本不计入。",
+        text = { Text("仅统计前台阅读时间，加载、弹窗和后台暂停计时。按空间和本地日期统计，同一作品的在线、离线时间合计。移除书目会保留统计；异常退出可能丢失最近未保存的时长。",
             Modifier.verticalScroll(rememberScrollState())) })
 }
 

@@ -32,7 +32,7 @@ internal class TagsViewModel(app: Application, private val session: WorldSession
         true
     } catch (cancelled: CancellationException) { throw cancelled }
     catch (_: Exception) {
-        if (active()) mutable.value = state.value.copy(ready = false, error = "分组读取失败；保留已显示内容，请重试读取后再编辑")
+        if (active()) mutable.value = state.value.copy(ready = false, error = "分组读取失败，请重试后再编辑。")
         false
     }
     fun refresh() {
@@ -56,7 +56,7 @@ internal class TagsViewModel(app: Application, private val session: WorldSession
                 if (active() && known) {
                     val validation = generateSequence(failure as Throwable) { it.cause }
                         .filterIsInstance<IllegalArgumentException>().firstOrNull()?.message
-                    mutable.value = state.value.copy(error = validation ?: "操作结果已重新读取；请核对当前分组后重试")
+                    mutable.value = state.value.copy(error = validation ?: "请核对当前分组后重试。")
                 }
             } finally { if (active()) mutable.value = state.value.copy(busy = false) }
         }

@@ -143,10 +143,10 @@ private fun OnlineShelfBook(item: OnlineShelfItem, library: OnlineLibrary,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             else if (item.book.favorite) Text("已收藏", style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary)
-            item.progress?.let { progress ->
-                Text(listOfNotNull("上次读到第 ${progress.ordinal} 页",
-                    ReadingMode.entries.firstOrNull { it.name == progress.mode }?.label).joinToString(" · "))
-            }
+            Text(shelfReadingLabel(item.progress?.let { progress ->
+                listOfNotNull("上次读到第 ${progress.ordinal} 页",
+                    ReadingMode.entries.firstOrNull { it.name == progress.mode }?.label).joinToString(" · ")
+            } ?: "未读", item.information, item.progress?.chapterId))
             if (!item.available) {
                 Text("此来源配置已失效；书目和进度保留")
                 TextButton(onClick = settings) { Text("图源设置") }
@@ -199,7 +199,7 @@ internal fun OnlineLibraryPage(session: WorldSession, back: () -> Unit, open: (S
     val shown = state.items.filter { (filter != 1 || it.book.favorite) && (filter != 2 || it.progress != null) &&
         matchesOnlineInformation(it.title, it.information, query, LocalSearchField.ALL) }
     if (help) ReferenceDialog(onDismissRequest = { help = false }, title = { Text("在线书库说明") },
-        text = { Text("这里保存已浏览或导入的在线书目。查询和筛选使用本机记录，封面与在线正文需要相应来源可用。取消收藏保留书目和阅读进度；来源失效时也不会清除记录。",
+        text = { Text("搜索与筛选使用本机书目，在线阅读需连接图源。取消收藏会保留书目和进度。",
             Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { help = false }) { Text("关闭") } })
     ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag("online-library"), state = rememberLazyListState(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp),

@@ -15,18 +15,28 @@ internal data class BaoziAccountUiState(val loaded: Boolean = false, val sourceI
     val busy: Boolean = false, val stage: String? = null, val error: String? = null, val notice: String? = null,
     val entries: List<BaoziShelfEntry> = emptyList(), val snapshotRevision: Long = 0,
     val importJob: BaoziImportJob? = null, val reconnectRequested: Boolean = false,
-    val autoLoginAvailable: Boolean = false, val recoveryNotice: String? = null)
+    val autoLoginAvailable: Boolean = false, val recoveryNotice: String? = null, val recoveryNeedsUser: Boolean = false,
+    val recoveryVersion: Long = 0)
+
+internal class BaoziVerificationRequired : java.io.IOException("网站验证已过期")
+internal class BaoziLoginExpired : java.io.IOException("账号登录已过期")
+internal class BaoziLoginRejected : java.io.IOException("自动登录未成功，请核对密码或使用官网登录")
 
 /** One WorldSession owner. Secrets never enter UI state, routes, SavedStateHandle or logs. */
 internal class BaoziAccountController(private val scope: CoroutineScope, private val active: () -> Boolean,
     private val store: BaoziAccountStore, private val network: BaoziAccountNetwork,
-    private val credentialsChanged: () -> Unit = {}) {
+    private val credentialsChanged: () -> Unit = {}, private val clearBrowserSession: suspend () -> Unit = {}) {
     private val mutable = MutableStateFlow(BaoziAccountUiState())
     val state = mutable.asStateFlow()
     private var work: Job? = null
     @Volatile private var revision = 0L
     @Volatile private var closed = false
-    private var recoveryAttempted = false
+    private var recovery: CompletableDeferred<Boolean>? = null
+    private var recoveryCheck: Job? = null
+    private var retrySignal: Job? = null
+    private var recoveryRequired = false
+    private var nextRecoveryAt = 0L
+    private fun now() = System.nanoTime() / 1_000_000
     private fun allowed(ticket: Long) = !closed && active() && ticket == revision
     private fun publish(account: BaoziSavedAccount?) {
         mutable.value = state.value.copy(loaded = true, sourceId = account?.sourceId, username = account?.username.orEmpty(),
@@ -91,11 +101,11 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
             credentialsChanged()
             currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
             publish(saved); showSnapshot(result)
-            mutable.value = state.value.copy(notice = "账号已保存；本次读取 ${result.entries.size} 本，不代表完整云书架。")
+            mutable.value = state.value.copy(notice = "已登录，读取到 ${result.entries.size} 本。")
         }
     }
     suspend fun connectWebSession(username: String, token: String, browserSession: BaoziBrowserSession? = null,
-        autoLogin: BaoziAutoLogin? = null) {
+        autoLogin: BaoziAutoLogin? = null, recoveryOnly: Boolean = false) {
         val name = username.trim()
         if (state.value.busy || closed || !active()) throw java.io.IOException("请等待账号读取完成")
         if (name.isEmpty()) throw java.io.IOException("尚未取得官网登录标识，请在官网完成邮箱登录后重试")
@@ -104,6 +114,10 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
         mutable.value = state.value.copy(busy = true, error = null, notice = null)
         try {
             val source = baoziAccountId(name)
+            if (recoveryOnly) {
+                val existing = store.current { allowed(ticket) }
+                if (existing == null || existing.sourceId != source || existing.token == null) throw BaoziLoginRejected()
+            }
             browserSession?.validate(token)
             val result = snapshot(BaoziSavedAccount(source, name, token, browserSession = browserSession), ticket)
             val saved = store.activate(source, name, token, browserSession, autoLogin) { allowed(ticket) }
@@ -111,49 +125,98 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
             currentCoroutineContext().ensureActive()
             if (!allowed(ticket)) throw CancellationException()
             publish(saved); showSnapshot(result)
-            recoveryAttempted = false
-            mutable.value = state.value.copy(reconnectRequested = false, recoveryNotice = null)
-            mutable.value = state.value.copy(notice = "网页账号已验证并保存；可继续导入书架")
+            recoveryRequired = false; nextRecoveryAt = 0L
+            retrySignal?.cancel(); retrySignal = null
+            mutable.value = state.value.copy(reconnectRequested = false, recoveryNotice = null, recoveryNeedsUser = false,
+                recoveryVersion = state.value.recoveryVersion + 1)
+            recovery?.complete(true); recovery = null
+            mutable.value = state.value.copy(notice = "已登录，可导入书架。")
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: Exception) { throw java.io.IOException(failureMessage(error)) }
+        catch (error: Exception) {
+            if (error is BaoziLoginRejected) throw error
+            if (error is SourceException.HttpStatus && error.status.toInt() == 403) throw BaoziVerificationRequired()
+            if (error is SourceException.AuthenticationRequired || error is SourceException.HttpStatus && error.status.toInt() == 401)
+                throw BaoziLoginExpired()
+            throw java.io.IOException(failureMessage(error))
+        }
         finally { if (allowed(ticket)) mutable.value = state.value.copy(busy = false, stage = null) }
     }
     private fun requestReconnect() {
-        if (recoveryAttempted || closed || !active()) return
-        recoveryAttempted = true
-        mutable.value = state.value.copy(reconnectRequested = true)
+        recoveryRequired = true
+        if (recovery != null || closed || !active() || state.value.recoveryNeedsUser || now() < nextRecoveryAt) return
+        recovery = CompletableDeferred()
+        mutable.value = state.value.copy(reconnectRequested = true, recoveryNotice = null)
     }
-    /** Public pages report only authentication / browser-gate failures, never network timeouts. */
-    fun recoverBrowserSession() {
-        scope.launch {
-            if (closed || !active() || recoveryAttempted || state.value.busy) return@launch
-            run("正在恢复包子登录") { ticket ->
-                val account = store.current { allowed(ticket) }
-                if (!allowed(ticket) || account?.token == null) return@run
-                publish(account)
-                requestReconnect()
+    /** Concurrent read requests await one browser restoration, then each replays its own read once. */
+    suspend fun recoverAndAwait(): Boolean = withContext(Dispatchers.Main.immediate) {
+        recoveryRequired = true
+        if (closed || !active() || state.value.recoveryNeedsUser) return@withContext false
+        var pending = recovery
+        if (pending == null) {
+            if (now() < nextRecoveryAt) { retryRecovery(); return@withContext false }
+            pending = CompletableDeferred<Boolean>().also { recovery = it }
+            val attempt = pending
+            recoveryCheck = scope.launch {
+                try {
+                    state.first { !it.busy }
+                    val account = store.current { !closed && active() && recovery === attempt }
+                    ensureActive()
+                    if (recovery !== attempt) return@launch
+                    if (account?.token == null) {
+                        reconnectFailed("请先完成一次包子网页登录。", requiresUser = true)
+                    } else {
+                        publish(account)
+                        mutable.value = state.value.copy(reconnectRequested = true, recoveryNotice = null)
+                    }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { reconnectFailed("已保存会话暂时无法读取，原账号保留。") }
             }
+        }
+        val request = requireNotNull(pending)
+        val result = withTimeoutOrNull(60_000) { request.await() }
+        if (result == null && recovery === pending) reconnectFailed("自动恢复超时，请稍后重试。")
+        result == true
+    }
+
+    fun recoverBrowserSession() {
+        scope.launch { recoverAndAwait() }
+    }
+    /** Only real foreground/network/source-entry events schedule a cooled retry, never a failure loop. */
+    fun retryRecovery() {
+        if (!recoveryRequired || closed || !active() || state.value.recoveryNeedsUser || recovery != null || retrySignal?.isActive == true) return
+        retrySignal = scope.launch {
+            delay((nextRecoveryAt - now()).coerceAtLeast(0))
+            recoverAndAwait()
         }
     }
     suspend fun savedWebAccount(): BaoziSavedAccount? {
         val ticket = revision
         return store.current { allowed(ticket) }?.takeIf { it.token != null }
     }
-    fun dismissReconnect() { mutable.value = state.value.copy(reconnectRequested = false) }
-    fun reconnectFailed(reason: String) {
-        if (closed || !active() || !state.value.reconnectRequested) return
-        // Keep recoveryAttempted set: concurrent source failures must not restart a failed login.
-        mutable.value = state.value.copy(reconnectRequested = false, recoveryNotice = reason)
+    fun dismissReconnect() {
+        if (recovery != null) reconnectFailed("恢复已暂停，下次进入包子或网络恢复后重试。")
+    }
+    fun pauseRecovery() { retrySignal?.cancel(); retrySignal = null; dismissReconnect() }
+    fun reconnectFailed(reason: String, requiresUser: Boolean = false) {
+        if (closed || recovery == null) return
+        recoveryCheck?.cancel(); recoveryCheck = null
+        recoveryRequired = true; nextRecoveryAt = now() + 60_000
+        mutable.value = state.value.copy(reconnectRequested = false, recoveryNotice = reason, recoveryNeedsUser = requiresUser)
+        recovery?.complete(false); recovery = null
     }
     fun logout() {
         val source = state.value.sourceId ?: return
         run("正在退出登录") { ticket ->
             val saved = store.logout(source) { allowed(ticket) }
+            recoveryRequired = false; retrySignal?.cancel(); recoveryCheck?.cancel()
+            recovery?.complete(false); recovery = null
+            mutable.value = state.value.copy(reconnectRequested = false)
+            clearBrowserSession()
             credentialsChanged()
             currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
             publish(saved)
-            recoveryAttempted = false
             mutable.value = state.value.copy(verified = false, entries = emptyList(), reconnectRequested = false, recoveryNotice = null,
+                recoveryNeedsUser = false,
                 notice = "已退出登录并删除自动登录凭据，书目、进度和待办导入任务已保留。")
         }
     }
@@ -186,7 +249,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
             publish(saved); yield()
         }
         publish(saved)
-        mutable.value = state.value.copy(notice = "本次选中书目已处理；没有下载正文或改写远端书架。")
+        mutable.value = state.value.copy(notice = "选中书目已导入。")
     }
     fun finishTask() {
         val source = state.value.sourceId ?: return
@@ -202,31 +265,34 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
             val saved = store.current { allowed(ticket) }
             currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
             publish(saved)
-            mutable.value = state.value.copy(notice = "已停止，已提交书目保留；重新验证账号后可继续未完成任务。")
+            mutable.value = state.value.copy(notice = "已停止，重新验证账号后可继续导入。")
         }
     }
     fun leave() {
         revision++; work?.cancel(); work = null
         mutable.value = state.value.copy(busy = false, stage = null, verified = false, entries = emptyList(), loaded = false,
-            notice = "操作已停止；重新读取后核对已提交书目，可继续未完成任务。")
+            notice = "已停止，可重新读取并继续导入。")
     }
-    fun close() { leave(); closed = true; mutable.value = BaoziAccountUiState() }
+    fun close() {
+        retrySignal?.cancel(); recoveryCheck?.cancel(); recovery?.complete(false); recovery = null
+        leave(); closed = true; mutable.value = BaoziAccountUiState()
+    }
 
     private class UnverifiedShelf : Exception()
     private fun failureMessage(error: Exception) = when (error) {
-        is UnverifiedShelf -> "没有读取到可核实的书架作品，暂时无法区分空书架与失效会话；未覆盖原账号。可重试或重新登录。"
-        is SourceException.AuthenticationRequired -> "账号或会话未通过验证，请重新登录；书目与进度保留。"
-        is SourceException.Timeout -> "请求超时；请重试读取，登录不会自动重发。"
+        is UnverifiedShelf -> "书架验证失败，可能为空书架或登录已过期。请重试或重新登录。"
+        is SourceException.AuthenticationRequired -> "登录已失效，请重新登录。"
+        is SourceException.Timeout -> "请求超时，请重试。"
         is SourceException.Transport -> "无法连接包子漫画，请检查网络后重试。"
         is SourceException.RateLimited -> "请求过于频繁，请稍后重试。"
         is SourceException.HttpStatus -> when (error.status.toInt()) {
-            403 -> "网站浏览器验证尚未通过或已过期（HTTP 403）。请打开应用内网页登录，完成网站验证后连接书架；原账号与书目保留。"
-            301, 302, 303, 307, 308 -> "账号地址或会话已变化，请通过应用内网页登录重新连接；不会自动向跳转地址发送旧凭据。"
-            else -> "服务暂不可用（HTTP ${error.status}），未将响应当作空书架。"
+            403 -> "请打开网页登录，完成网站验证（HTTP 403）。"
+            301, 302, 303, 307, 308 -> "登录地址已变化，请通过网页登录重新连接。"
+            else -> "服务暂不可用（HTTP ${error.status}），请稍后重试。"
         }
-        is SourceException.InvalidResponse -> "书架或登录响应无法识别，请重试；未跳过异常书目。"
-        is java.io.IOException -> "账号或导入状态读取 / 保存未确认，请重新读取核对；未重置数据。"
-        else -> "操作未完成，请重新读取账号与任务状态后重试。"
+        is SourceException.InvalidResponse -> "无法读取书架或登录信息，请重试。"
+        is java.io.IOException -> "账号或导入状态未确认，请刷新核对。"
+        else -> "操作未完成，请刷新后重试。"
     }
 }
 

@@ -16,7 +16,7 @@ internal fun copyMangaFailure(error: Exception): String = when (error) {
     is SourceException.LoginRejected -> if (error.reason == "client_restricted")
         "图源暂时限制内容访问（210），提示更新官方 App 并等待限制解除。已登录账号和书库保留，不需要反复登录。"
         else "图源拒绝本次请求（${error.code}）"
-    is SourceException.AuthenticationRequired -> "图源要求认证或拒绝访问；请在图源管理中验证对应账号"
+    is SourceException.AuthenticationRequired -> "请在图源管理中验证账号后重试。"
     is SourceException.InvalidResponse -> "图源响应无法识别，接口可能已变化，请稍后重试"
     is SourceException.NotFound -> "图源上未找到此作品"
     is SourceException.Timeout -> "请求超时，可以重试"

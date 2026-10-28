@@ -50,7 +50,7 @@ internal class SpaceStorageModel(app: Application, private val session: WorldSes
                 if (policy != null) {
                     val result = try { store.applyCoverPolicy(policy) }
                     catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { "缓存设置保存结果待核对，请查看重新读取的当前设置；读取失败时请刷新后再操作。" }
+                    catch (_: Exception) { "保存结果待确认，请刷新设置。" }
                     if (active()) mutable.value = state.value.copy(result = result)
                 }
                 if (choice != null) {
@@ -123,7 +123,7 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
                 SettingsDisclosure("CBZ 本地封面缓存上限", stored?.let {
                     "当前：${it.label}" + if (draft != stored) " · 有未保存的选择" else ""
                 } ?: "尚未读取设置") {
-                    Text("达到上限后先清理较久未使用的封面；不保存磁盘缓存时，每次从 CBZ 副本生成。",
+                    Text("达到上限后优先清理旧封面。关闭磁盘缓存后，封面从 CBZ 重新生成。",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (stored != null) {
                         Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -145,9 +145,9 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
                 open = downloads, enabled = !state.busy)
         } }
         item { SettingsPanel { SettingsDisclosure("清理范围与说明") {
-            Text("手动清理仅处理勾选项目；封面缓存上限单独保存。数量是本次读取的快照，执行后重新核对。")
-            Text("书目、收藏、分组、阅读进度、账号、密钥和原文件保留。搜索记录与最近观看记录的清理不可撤销。")
-            Text("下载副本单独管理，不随缓存清理删除。CBZ 应用副本保留；封面可从副本重建。在线书库缩略封面可重新获取，正文临时图片由原句柄释放。")
+            Text("仅清理所选项目。封面缓存上限需单独保存。")
+            Text("书库和进度保留。清除搜索与浏览记录无法撤销。")
+            Text("保留下载与 CBZ 副本，封面可重新生成或获取。")
             if (!public) Text("只清理当前空间的加密图片缓存，保留书库、进度和密钥。离线副本在下载管理中单独清理。")
         }
         } }

@@ -46,7 +46,7 @@ class CbzLibrary(private val store: WorldDataStore, private val output: (File) -
         lock.withLock {
             val usage = coverCache().usage()
             try { CoverCacheSettings(usage, coverPolicy.read()) }
-            catch (_: IOException) { CoverCacheSettings(usage, null, "封面缓存设置读取失败，请刷新重试；暂不新增磁盘封面缓存。") }
+            catch (_: IOException) { CoverCacheSettings(usage, null, "封面缓存设置读取失败，请刷新重试。") }
         }
     }
     internal suspend fun applyCoverCachePolicy(value: CoverCachePolicy, allowed: () -> Boolean): String = withContext(Dispatchers.IO) {
@@ -63,7 +63,7 @@ class CbzLibrary(private val store: WorldDataStore, private val output: (File) -
                 else "封面缓存设置已保存：${value.label}；已清理 ${removed.files} 个文件（${removed.bytes} 字节）" +
                     if (removed.failed > 0) "；${removed.failed} 个文件未清理，可刷新后再次整理" else ""
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { "封面缓存设置已保存；整理未完成，请刷新占用后重试" }
+            catch (_: Exception) { "设置已保存，缓存整理未完成，请刷新后重试。" }
         }
     }
     internal suspend fun clearCoverCache(allowed: () -> Boolean): CacheCleared = withContext(Dispatchers.IO) {
@@ -92,7 +92,7 @@ class CbzLibrary(private val store: WorldDataStore, private val output: (File) -
         val covers = books.map { "${it.mangaId}.png" }.toSet()
         val orphans = directory.listFiles().orEmpty().filter { ownedName.matches(it.name) && it.name !in committed && it.absolutePath !in activeImports } +
             coverDirectory.listFiles().orEmpty().filter { it.name.matches(Regex("[0-9a-f-]{36}\\.png(\\.new|\\.bak)?")) && it.name.removeSuffix(".new").removeSuffix(".bak") !in covers }
-        if (orphans.any { !it.delete() && it.exists() }) throw IOException("书目已更新，部分应用副本 / 缓存清理未完成，请刷新重试；原文件未改动")
+        if (orphans.any { !it.delete() && it.exists() }) throw IOException("书目已更新，部分副本或缓存未清理，请重试。")
     }
     /** SQLite is the commit point; orphan recovery finishes interrupted file cleanup. */
     suspend fun remove(key: MangaKey, allowed: () -> Boolean = { true }) = withContext(Dispatchers.IO) {
@@ -163,7 +163,7 @@ class CbzLibrary(private val store: WorldDataStore, private val output: (File) -
                     val cached = coverFile(key)
                     android.util.AtomicFile(cached).delete()
                     if (listOf(cached, File(cached.path + ".new"), File(cached.path + ".bak")).any { it.exists() })
-                        throw IOException("旧封面缓存未能清理，请重试；书目信息未修改")
+                        throw IOException("封面缓存清理失败，书目信息未保存，请重试。")
                 }
                 dao.updateBook(book.copy(title = displayTitle, coverPageId = coverPageId))
                 dao.updateLocalVisitTitle(key.sourceId, key.mangaId, displayTitle)

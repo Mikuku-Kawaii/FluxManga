@@ -90,7 +90,7 @@ internal fun rememberPrivateFavoritesImport(session: WorldSession, source: Strin
 internal fun PrivateFavoritesImportPanel(model: FavoritesImportModel, previewBusy: Boolean) {
     val state by model.state.collectAsStateWithLifecycle()
     AccountPanel("全部收藏") {
-        Text("从全部收藏的第一页开始，不受当前文件夹或搜索筛选影响。按页保存，离开页面或进入后台会停止，返回后可续办。",
+        Text("导入全部云收藏，忽略当前筛选。离页或进入后台会暂停，可返回继续。",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val task = state.task
         task?.let {
@@ -109,7 +109,7 @@ internal fun PrivateFavoritesImportPanel(model: FavoritesImportModel, previewBus
             } else TextButton(feedbackAttempt(model::load)) { Text("读取导入进度") }
         }
         state.message?.let { RequestFeedback(it, color = if (state.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, failure = state.error, busy = state.running) }
-        Text("新增书目加入本机收藏；已有书目和阅读进度保持。云端列表变化时可从头重扫去重。",
+        Text("新书目加入本机收藏，已有记录保留。列表有变化时可重新扫描。",
             style = MaterialTheme.typography.bodySmall)
     }
 }

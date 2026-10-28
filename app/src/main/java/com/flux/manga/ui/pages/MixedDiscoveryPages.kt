@@ -149,10 +149,10 @@ internal fun MixedFeedSummary(model: MixedDiscoveryModel, section: DiscoverySect
 internal fun MixedFeedPage(session: WorldSession, komgaId: String?, section: DiscoverySection, back: () -> Unit,
     sources: () -> Unit, open: (String, String) -> Unit, configurationError: Boolean = false, retryConfiguration: () -> Unit = {}) {
     val privateWorld = session.identity.value.world == PrototypeWorld.NSFW
-    val help = if (privateWorld) "图源推荐合并 JM 首页推荐栏与已登录 PicACG 的首页推荐合集，展示图源当前返回的漫画预览；可下拉刷新，不以排行榜替代推荐。最近更新合并 JM / PicACG 最新作品与 EH / EX 最新画廊。各源账号、分页和错误保持独立。"
+    val help = if (privateWorld) "推荐来自 JM 和 PicACG，更新还包含 EH / EX。可按图源筛选，下拉刷新。"
     else if (section == DiscoverySection.RECOMMENDATIONS)
-        "推荐来自已开启的拷贝漫画与包子漫画，保留各站推荐顺序。Komga 暂不提供推荐内容。"
-    else "更新来自已开启的拷贝漫画、包子漫画与已配置的 Komga，按来源交错展示并保留各站顺序。作品资料修改也可能列入更新。"
+        "展示拷贝与包子的图源推荐，保留原站顺序。"
+    else "展示拷贝、包子与 Komga 的更新，含作品资料更新。"
     MixedBookList(mixedModel(session, komgaId, section), section.title, back, sources, open, help, configurationError, retryConfiguration, grid = true)
 }
 
@@ -166,7 +166,7 @@ internal fun MixedTagBooksPage(session: WorldSession, route: UnifiedTagResults, 
             !isCopySource(it.sourceId) && !isBaoziSource(it.sourceId)
         }?.sourceId
     MixedBookList(mixedModel(session, komgaId, null, route.targets, route.label), route.label, back, sources, open,
-        "当前空间全部图源混合展示；已知标签使用原站条件，其他图源按标签名称搜索。各图源独立分页和重试。",
+        "汇总当前空间各图源的标签结果；不支持该标签的图源按名称搜索。",
         configurationError = state.status == DiscoveryStatus.FAILED, retryConfiguration = configuration::refresh,
         grid = true, allSources = true)
 }
@@ -190,7 +190,7 @@ private fun MixedBookList(model: MixedDiscoveryModel, title: String, back: () ->
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("heading") { SettingsHeading(title, "", back, actions = {
                 ResultActionsMenu(sources = sources, sourceStatus = { showSources = true },
-                    help = if (allSources) help else "$help\n\n来源筛选只改变显示范围。滑到底部自动读取当前筛选来源的后续作品；数量为已加载作品，不是站点总量。")
+                    help = if (allSources) help else "$help\n\n下拉刷新，滑到底部自动加载更多。数量为已加载作品。")
             }) }
             if (configurationError) item("configuration-error") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 RequestFeedback("部分图源配置读取失败，其他作品仍可使用。", color = MaterialTheme.colorScheme.error)

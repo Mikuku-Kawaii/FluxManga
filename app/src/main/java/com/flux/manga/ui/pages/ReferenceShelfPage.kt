@@ -40,7 +40,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun ReferenceShelfPage(
     session: WorldSession, bottomClearance: Dp, open: (ShelfBook) -> Unit, read: (ShelfBook) -> Unit,
@@ -99,33 +99,77 @@ internal fun ReferenceShelfPage(
     val shownScroll = if (state.loading && state.books.isEmpty()) loadingScroll else scroll
     SideEffect { reportScroll { shownScroll.firstVisibleItemIndex; shownScroll.firstVisibleItemScrollOffset; Unit } }
     val fontScale = LocalDensity.current.fontScale
+    val collectionHeader: @Composable () -> Unit = {
+        Column(Modifier.fillMaxWidth().then(if (selecting) Modifier.background(MaterialTheme.colorScheme.background) else Modifier),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+              Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text((if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目") +
+                    (if (selecting) "（已选 ${selectedKeys.size} 部）" else ""), style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.semantics { heading() })
+                if (!selecting) Text(when {
+                    state.loading && state.books.isEmpty() -> "读取中…"
+                    else -> "${books.size} 部${if (state.errors.isNotEmpty()) " · 待确认" else ""}"
+                },
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+                if (!selecting) TextButton(onClick = { selecting = true; selectedKeys = emptyList() }, enabled = canEdit,
+                    modifier = Modifier.testTag("shelf-batch-toggle")) { Text("批量") }
+                if (!selecting) IconButton(onClick = { panel = "filters" }, enabled = !state.batchBusy, modifier = Modifier.testTag("shelf-actions")
+                    .semantics { contentDescription = "筛选与排序" }) { ReferenceIcon(ReferenceSymbol.OPTIONS) }
+                if (!selecting) IconButton(onClick = { model.layout(if (state.layout == ShelfLayout.GRID) ShelfLayout.LIST else ShelfLayout.GRID) },
+                    modifier = Modifier.testTag("shelf-layout").semantics {
+                        stateDescription = if (state.layout == ShelfLayout.GRID) "网格视图" else "列表视图"
+                        contentDescription = if (state.layout == ShelfLayout.GRID) "切换列表视图" else "切换网格视图"
+                    }) {
+                    val color = LocalContentColor.current
+                    Canvas(Modifier.size(24.dp).clearAndSetSemantics { }) {
+                        val unit = size.width / 24
+                        if (state.layout == ShelfLayout.GRID) repeat(3) { i ->
+                            drawLine(color, androidx.compose.ui.geometry.Offset(3 * unit, (5 + i * 7) * unit),
+                                androidx.compose.ui.geometry.Offset(21 * unit, (5 + i * 7) * unit), 2 * unit,
+                                androidx.compose.ui.graphics.StrokeCap.Round)
+                        } else repeat(4) { i ->
+                            drawRoundRect(color, androidx.compose.ui.geometry.Offset((3 + i % 2 * 11) * unit, (3 + i / 2 * 11) * unit),
+                                androidx.compose.ui.geometry.Size(7 * unit, 7 * unit), androidx.compose.ui.geometry.CornerRadius(unit))
+                        }
+                    }
+                }
+            }
+            if (isRoot) ShelfReadingFilters(filter, model::filter, enabled = !state.batchBusy)
+            if (!isRoot && (filter != ShelfFilter.ALL || favoritesOnly || downloadFilter != ShelfDownloadFilter.ALL || searchField != LocalSearchField.ALL)) {
+                FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                    Text(listOfNotNull(filter.takeIf { it != ShelfFilter.ALL }?.label,
+                        "仅收藏".takeIf { favoritesOnly }, downloadFilter.takeIf { it != ShelfDownloadFilter.ALL }?.label,
+                        searchField.takeIf { it != LocalSearchField.ALL }?.label).joinToString(" · "),
+                        Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    if (!selecting) TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); downloadFilter = ShelfDownloadFilter.ALL; searchField = LocalSearchField.ALL }, enabled = !state.batchBusy) { Text("重置") }
+                }
+            }
+            if (selecting) ShelfSelectionBar(
+                canEdit = canEdit, hasBooks = books.isNotEmpty(), hasSelection = selectedKeys.isNotEmpty(),
+                selectAll = { selectedKeys = visibleKeys }, clear = { selectedKeys = emptyList() },
+                unfavorite = { model.batch(selectedKeys.toSet(), ShelfBatchAction.UNFAVORITE) },
+            )
+            if (state.batchBusy) {
+                Text("正在处理 ${state.batchProcessed}/${state.batchTotal} 部")
+                if (!selecting) TextButton(model::cancelBatch) { Text("停止处理") }
+            }
+            state.batchMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+
+        }
+    }
     ReferenceRefreshBox(state.loading && state.showLoading, { model.refresh() }, Modifier.fillMaxSize(),
         enabled = canEdit && !selecting) { BoxWithConstraints(Modifier.fillMaxSize()) {
         val columns = shelfColumns(maxWidth.value, fontScale, state.layout)
         val compactContinue = maxWidth < 340.dp || fontScale >= 1.5f
         Column(Modifier.fillMaxSize()) {
-        if (selecting) SelectionActionBar(Modifier.padding(horizontal = 20.dp)) {
-            Text((if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目") + "（已选 ${selectedKeys.size} 部）",
-                style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-            ShelfReadingFilters(filter, model::filter, enabled = !state.batchBusy)
-            ShelfSelectionBar(
-                canEdit = canEdit, hasBooks = books.isNotEmpty(), hasSelection = selectedKeys.isNotEmpty(),
-                selectAll = { selectedKeys = visibleKeys }, clear = { selectedKeys = emptyList() },
-                unfavorite = { model.batch(selectedKeys.toSet(), ShelfBatchAction.UNFAVORITE) },
-            )
-            if (state.batchBusy) Text("正在处理 ${state.batchProcessed}/${state.batchTotal} 部",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            state.batchMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-        }
         LazyVerticalGrid(GridCells.Fixed(columns), state = shownScroll,
             modifier = Modifier.weight(1f).fillMaxWidth().testTag("reference-shelf"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = bottomClearance),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item(key = "heading", span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (!selecting) {
                     if (!isRoot) SettingsHeading(when {
                         searchMode -> "本机书目搜索"
                         section == ShelfSection.HISTORY -> "阅读记录"
@@ -139,7 +183,6 @@ internal fun ReferenceShelfPage(
                             }
                             ReferenceMoreButton("设置", "shelf-more", settings)
                         }
-                    }
                     }
                     if (informationState.running) TextButton({ panel = "information" }) { Text("正在补齐作品资料 · ${informationState.processed}/${informationState.total}") }
                     switchError?.let { RequestFeedback(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
@@ -158,7 +201,6 @@ internal fun ReferenceShelfPage(
             // Keep these structural keys in both modes so book anchors do not change.
             if (isRoot) {
                 item(key = "continue", span = { GridItemSpan(maxLineSpan) }) {
-                  if (!selecting) {
                   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     DiscoverySectionHeading("继续阅读", "shelf-history", "阅读记录") { list(ShelfSection.HISTORY) }
                     if (latest != null) ContinueCard(latest, model, open, read, compactContinue)
@@ -169,64 +211,12 @@ internal fun ReferenceShelfPage(
                         TextButton(onClick = { list(ShelfSection.ALL) }) { Text("选择书目，开始阅读") }
                     }
                   }
-                  }
                 }
             } else item(key = "query", span = { GridItemSpan(maxLineSpan) }) {
                 LibraryQueryField(query, { query = it }, "shelf-query", searchField.placeholder)
             }
-            item(key = "collection-heading", span = { GridItemSpan(maxLineSpan) }) {
-                if (!selecting) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                      Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目", style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.semantics { heading() })
-                        Text(when {
-                            state.loading && state.books.isEmpty() -> "读取中…"
-                            else -> "${books.size} 部${if (state.errors.isNotEmpty()) " · 待确认" else ""}"
-                        },
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                      }
-                        if (!selecting) TextButton(onClick = { selecting = true; selectedKeys = emptyList() }, enabled = canEdit,
-                            modifier = Modifier.testTag("shelf-batch-toggle")) { Text("批量") }
-                        IconButton(onClick = { panel = "filters" }, enabled = !state.batchBusy, modifier = Modifier.testTag("shelf-actions")
-                            .semantics { contentDescription = "筛选与排序" }) { ReferenceIcon(ReferenceSymbol.OPTIONS) }
-                        IconButton(onClick = { model.layout(if (state.layout == ShelfLayout.GRID) ShelfLayout.LIST else ShelfLayout.GRID) },
-                            modifier = Modifier.testTag("shelf-layout").semantics {
-                                stateDescription = if (state.layout == ShelfLayout.GRID) "网格视图" else "列表视图"
-                                contentDescription = if (state.layout == ShelfLayout.GRID) "切换列表视图" else "切换网格视图"
-                            }) {
-                            val color = LocalContentColor.current
-                            Canvas(Modifier.size(24.dp).clearAndSetSemantics { }) {
-                                val unit = size.width / 24
-                                if (state.layout == ShelfLayout.GRID) repeat(3) { i ->
-                                    drawLine(color, androidx.compose.ui.geometry.Offset(3 * unit, (5 + i * 7) * unit),
-                                        androidx.compose.ui.geometry.Offset(21 * unit, (5 + i * 7) * unit), 2 * unit,
-                                        androidx.compose.ui.graphics.StrokeCap.Round)
-                                } else repeat(4) { i ->
-                                    drawRoundRect(color, androidx.compose.ui.geometry.Offset((3 + i % 2 * 11) * unit, (3 + i / 2 * 11) * unit),
-                                        androidx.compose.ui.geometry.Size(7 * unit, 7 * unit), androidx.compose.ui.geometry.CornerRadius(unit))
-                                }
-                            }
-                        }
-                    }
-                    if (isRoot) ShelfReadingFilters(filter, model::filter)
-                    if (!isRoot && (filter != ShelfFilter.ALL || favoritesOnly || downloadFilter != ShelfDownloadFilter.ALL || searchField != LocalSearchField.ALL)) {
-                        FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
-                            Text(listOfNotNull(filter.takeIf { it != ShelfFilter.ALL }?.label,
-                                "仅收藏".takeIf { favoritesOnly }, downloadFilter.takeIf { it != ShelfDownloadFilter.ALL }?.label,
-                                searchField.takeIf { it != LocalSearchField.ALL }?.label).joinToString(" · "),
-                                Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = { favoritesOnly = false; model.filter(ShelfFilter.ALL); downloadFilter = ShelfDownloadFilter.ALL; searchField = LocalSearchField.ALL }, enabled = !state.batchBusy) { Text("重置") }
-                        }
-                    }
-                    if (!selecting && state.batchBusy) {
-                        Text("正在处理 ${state.batchProcessed}/${state.batchTotal} 部")
-                        TextButton(model::cancelBatch) { Text("停止处理") }
-                    }
-                    if (!selecting) state.batchMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-
-                }
-            }
+            if (selecting) stickyHeader(key = "collection-heading") { collectionHeader() }
+            else item(key = "collection-heading", span = { GridItemSpan(maxLineSpan) }) { collectionHeader() }
             if (state.loading && state.books.isEmpty()) item(key = "read-layout", span = { GridItemSpan(maxLineSpan) }) { ReadLayoutPlaceholder() }
             if (books.isEmpty() && !state.loading) item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
                 Column(Modifier.testTag("shelf-empty").semantics { liveRegion = LiveRegionMode.Polite }) {
@@ -297,9 +287,9 @@ internal fun ReferenceShelfPage(
 
             }
             "help" -> Text(when {
-                searchMode -> "搜索本机已保存的书名及本地 CBZ 作者、卷号和简介；书名包括显示名与识别出的元数据书名。筛选中可限定搜索字段，并组合阅读状态、收藏和下载状态；条件同时满足才显示。在线书目只匹配已保存书名，不发起网络搜索。清空搜索只清文字，清除筛选保留文字。"
-                section == ShelfSection.HISTORY -> "这里显示有阅读进度的书目，按最近阅读排序时分日期展示。收藏状态不会影响记录保留；仅打开详情产生的浏览记录在首页的最近观看中。"
-                else -> "这里显示本机已保存的全部书目，包含尚未收藏的作品。取消收藏仍保留书目与阅读进度；副本或来源失效时，已有记录仍保留。"
+                searchMode -> "搜索本机书名，以及本地 CBZ 的作者、卷号和简介。多个筛选条件需同时满足；清除筛选会保留关键词。"
+                section == ShelfSection.HISTORY -> "显示读过的作品。仅浏览过详情的作品请在首页“最近观看”中查看。"
+                else -> "显示本机全部书目。取消收藏会保留书目和阅读进度。"
             })
             else -> {
                 if (!isRoot) PanelAction("添加书目") { panel = "add" }
@@ -318,12 +308,8 @@ internal fun ReferenceShelfPage(
 internal fun ShelfReadingFilters(filter: ShelfFilter, select: (ShelfFilter) -> Unit, enabled: Boolean = true) {
     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().testTag("shelf-reading-filters"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ShelfFilter.entries.forEach { value ->
-            val background = referenceStateColor(if (filter == value) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-            TextButton(onClick = { select(value) }, enabled = enabled, shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.textButtonColors(
-                    containerColor = background,
-                    contentColor = if (filter == value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant),
-                modifier = Modifier.testTag("shelf-filter-${value.name}").semantics { selected = filter == value }) { Text(value.label) }
+            ShelfTextButton(value.label, { select(value) }, enabled = enabled, selected = filter == value,
+                modifier = Modifier.testTag("shelf-filter-${value.name}"))
         }
     }
 }
@@ -358,9 +344,10 @@ private fun ShelfTile(book: ShelfBook, model: ShelfViewModel, row: Boolean, open
             Text(book.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 minLines = 2, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             ShelfUpdateLabel(book.information, book.chapterId, book.online)
-            Text(if (book.hasProgress && !book.validProgress) "阅读位置待核对" else if (book.hasProgress) book.status.label else "尚未开始",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(shelfReadingLabel(
+                if (book.hasProgress && !book.validProgress) "阅读位置待核对" else book.status.label,
+                book.information, book.chapterId, book.online),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (!book.available) Text(if (book.online) "来源已失效" else "副本缺失", style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -426,7 +413,8 @@ private fun ContinueCard(book: ShelfBook, model: ShelfViewModel, open: (ShelfBoo
             Text(book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             ShelfUpdateLabel(book.information, book.chapterId, book.online)
-            Text(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
+            Text(shelfReadingLabel(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
+                book.information, book.chapterId, book.online),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
             book.ratio?.let { fraction ->
                 Text("${(fraction * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

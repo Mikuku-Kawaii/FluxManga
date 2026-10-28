@@ -69,10 +69,10 @@ internal fun ReaderOptionsSettings(world: PrototypeWorld) {
         Option("跨章节连读", "离线缺章时停止，不跨本地书目", options.continuous) { change(options.copy(continuous = it)) }
         Option("宽屏双页", "横向宽屏的左右翻页模式可用", options.spread) { change(options.copy(spread = it)) }
         SettingsDisclosure("操作说明") {
-            Text("阅读操作在当前空间共用，即时保存；不会修改作品的阅读方式或位置。")
-            Text("音量键翻页默认关闭。隐藏工具且阅读器处于前台时，释放按键翻动一次；默认音量减向后、音量加向前，反向只调整阅读方向。")
-            Text("可捏合至 3×，放大时拖动查看；始终保留放大 / 还原按钮。读完后继续翻动可进入相邻章节，本地 CBZ 不自动打开其他书目。")
-            Text("宽屏双页仅在宽度至少 600dp 的横向阅读区域并排两页；竖屏和条漫保持原方式。")
+            Text("阅读操作设置在当前空间共用，即时保存。")
+            Text("隐藏阅读工具后，音量减向后翻，音量加向前翻；可设置反向。")
+            Text("捏合最多放大 3 倍，拖动查看。在线漫画读完后可继续翻到相邻章节。")
+            Text("横向阅读区域足够宽时显示双页，竖屏和条漫保持单页。")
         }
     } }
 }

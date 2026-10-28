@@ -149,7 +149,7 @@ class MainActivity : ComponentActivity() {
             worldSession.state.value.phase == SwitchPhase.Stable) {
             val selected = uris.distinct()
             if (selected.size <= com.flux.manga.ui.pages.MAX_CBZ_BATCH) pendingCbzUris = selected
-            else Toast.makeText(this, "每批最多选择 ${com.flux.manga.ui.pages.MAX_CBZ_BATCH} 个文件，请分批导入；本次未开始导入", Toast.LENGTH_LONG).show()
+            else Toast.makeText(this, "每批最多 ${com.flux.manga.ui.pages.MAX_CBZ_BATCH} 个文件，请重新选择。", Toast.LENGTH_LONG).show()
         }
         waitingForCbz = false
     }

@@ -147,7 +147,7 @@ internal fun VisitsPage(session: WorldSession, back: () -> Unit, open: (BrowseVi
     }
     }
     if (help) ReferenceDialog(onDismissRequest = { help = false }, title = { Text("浏览记录") },
-        text = { Text("仅保存当前空间的浏览记录，与阅读进度分开。删除或清空记录保留作品、收藏、原文件和阅读进度。",
+        text = { Text("保存当前空间的浏览记录。清空记录会保留书目和阅读进度。",
             Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { help = false }) { Text("关闭") } })
     if (clear) ReferenceDialog(onDismissRequest = { clear = false }, title = { Text("清空浏览记录？") },

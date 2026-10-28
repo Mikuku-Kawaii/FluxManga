@@ -25,8 +25,8 @@ android {
         applicationId = "com.flux.manga"
         minSdk = 31
         targetSdk = 36
-        versionCode = providers.gradleProperty("fluxVersionCode").getOrElse("10").toInt()
-        versionName = providers.gradleProperty("fluxVersionName").getOrElse("1.0.0")
+        versionCode = providers.gradleProperty("fluxVersionCode").getOrElse("11").toInt()
+        versionName = providers.gradleProperty("fluxVersionName").getOrElse("1.0.1")
         // Public release configuration only. Never put signing private keys in BuildConfig.
         fun updateString(name: String, property: String, fallback: String = "") {
             val value = providers.gradleProperty(property).getOrElse(fallback)
@@ -104,6 +104,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    implementation("androidx.webkit:webkit:1.14.0")
     implementation("org.jsoup:jsoup:1.21.2")
     // BSDIFF40 BZip2 streams; no native patch runtime or additional network stack.
     implementation("org.apache.commons:commons-compress:1.28.0")

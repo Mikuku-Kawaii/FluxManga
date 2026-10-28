@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,24 +15,30 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 
-/** The title and reading filters are fixed by the caller, above these three actions. */
+/** Actions use the exact same compact text button as the shelf reading filters. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ShelfSelectionBar(
     canEdit: Boolean, hasBooks: Boolean, hasSelection: Boolean,
     selectAll: () -> Unit, clear: () -> Unit, unfavorite: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        @Composable fun Action(label: String, enabled: Boolean, action: () -> Unit) {
-            FilledTonalButton(action, enabled = enabled,
-                modifier = Modifier.weight(1f).heightIn(min = 48.dp).fillMaxHeight(),
-                shape = MaterialTheme.shapes.medium,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)) {
-                Text(label, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-        }
-        Action("全选", canEdit && hasBooks, selectAll)
-        Action("清空", canEdit && hasSelection, clear)
-        Action("取消收藏", canEdit && hasSelection, unfavorite)
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically) {
+        ShelfTextButton("全选", selectAll, enabled = canEdit && hasBooks)
+        ShelfTextButton("清空", clear, enabled = canEdit && hasSelection)
+        ShelfTextButton("取消收藏", unfavorite, enabled = canEdit && hasSelection)
+    }
+}
+
+@Composable
+internal fun ShelfTextButton(label: String, action: () -> Unit, enabled: Boolean,
+    modifier: Modifier = Modifier, selected: Boolean? = null) {
+    val background = referenceStateColor(if (selected == true) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+    TextButton(action, enabled = enabled, shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.textButtonColors(containerColor = background,
+            contentColor = if (selected == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant),
+        modifier = modifier.then(if (selected != null) Modifier.semantics { this.selected = selected } else Modifier)) {
+        Text(label)
     }
 }
 

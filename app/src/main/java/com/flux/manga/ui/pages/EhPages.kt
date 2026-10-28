@@ -286,7 +286,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
                 state.settings.original, model::original, enabled = state.ready && !state.busy)
         } }
         if (navigation.section == SourceSettingsSection.CONNECTION && site == GallerySite.EX) item {
-            Text("EX 权限独立验证；EH 登录成功不代表 EX 可用。", style = MaterialTheme.typography.bodySmall,
+            Text("EX 需要单独验证访问权限。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -301,7 +301,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
             val pass = page.cookie(site.base, "ipb_pass_hash")
             val ex = if (site == GallerySite.EX) page.cookie(site.base, "igneous") else ""
             if (member.isBlank() || pass.isBlank() || (site == GallerySite.EX && ex.isBlank())) {
-                throw java.io.IOException("尚未取得 ${site.label} 本站会话，请登录后打开本站；EX 不沿用 EH 登录结果")
+                throw java.io.IOException("请登录后打开 ${site.label}，以验证本站权限。")
             }
             model.connectWebAccount(EhAccount(member, pass, "", ex))
         }, afterConnected = { browse(true) })
@@ -339,7 +339,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
                 FilterChip(state.folder == "all", { model.folder("all") }, enabled = canBrowse && !state.busy, label = { Text("全部分类") })
                 state.folders.forEach { folder -> FilterChip(state.folder == folder.id, { model.folder(folder.id) }, enabled = canBrowse && !state.busy, label = { Text(folder.title) }) }
             }
-                if (site == GallerySite.EX && state.batch != null) Text("本批 ${state.ehOverlap} 本在当前空间已有 EH 同画廊 ID 记录；仍按 EX 独立导入，不合并收藏或进度。")
+                if (site == GallerySite.EX && state.batch != null) Text("其中 ${state.ehOverlap} 本已有 EH 记录，EX 将单独保存。")
                 AccountLibraryImportPanel("按收藏分类分批导入，关键词可缩小列表范围；本次只保存当前批作品。",
                     state.batch?.books?.size ?: 0, batch = true,
                     ready = state.ready, signedIn = signedIn, busy = state.busy,

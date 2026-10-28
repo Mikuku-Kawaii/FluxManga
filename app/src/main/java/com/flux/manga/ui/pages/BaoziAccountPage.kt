@@ -36,7 +36,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
     var favorite by rememberSaveable { mutableStateOf(false) }
     var confirm by remember { mutableStateOf<String?>(null) }
     DisposableEffect(model, lifecycle) {
-        if (lifecycle == Lifecycle.State.RESUMED) model.start()
+        if (lifecycle == Lifecycle.State.RESUMED) { model.retryRecovery(); model.start() }
         onDispose { confirm = null; model.leave() }
     }
     LaunchedEffect(state.snapshotRevision) {
@@ -56,7 +56,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
         if (navigation.section == SourceSettingsSection.IMPORT) informationModel?.let { info -> item("information") { SourceInformationEntry(info, enabled = !state.busy) } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("account") { AccountPanel(navigation.section.label) {
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
-                "我的书架（当前页面快照）", state.username)
+                "我的书架（已读取部分）", state.username)
             WebAccountEntry(BaoziWebSite.url,
                 if (state.autoLoginAvailable) "已记住登录，掉线后在后台恢复，不弹出登录页。" else "设置一次自动登录，后续掉线在后台恢复。", state.loaded && !state.busy,
                 connect = { page, _, name ->
@@ -87,7 +87,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                 TextButton(onClick = library, enabled = !state.busy) { Text("查看在线书库") }
                 AccountMoreActions("任务管理") { close ->
                     TextButton(onClick = { close(); confirm = "finish" }, enabled = state.loaded && !state.busy) { Text(if (job.remaining > 0) "结束此任务" else "收起结果") }
-                    Text("统计仅针对这次选中的 ${job.items.size} 本；停止或失败保留已提交批次。")
+                    Text("本次选择 ${job.items.size} 本，已导入书目保留。")
                 }
             }
         } } }
@@ -98,7 +98,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                 Text("已有书目与阅读进度保留。", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                Text("我的书架 · 本次快照，完整性未确认", style = MaterialTheme.typography.bodySmall,
+                Text("我的书架 · 已读取部分", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 ImportPreviewFilter(previewQuery, { previewQuery = it }, state.entries.size, visibleEntries.size,
                     selection.size, hiddenImportSelection(selection, visibleEntries.map { it.card.key.mangaId }), !state.busy,
@@ -110,7 +110,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                 }
                 AccountMoreActions("导入说明") { _ ->
                     Text("账号服务：网页登录时使用的包子官网")
-                    Text("来自账号的“我的书架”，只能确认本次页面快照。勾选后只导入书目引用，不下载正文；已有收藏和阅读进度保持。")
+                    Text("仅导入已读取的书目，不下载正文。已有收藏和进度保留。")
                 }
                 if (unfinished) Text("请先继续或结束上次任务，再创建新的导入。")
             }
@@ -132,7 +132,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
     if (confirm != null) ReferenceDialog(onDismissRequest = { confirm = null },
         title = { Text(if (confirm == "import") "导入选中的书目？" else "结束此导入任务？") },
         text = { Text(if (confirm == "import") "处理本次选中的 ${selection.size} 本。已有书目、收藏和阅读进度保持，不改写远端书架或下载正文。"
-            else "已提交的书目和阅读进度保留，未处理部分不再继续；以后可重新选择导入。", Modifier.verticalScroll(rememberScrollState())) },
+            else "结束剩余导入，已导入书目和进度保留。", Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm(if (confirm == "import") "导入所选书目" else "结束任务", onClick = {
             val action = confirm; confirm = null
             if (action == "import") model.importSelected(selection.toSet(), favorite) else model.finishTask()

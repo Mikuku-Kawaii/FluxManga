@@ -144,7 +144,7 @@ internal fun DockEffectControls(effects: DockEffects, change: (DockEffects) -> U
         basic.forEach { Option(it) }
         SettingsDisclosure("玻璃效果细节", "采样、模糊与边缘光效") {
             DockEffectOption.entries.filterNot { it in basic }.forEach { Option(it) }
-            Text("低效果与减少动画重启后保留；其余玻璃选项随当前任务恢复。", style = MaterialTheme.typography.bodySmall)
+            Text("低效果与减少动画长期保存，其余选项仅本次生效。", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -204,7 +204,7 @@ internal fun AboutSettingsPage(back: () -> Unit, licenses: () -> Unit, updates: 
             }
         } } }
         item("description") { SettingsPanel { SettingsDisclosure("应用说明") {
-            Text("支持本地 CBZ、Komga、拷贝漫画与包子漫画，提供书库管理、四种阅读方式与离线下载。各图源以实际支持能力和准入状态为准。")
+            Text("支持本地与在线漫画，提供书库管理、多种阅读方式和离线下载。")
         } } }
     }
 }
@@ -266,7 +266,7 @@ internal fun SourceManagementPage(
                 Source(SourceKind.EX, "manage-ex-account", ex)
             }
         } }
-        item("scope") { Text("开关仅控制发现与搜索；关闭后仍保留账号、书库和阅读进度。",
+        item("scope") { Text("控制图源是否参与发现与搜索，关闭后保留账号和书库。",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }

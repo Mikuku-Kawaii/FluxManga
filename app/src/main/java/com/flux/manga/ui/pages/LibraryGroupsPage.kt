@@ -169,7 +169,7 @@ internal fun LibraryGroupsPage(session: WorldSession, bookKey: String?, back: ()
         }
         item { SettingsPanel { SettingsDisclosure("分组使用说明") {
             Text("一部作品可加入多个分组；旧自建标签在这里保留。图源标签仍从标签页浏览。")
-            Text("普通勾选即时保存关联；批量管理中勾选仅表示选择，确认加入或移出后保存。选择筛选结果会替换已有批量选择。")
+            Text("普通勾选即时保存，批量操作需确认。“选择筛选结果”会替换当前选择。")
             Text("移出分组或删除分组都保留书目、收藏、阅读进度、下载与原文件。")
         } } }
     }

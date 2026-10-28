@@ -188,12 +188,12 @@ internal class PrivateDownloadsModel(private val app: Application, private val s
     if (showSettings) ReferenceSheet(onDismissRequest = { showSettings = false }, title = { Text("下载设置") },
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SettingsSwitchRow("允许计费网络", "默认仅非计费网络", state.metered, model::metered, enabled = !state.busy)
-            Text("仅在本页前台下载，离页或锁屏暂停；返回后显式继续。已完成章节可离线阅读。")
+            Text("离页或锁屏会暂停下载，返回后可继续。已完成章节可离线阅读。")
             Text("EH / EX 固定下载站点图，在线原图设置保持。", style = MaterialTheme.typography.bodySmall)
             TextButton(feedbackAttempt(model::reload), enabled = !state.busy) { Text("重新读取队列") }
         } }, confirmButton = { TextButton({ showSettings = false }) { Text("关闭") } })
     if (confirm) ReferenceDialog(onDismissRequest = { confirm = false }, title = { Text("下载所选章节？") },
-        text = { Text("保存 ${selected.size} 章的应用内加密副本，单次最多 200 章。副本不包含在书库备份中；原书目、进度和文件保持。", Modifier.verticalScroll(rememberScrollState())) },
+        text = { Text("加密下载 ${selected.size} 章，每次最多 200 章。下载内容不随书库备份。", Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm("确认下载", onClick = { confirm = false; model.enqueue(selected); selected = emptySet() }) },
         dismissButton = { TextButton({ confirm = false }) { Text("取消") } })
     remove?.let { job -> ReferenceDialog(onDismissRequest = { remove = null }, title = { Text("移除任务与下载副本？") },

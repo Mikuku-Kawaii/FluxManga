@@ -102,7 +102,7 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
                     Modifier.testTag("update-automatic"), model.configured)
                 Text("渠道：${model.channel}")
                 if (primaryMessage == null) state.message?.let { Text(it) }
-                Text("冷启动时自动检查，不打断阅读。自动下载离开前台或网络变化时暂停；安装由系统确认。")
+                Text("启动时自动检查更新。离开前台或网络变化会暂停自动下载，安装需系统确认。")
                 state.artifact?.let { a ->
                     Text("${a.abis.joinToString(" / ")} · Android API ${a.minSdk}+")
                     Text("完整包 · ${sizeLabel(a.size)}")
@@ -119,13 +119,13 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
                     if (!state.busy && (state.bytes > 0 || state.phase == UpdatePhase.READY))
                         TextButton(onClick = { confirmClear = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("取消并清理此更新包") }
                 }
-                Text("清理仅影响更新包，保留书库、章节下载、阅读位置和原文件。安装失败仍可使用当前版本。",
+                Text("清理更新包会保留应用和阅读数据。",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } }
     }
     if (confirmClear) ReferenceDialog(onDismissRequest = { confirmClear = false }, title = { Text("清理此更新包？") },
-        text = { Text("删除此版本的完整包、增量包和合成临时文件；已安装应用、漫画和阅读位置不变。") },
+        text = { Text("删除此版本的更新文件，保留已安装应用和阅读数据。") },
         confirmButton = { ReferenceDialogConfirm("清理更新包", onClick = { confirmClear = false; model.clearDownload() }, destructive = true) },
         dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("保留") } })
 }

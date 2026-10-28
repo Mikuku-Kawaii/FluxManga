@@ -77,7 +77,7 @@ internal fun downloadBookStatuses(jobs: List<ChapterDownload>) = jobs.filter { i
 
 /** Partial snapshots and download insertion order cannot establish chapter adjacency. */
 internal fun completeReaderCatalog(catalog: OfflineCatalog?, source: String, manga: String): List<SourceChapter> {
-    if (catalog?.complete != true) throw IOException("离线目录不完整，无法确定相邻章节；请从目录选择，联网时可缓存完整目录")
+    if (catalog?.complete != true) throw IOException("离线目录不完整，请手动选择章节或联网更新目录。")
     require(catalog.source == source && catalog.manga == manga && catalog.chapters.all {
         it.manga == SourceMangaKey(SourceWorld.SFW, source, manga)
     }) { "离线目录身份不匹配" }

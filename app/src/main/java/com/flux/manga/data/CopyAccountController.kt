@@ -110,7 +110,7 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
                 nextOffset = null, reportedTotal = null, notice = "官网账号已验证并加密保存")
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) { throw java.io.IOException(if (error is SourceException.AuthenticationRequired)
-            "网页登录会话未被账号接口接受，尚未保存；当前网页和原账号保留。" else copyAccountFailure(error)) }
+            "网页登录验证失败，请重试连接。" else copyAccountFailure(error)) }
         finally { if (allowed(ticket)) mutable.value = state.value.copy(busy = false, stage = null) }
     }
     fun logout() {
@@ -178,7 +178,7 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
         leave()
         run("正在核对已提交进度") { ticket ->
             val c = store.current { allowed(ticket) }; check(ticket); publish(c, ticket)
-            mutable.value = state.value.copy(notice = "已停止，已提交书目保留；重新验证后可显式继续。")
+            mutable.value = state.value.copy(notice = "已停止，重新验证后可继续导入。")
         }
     }
     fun leave() { revision++; work?.cancel(); work = null; account = null
@@ -187,19 +187,19 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
 }
 internal fun copyAccountFailure(error: Exception) = when (error) {
     is SourceException.LoginRejected -> when (error.reason) {
-        "account_missing" -> "当前接口返回“账户不存在”（${error.code}）。若官方 App 可登录，可能是接口版本不兼容，并不代表账号无效。"
+        "account_missing" -> "账户不存在（${error.code}）。若官方 App 能登录，可能是接口不兼容。"
         "password_incorrect" -> "服务器提示密码不正确，请重新输入（${error.code}）。"
         "verification_required" -> "网站要求验证码，请先在官方入口完成验证（${error.code}）。"
-        "client_restricted" -> "服务器限制了当前客户端访问（${error.code}），要求使用最新版官方 App 并等待限制解除；本次未完成账号验证。"
+        "client_restricted" -> "客户端访问受限（${error.code}），请在最新版官方 App 登录后再试。"
         else -> "服务器拒绝了本次登录（${error.code}），请核对账号或稍后重试。"
     }
-    is SourceException.AuthenticationRequired -> "账号未通过验证，请重新登录；已有书目与任务保留。"
-    is SourceException.Timeout -> "请求超时，已提交批次保留；登录不会自动重发。"
+    is SourceException.AuthenticationRequired -> "账号验证失败，请重新登录。"
+    is SourceException.Timeout -> "请求超时，请重试。已导入书目保留。"
     is SourceException.Transport -> "无法连接拷贝漫画，请检查网络后重试。"
     is SourceException.RateLimited -> "请求过于频繁，请稍后重试。"
-    is SourceException.HttpStatus -> "服务器返回 HTTP ${error.status}；本页未提交，可重试。"
-    is SourceException.InvalidResponse -> "返回数据格式与当前适配不一致；未将失败当作成功或空收藏。"
+    is SourceException.HttpStatus -> "读取失败（HTTP ${error.status}），请重试。"
+    is SourceException.InvalidResponse -> "暂不支持此返回格式，请稍后重试。"
     is java.io.IOException -> "账号或提交结果尚未确认，请重新读取核对后继续。"
-    is IllegalArgumentException -> "预览或导入状态超出支持范围；预览最多 1000 项，可使用当前范围分页导入。"
+    is IllegalArgumentException -> "最多预览 1000 项，更多作品可按当前范围分页导入。"
     else -> "操作未完成，已提交书目保留，请重试或重新验证账号。"
 }

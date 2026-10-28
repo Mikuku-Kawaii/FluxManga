@@ -44,7 +44,7 @@ internal fun jmFailure(error: Exception): String = when (error) {
     is SourceException.HttpStatus -> "JMComic 线路返回 HTTP ${error.status}，请稍后重试或更换线路"
     is SourceException.NotFound -> "作品或章节不存在"
     is IOException -> error.message ?: "JMComic 请求失败，请重试"
-    else -> "JMComic 请求或解析失败，请重试；现有记录保留"
+    else -> "JMComic 加载失败，请重试。"
 }
 
 internal class JmStore(context: Context, private val session: WorldSession) {

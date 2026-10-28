@@ -243,14 +243,14 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, "application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra(Intent.EXTRA_RETURN_RESULT, true)
         prefs.edit { putLong("install-target", a.version) }
-        mutable.update { it.copy(phase = UpdatePhase.INSTALLING, message = "请在系统安装页面确认；取消不会改变当前应用") }
+        mutable.update { it.copy(phase = UpdatePhase.INSTALLING, message = "请在系统页面确认安装。") }
         launch(intent)
     }
     fun installationResult(result: Int) {
         // A self-update usually kills this process; only next-launch version identity proves success.
         prefs.edit { remove("install-target") }
         mutable.update { it.copy(phase = UpdatePhase.READY, message = if (result == android.app.Activity.RESULT_CANCELED)
-            "已取消或未完成安装，更新包保留，可重试" else if (result == android.app.Activity.RESULT_OK) "系统已接受安装结果；下次启动核对版本" else "系统安装失败，当前版本保留，可重试") }
+            "已取消或未完成安装，更新包保留，可重试" else if (result == android.app.Activity.RESULT_OK) "系统已返回安装结果，下次启动确认版本。" else "系统安装失败，当前版本保留，可重试") }
     }
     fun launchError() { mutable.update { it.copy(phase = UpdatePhase.READY, message = "无法打开系统安装页面，请检查系统安装功能") } }
     private fun launchOperation(block: suspend () -> Unit) {

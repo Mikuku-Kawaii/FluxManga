@@ -9,19 +9,19 @@ enum class SecretKeyFailure { MISSING_ENVELOPE, MISSING_KEYSTORE_KEY, INVALID_EN
 class SecretKeyException(val reason: SecretKeyFailure) : GeneralSecurityException(reason.name)
 
 internal enum class StorageProblem(val title: String, val guidance: String) {
-    MISSING_ENVELOPE("密钥文件缺失", "保留原库与现有密钥文件；仅复制数据库不能恢复访问，当前不提供自动补钥。"),
-    MISSING_MASTER("设备密钥缺失", "可能发生过应用数据恢复或密钥丢失；原库保留，当前无法重新生成可解密旧库的密钥。"),
-    INVALID_ENVELOPE("密钥文件校验失败", "密钥文件可能不完整或与此安装不匹配；保留原文件，不以新密钥覆盖。"),
-    KEY_INVALIDATED("设备密钥已失效", "当前无法解密原数据；保留原库，不卸载、不清数据，不自动重建。"),
-    KEY_UNAVAILABLE("设备密钥暂不可用", "先解锁手机，稍后重试；持续失败时保留数据和现有安装。"),
-    DATABASE_INCOMPLETE("数据库文件不完整", "检测到空库，或有密钥 / 数据库残留却缺少主文件；已停止打开，不自动创建空库替代。"),
-    DATABASE_REJECTED("数据库无法打开", "可能是校验、版本或迁移问题；保留原库与当前安装，更新兼容版本后重试，不自动删除或重建。"),
-    DATABASE_INTEGRITY("数据库结构检查未通过", "检查副本发现结构异常；原库未修复或改写，请保留现有安装和文件。"),
-    DATABASE_RELATIONS("数据库关联检查未通过", "副本中存在不完整的记录关联；原库保持，不自动删除记录或修复。"),
-    DATABASE_VERSION("数据库版本不兼容", "仅能在副本上检查应用已支持的迁移；请使用兼容版本，原库未迁移或重建。"),
-    DIAGNOSTIC_SPACE("检查副本所需空间不足", "请先释放设备空间，再重新检查；本次没有修改原库或密钥。"),
-    PAYLOAD_INVALID("加密内容校验失败", "未返回未校验内容；原记录保留，可重新进入页面核对。"),
-    IO("存储暂不可用", "检查可用空间并稍后重试；原库与密钥不重置。"),
+    MISSING_ENVELOPE("密钥文件缺失", "请保留数据库与密钥文件，无法自动补回密钥。"),
+    MISSING_MASTER("设备密钥缺失", "原数据库保留，但缺少设备密钥，暂时无法解密。"),
+    INVALID_ENVELOPE("密钥文件校验失败", "密钥文件损坏或与当前安装不匹配，请保留原文件。"),
+    KEY_INVALIDATED("设备密钥已失效", "无法解密原数据，请勿卸载应用或清除数据。"),
+    KEY_UNAVAILABLE("设备密钥暂不可用", "请解锁手机后重试；仍失败时请保留现有安装和数据。"),
+    DATABASE_INCOMPLETE("数据库文件不完整", "数据库文件缺失或为空，已停止打开。请保留现有文件。"),
+    DATABASE_REJECTED("数据库无法打开", "数据库校验或版本不兼容，请保留数据，更新应用后重试。"),
+    DATABASE_INTEGRITY("数据库结构检查未通过", "副本结构异常，原数据库保留。请勿卸载或清除数据。"),
+    DATABASE_RELATIONS("数据库关联检查未通过", "副本存在不完整记录，原数据库保留。"),
+    DATABASE_VERSION("数据库版本不兼容", "请使用兼容版本，原数据库保留。"),
+    DIAGNOSTIC_SPACE("检查副本所需空间不足", "请释放设备空间后重试。"),
+    PAYLOAD_INVALID("加密内容校验失败", "内容校验失败，请重新进入页面。原记录保留。"),
+    IO("存储暂不可用", "请检查剩余空间后重试。"),
 }
 internal class StorageAccessException(val problem: StorageProblem, cause: Throwable? = null) :
     IOException(problem.title, cause)

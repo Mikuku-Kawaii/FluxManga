@@ -87,7 +87,7 @@ internal class LocalBookmarkModel(private val repository: LocalBookmarks, privat
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
                 if (repository.active()) mutable.value = state.value.copy(busy = false, loaded = false,
-                    error = if (writing) "操作结果待核对，请先刷新后再操作；备注草稿保留。${failure.message.orEmpty()}"
+                    error = if (writing) "保存结果待确认，请刷新后重试。草稿保留。${failure.message.orEmpty()}"
                         else "书签读取失败，请重试。${failure.message.orEmpty()}")
             }
         }

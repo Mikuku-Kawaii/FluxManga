@@ -120,13 +120,13 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
             val errors = mutableListOf<String>()
             try { localRows = local.cards(identity.world).map { it.shelfBook() } }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { errors += "本地书库读取失败；保留已显示内容，请重试" }
+            catch (_: Exception) { errors += "本地书库读取失败，请重试。" }
             try { onlineRows = online.shelf().map { it.shelfBook() } }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { errors += "在线书库读取失败；保留已显示内容，请重试" }
+            catch (_: Exception) { errors += "在线书库读取失败，请重试。" }
             try { downloadRows=DownloadStore(WorldDataStore(getApplication()).accountImportDatabase()).list { active() } }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { errors += "下载状态读取失败；保留已显示状态，请重试" }
+            catch (_: Exception) { errors += "下载状态读取失败，请重试。" }
             if (active()) mutable.value = state.value.copy(books = withShelfDownloads(localRows + onlineRows,downloadRows), loading = false, errors = errors)
             if (active() && !silent) onlineRows.forEach { prepareInformation(it, refreshMetadata = true) }
         }
@@ -194,7 +194,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
                 message = "已停止，已完成 ${completed.size}/${rows.size} 部；已提交的操作保留。"
                 throw cancelled
             } catch (_: Exception) {
-                message = "已完成 ${completed.size}/${rows.size} 部；其余操作未确认，请刷新核对后重试。"
+                message = "已完成 ${completed.size}/${rows.size} 部，其余请刷新确认后重试。"
             } finally {
                 if (active()) {
                     mutable.value = state.value.copy(batchBusy = false, batchCompleted = completed.toSet(), batchMessage = message)

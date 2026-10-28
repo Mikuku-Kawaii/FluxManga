@@ -304,7 +304,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                 ReferenceButton(feedbackAttempt({ model.login(username, password); password = "" }), enabled = state.ready && !state.busy && username.isNotBlank() && password.isNotEmpty()) { Text("登录") }
             }
             if (state.settings.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
-            Text("接回软件的会话按里世界加密保存。登录网页有临时存储，关闭时清理；切换 API 线路后需重新登录。", style = MaterialTheme.typography.bodySmall)
+            Text("登录信息加密保存，切换 API 线路后需重新登录。", style = MaterialTheme.typography.bodySmall)
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部收藏或按文件夹导入；已有书目与阅读进度保留。",
             state.ready && state.settings.account != null, state.busy, "import-jm-library", favorites) }

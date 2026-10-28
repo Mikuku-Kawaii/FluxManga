@@ -3,11 +3,6 @@ package com.flux.manga.ui.pages
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.flux.manga.data.OnlineBookInformation
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -18,12 +13,12 @@ internal data class ShelfUpdateStatus(val label: String, val newerChapters: Bool
 /** Compare actual chapter identities in reading order, never local save/read timestamps. */
 internal fun shelfUpdateStatus(info: OnlineBookInformation?, chapter: String?, online: Boolean = true): ShelfUpdateStatus {
     if (!online) return ShelfUpdateStatus("本地作品")
-    if (info?.status?.trim()?.uppercase(Locale.ROOT) in setOf("已完结", "完结", "已完結", "完結", "COMPLETED", "ENDED", "FINISHED"))
-        return ShelfUpdateStatus("已完结")
     val newer = info?.chapterGroups?.values?.any { ids ->
         if (chapter.isNullOrBlank()) ids.isNotEmpty()
         else ids.indexOf(chapter).let { index -> index >= 0 && index < ids.lastIndex }
     } == true
+    if (info?.status?.trim()?.uppercase(Locale.ROOT) in setOf("已完结", "完结", "已完結", "完結", "COMPLETED", "ENDED", "FINISHED"))
+        return ShelfUpdateStatus("已完结", newer)
     val date = info?.takeIf { it.contentUpdated }?.updated?.trim()?.let { raw ->
         val match = Regex("^(\\d{4})[-/年](\\d{1,2})[-/月](\\d{1,2})(?:日|(?=T|\\s|$))").find(raw)
         match?.let {
@@ -32,18 +27,15 @@ internal fun shelfUpdateStatus(info: OnlineBookInformation?, chapter: String?, o
         }
     }
     return ShelfUpdateStatus(date?.format(DateTimeFormatter.ofPattern("MM月dd日更新", Locale.CHINA))
-        ?: if (newer) "有新章节" else "更新日期未知", newer)
+        ?: "更新日期未知", newer)
 }
+
+internal fun shelfReadingLabel(label: String, info: OnlineBookInformation?, chapter: String?, online: Boolean = true): String =
+    label + if (shelfUpdateStatus(info, chapter, online).newerChapters) " · 有未看章节" else ""
 
 @Composable
 internal fun ShelfUpdateLabel(info: OnlineBookInformation?, chapter: String?, online: Boolean = true) {
     val status = shelfUpdateStatus(info, chapter, online)
-    val dark = MaterialTheme.colorScheme.background.luminance() < .5f
-    // Same green as the chapter directory's read state, with the existing dark/light contrast.
     Text(status.label, style = MaterialTheme.typography.bodySmall,
-        color = if (status.newerChapters) { if (dark) Color(0xFF81C784) else Color(0xFF256A2A) }
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.semantics {
-            contentDescription = status.label + if (status.newerChapters) "，有尚未读到的章节" else ""
-        })
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
