@@ -29,6 +29,7 @@ internal data class BaoziDetailState(val book: BaoziBook? = null, val busy: Bool
 
 internal class BaoziModel(private val app: Application, private val session: WorldSession, private val mangaId: String?, private val sourceId: String = BaoziEndpoint.SOURCE_ID) : ViewModel() {
     val library = OnlineLibrary(app, session)
+    private val blacklist = TagBlacklistFilter(app, session)
     private val data = WorldDataStore(app)
     private val identity = session.identity.value
     private val detailCache = mangaId?.let { DetailPageCache(app, session, sourceId, it) }
@@ -39,7 +40,7 @@ internal class BaoziModel(private val app: Application, private val session: Wor
     }
     var submitted by mutableStateOf<String?>(null); private set
     val feed = DiscoveryFeedController(viewModelScope, ::active, ::baoziFailure) { page ->
-        source().search(requireNotNull(submitted), page)
+        blacklist.apply(source().search(requireNotNull(submitted), page))
     }
     fun search(query: String): Boolean {
         if (!active() || (feed.state.value.busy && submitted == query.trim())) return false

@@ -202,7 +202,21 @@ internal class PicaClient(private val session: WorldSession, private val account
         }
         val routed = if (websiteHost == host) url else URI(original.scheme, original.userInfo, websiteHost,
             original.port, original.path, original.query, original.fragment).toASCIIString()
-        val reply = native.picaImage(context, routed)
+        // The website exposes both proxy and original image addresses. A failed proxy
+        // must not turn a readable original into a permanent missing-cover result.
+        // No account headers are sent by picaImage on either route.
+        val reply = try { native.picaImage(context, routed) }
+        catch (error: SourceException) {
+            val transient = error is SourceException.Timeout || error is SourceException.Transport ||
+                (error is SourceException.HttpStatus && error.status.toInt() in 500..599)
+            val failedProxy = routed != url && (error is SourceException.NotFound ||
+                error is SourceException.AuthenticationRequired)
+            if (!transient && !failedProxy) throw error
+            currentCoroutineContext().ensureActive(); active()
+            delay(350)
+            active()
+            native.picaImage(context, url)
+        }
         try { currentCoroutineContext().ensureActive(); active(); require(reply.contentType?.startsWith("image/") == true) }
         catch (error: Throwable) { reply.body.fill(0); throw error }
         return reply.body

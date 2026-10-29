@@ -86,7 +86,10 @@ internal fun PrivateSourceCover(session: WorldSession, source: String, id: Strin
             if (currentCoroutineContext().isActive) error = "封面请求已取消"
             throw cancelled
         }
-        catch (_: SourceException.NotFound) { missing = true }
+        catch (_: SourceException.NotFound) {
+            if (com.flux.manga.data.isPicaSource(source)) error = "封面暂不可用"
+            else missing = true
+        }
         catch (_: SourceException.Timeout) { error = "封面加载超时" }
         catch (_: Exception) { error = "封面加载失败" }
     }

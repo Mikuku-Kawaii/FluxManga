@@ -128,14 +128,15 @@ internal class OnlineBookInformationLoader(private val app: Application, private
         return ids.distinct()
     }
     suspend fun load(source: String, id: String, force: Boolean = false, refreshMetadata: Boolean = false,
-        loadCover: Boolean = true, onMetadata: suspend (OnlineBookInformation) -> Unit = {}): BookInformationResult = slots.withPermit { coroutineScope {
+        loadCover: Boolean = true, loadChapters: Boolean = true, onMetadata: suspend (OnlineBookInformation) -> Unit = {}): BookInformationResult = slots.withPermit { coroutineScope {
         if (!active()) throw CancellationException()
         var info = store.read(source, id)
         var metadataError: String? = null
-        if (info == null || !info.detailsReady || !info.chaptersKnown || force || refreshMetadata) {
+        if (info == null || !info.detailsReady || (loadChapters && !info.chaptersKnown) || force || refreshMetadata) {
             info = try { if (identity.world == PrototypeWorld.SFW) when {
                 isCopySource(source) -> copyMangaClient(session, source).let { client ->
-                    client.detail(id).info().copy(chapterGroups = mapOf("default" to chapterIds { client.allChapters(id, it) }), chaptersKnown = true)
+                    val details = client.detail(id).info()
+                    if (loadChapters) details.copy(chapterGroups = mapOf("default" to chapterIds { client.allChapters(id, it) }), chaptersKnown = true) else details
                 }
                 isBaoziSource(source) -> session.baoziSources.client(app, source).source.detail(id).let {
                     OnlineBookInformation(it.card.title, it.author, it.description, it.tags.orEmpty(),
@@ -145,7 +146,8 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                 }
                 else -> KomgaAccess(app, session, source).client().let { client ->
                     val key = SourceMangaKey(SourceWorld.SFW, source, id)
-                    client.detail(key).info().copy(chapterGroups = mapOf("default" to chapterIds { client.chapters(key, it) }), chaptersKnown = true)
+                    val details = client.detail(key).info()
+                    if (loadChapters) details.copy(chapterGroups = mapOf("default" to chapterIds { client.chapters(key, it) }), chaptersKnown = true) else details
                 }
             } else when {
                 isJmSource(source) -> {
@@ -164,7 +166,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                         ensureActive(); if (!active()) throw CancellationException()
                         info = store.save(source, id, details)
                         onMetadata(requireNotNull(info))
-                        details.copy(chapterGroups = mapOf("default" to client.allChapters(id).map { chapter -> chapter.order.toString() }), chaptersKnown = true)
+                        if (loadChapters) details.copy(chapterGroups = mapOf("default" to client.allChapters(id).map { chapter -> chapter.order.toString() }), chaptersKnown = true) else details
                     } }
                 }
                 else -> {

@@ -38,6 +38,7 @@ internal data class JmUiState(val ready: Boolean = false, val busy: Boolean = fa
 }
 
 internal class JmModel(app: Application, private val session: WorldSession, private val selectedSource: String? = null) : AndroidViewModel(app) {
+    private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val store = JmStore(app, session)
     private val data = WorldDataStore(app)
@@ -89,10 +90,11 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         val text = state.value.query.trim()
         require(text.isNotBlank()) { "请输入关键词或 JM 编号" }
         val current = client(); val result = current.search(text, page)
+        val books = blacklist.items(current.source, result.books, { it.id }, { it.title })
         if (!active()) throw CancellationException()
         data.remember(identity.world, "online:${current.source}", text, ::active)
         val history = data.worldData(identity.world, ::active) { it.history("online:${current.source}") }
-        state.update { it.copy(books = result.books, page = page, next = result.next, history = history, message = if (result.books.isEmpty()) "没有匹配作品" else null) }
+        state.update { it.copy(books = books, page = page, next = result.next, history = history, message = if (books.isEmpty()) "没有匹配作品" else null) }
     }
     fun favorites(folder: String = state.value.folder, page: Int = 1): Unit = work({ favorites(folder, page) }) {
         val result = client().favorites(folder, page)

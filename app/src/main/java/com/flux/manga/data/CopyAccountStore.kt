@@ -8,7 +8,8 @@ import kotlinx.coroutines.CancellationException
 internal fun isCopyAccount(source: String) = source.matches(Regex("copymanga-account-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))
 internal fun isCopySource(source: String) = source == CopyMangaEndpoint.SOURCE_ID || isCopyAccount(source)
 internal enum class CopyAccountService(val base: String) {
-    LEGACY(CopyMangaEndpoint.BASE_URL), OFFICIAL("https://mapi.mangacopy.com/"), WEB("https://mangacopy.com/")
+    // Account identity must not follow changes to the anonymous reading endpoint.
+    LEGACY("https://api.2024manga.com/"), OFFICIAL("https://mapi.mangacopy.com/"), WEB("https://mangacopy.com/")
 }
 internal fun copyAccountId(user: String, service: CopyAccountService = CopyAccountService.LEGACY) = "copymanga-account-${UUID.nameUUIDFromBytes((service.base + "\n" + user).toByteArray())}"
 internal class CopyAccount(val userId: String, val username: String, internal val token: String, val service: CopyAccountService = CopyAccountService.LEGACY) {

@@ -8,8 +8,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Reading endpoint stays independent of the service used to sign in and import collections. */
 internal object CopyMangaEndpoint {
+    // Keep persisted book/progress identities stable when the reading route changes.
     const val SOURCE_ID = "copymanga-api2024-v3"
-    const val BASE_URL = "https://api.2024manga.com/"
+    // First compatible API in Copy's network2 config; verified on mobile data 2026-10-29.
+    // Account credentials remain on their separately configured import service.
+    const val BASE_URL = "https://mapi.hotmangasg.com/"
 }
 
 /** Lazy generation-owned client; metadata pages share one pool and limiter. */

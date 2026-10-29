@@ -227,6 +227,13 @@ internal fun SourceManagementPage(
     val scope = rememberCoroutineScope()
     val feedback = LocalRequestFeedback.current
     val owner = session?.identity?.value
+    var showBlacklist by rememberSaveable(world) { mutableStateOf(false) }
+    val overviewScroll = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.activity.compose.BackHandler(showBlacklist) { showBlacklist = false }
+    if (showBlacklist && session != null) {
+        TagBlacklistPage(session) { showBlacklist = false }
+        return
+    }
     fun active() = session == null || (session.accepts(requireNotNull(owner)) && session.state.value.foreground)
     @Composable fun Source(kind: SourceKind, settingsTag: String, settings: () -> Unit) {
         SourceManagementGroup(kind.label, sourceAccountSummary(kind, session), settingsTag, settings,
@@ -247,9 +254,13 @@ internal fun SourceManagementPage(
                 }
             })
     }
-    LazyColumn(Modifier.fillMaxSize().testTag("source-management"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
+    LazyColumn(Modifier.fillMaxSize().testTag("source-management"), state = overviewScroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") { SettingsHeading("图源管理", if (available) "表世界图源" else "里世界图源", back) }
+        if (session != null) item("tag-blacklist") { SettingsGroup {
+            SettingsRow("标签黑名单", "隐藏含指定标签的发现结果", "source-tag-blacklist", SettingsSymbol.PRIVACY,
+                { showBlacklist = true })
+        } }
         error?.let { message -> item("save-error") { RequestFeedback(message) } }
         item("sources") { SettingsGroup {
             if (available) {

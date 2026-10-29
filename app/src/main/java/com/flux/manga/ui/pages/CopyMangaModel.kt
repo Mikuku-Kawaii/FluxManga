@@ -34,6 +34,7 @@ internal data class CopyDetailState(val detail: SourceDetail? = null, val busy: 
 internal class CopyMangaModel(private val app: Application, private val session: WorldSession, private val saved: SavedStateHandle,
     private val mangaId: String? = null, private val manualSearch: Boolean = false, private val sourceId: String = CopyMangaEndpoint.SOURCE_ID) : ViewModel() {
     val covers = OnlineSourceCovers(app, session, sourceId)
+    private val blacklist = TagBlacklistFilter(app, session)
     private val library = OnlineLibrary(app, session)
     private val data = WorldDataStore(app)
     private val identity = session.identity.value
@@ -49,7 +50,7 @@ internal class CopyMangaModel(private val app: Application, private val session:
     }
     val feed = DiscoveryFeedController(viewModelScope, ::active, ::copyMangaFailure) { page ->
         val client = client()
-        if (submitted.isEmpty()) client.recommendations(page) else client.search(submitted, page)
+        blacklist.apply(if (submitted.isEmpty()) client.recommendations(page) else client.search(submitted, page))
     }
     fun search() {
         val value = query.trim()

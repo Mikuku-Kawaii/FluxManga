@@ -90,6 +90,7 @@ internal class DiscoveryFeedController(
 
 internal class DiscoveryFeedModel(app: Application, session: WorldSession, sourceId: String,
     section: DiscoverySection) : AndroidViewModel(app) {
+    private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val isCopy = sourceId == CopyMangaEndpoint.SOURCE_ID
     private val access = if (isCopy) null else KomgaAccess(app, session, sourceId)
@@ -97,7 +98,7 @@ internal class DiscoveryFeedModel(app: Application, session: WorldSession, sourc
     val feed = DiscoveryFeedController(viewModelScope,
         { identity.world == com.flux.manga.ui.navigation.PrototypeWorld.SFW && session.accepts(identity) },
         if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (isCopy) ::copyMangaFailure else ::komgaFailure) { page ->
-        if (sourceId == BaoziEndpoint.SOURCE_ID) {
+        val result = if (sourceId == BaoziEndpoint.SOURCE_ID) {
             withContext(Dispatchers.IO) { session.baoziSources.client(app).source.let {
                 if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page)
                 else it.search("", page, updates = true)
@@ -110,5 +111,6 @@ internal class DiscoveryFeedModel(app: Application, session: WorldSession, sourc
             check(section == DiscoverySection.UPDATES)
             requireNotNull(access).client().updates(page)
         }
+        blacklist.apply(result)
     }
 }

@@ -356,7 +356,8 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         route = navigation.currentStack.lastOrNull(),
         motionEnabled = !effects.reduceMotion && !effects.lowEffects && android.animation.ValueAnimator.areAnimatorsEnabled()) {
     Scaffold(
-        containerColor = if (fullscreenReader) com.flux.manga.ui.pages.ReaderBackground else palette.background,
+        // Routes own their backgrounds: a reader push must not recolor the outgoing detail.
+        containerColor = palette.background,
         topBar = {
             if (isRoot && samplePages) Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
                 .semantics { isTraversalGroup = true; traversalIndex = 0f }) {
@@ -386,7 +387,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
             enabled = showDock && !motion.pending && effects.backdropEnabled && sessionState.foreground && lifecycle.isAtLeast(Lifecycle.State.RESUMED),
             blur = effects.blurEnabled, saturation = effects.saturationEnabled,
             motionPadding = with(density) { 64.dp.toPx() },
-            sampleBounds = dockBounds, background = if (fullscreenReader) com.flux.manga.ui.pages.ReaderBackground else palette.background,
+            sampleBounds = dockBounds, background = palette.background,
             observeContentChanges = observeScroll,
             content = {
                 val pageMotion = !effects.reduceMotion && !effects.lowEffects && !motion.pending &&
@@ -404,7 +405,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
                         kind = if (fullscreenReader) com.flux.manga.ui.pages.ReferenceTransitionKind.Reader
                             else com.flux.manga.ui.pages.ReferenceTransitionKind.Page) },
                     modifier = when {
-                        fullscreenReader -> Modifier.fillMaxSize().background(com.flux.manga.ui.pages.ReaderBackground).imePadding()
+                        fullscreenReader -> Modifier.fillMaxSize().imePadding()
                         glassLab -> Modifier.fillMaxSize().padding(bottom = if (showDock)
                             bottomClearance + WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding() else 0.dp)
                         isRoot -> Modifier.fillMaxSize().background(palette.background)

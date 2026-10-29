@@ -29,8 +29,9 @@ internal fun AggregateSearchPage(session: WorldSession, configuration: Discovery
     val app = LocalContext.current.applicationContext as Application
     val komgaId = DiscoverySource.KOMGA.id(configuration)
     val selection = com.flux.manga.data.SourceSelection(app, session.identity.value.world).fingerprint()
+    val pages = preloadedPages(session)
     val model = if (initialQuery.isBlank()) preloadedPages(session).search(komgaId)
-        else viewModel<AggregateSearchModel>(key = "aggregate-search:$komgaId:$selection:$initialQuery", factory = viewModelFactory {
+        else viewModel<AggregateSearchModel>(key = "aggregate-search:$komgaId:$selection:$initialQuery:${pages.revision.value}", factory = viewModelFactory {
             initializer { AggregateSearchModel(app, session, komgaId) }
         })
     val state by model.search.state.collectAsStateWithLifecycle()

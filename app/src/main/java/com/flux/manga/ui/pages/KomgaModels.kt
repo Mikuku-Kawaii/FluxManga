@@ -160,6 +160,7 @@ internal class KomgaContentModel(app: Application, private val session: WorldSes
     private val sourceId: String, private val mangaId: String?, private val savedState: SavedStateHandle,
     private val manualSearch: Boolean = false
 ) : AndroidViewModel(app) {
+    private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val detailCache = mangaId?.let { DetailPageCache(app, session, sourceId, it) }
     private val store = KomgaSettingsStore(WorldDataStore(app))
@@ -229,7 +230,7 @@ internal class KomgaContentModel(app: Application, private val session: WorldSes
             try {
                 val client = client()
                 if (mangaId == null) {
-                    val result = client.search(submitted, request)
+                    val result = blacklist.apply(client.search(submitted, request))
                     ensureActive(); active()
                     mutableState.value = state.value.copy(cards = (if (append) state.value.cards + result.cards else result.cards)
                         .distinctBy { it.key }, next = result.continuation, busy = false, loaded = true)

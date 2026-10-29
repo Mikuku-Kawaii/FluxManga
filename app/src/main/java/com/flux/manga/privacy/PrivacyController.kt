@@ -20,10 +20,12 @@ internal class PrivacyController(
     private val foreground: () -> Boolean,
     private val isPrivate: () -> Boolean,
     private val returnToPublic: () -> Unit,
+    private val screenshotPreferenceChanged: () -> Unit,
 ) {
     private val preferences = activity.getSharedPreferences("privacy-entry", Activity.MODE_PRIVATE)
     var longPress by mutableStateOf(preferences.getBoolean("long-press", false)); private set
     var biometric by mutableStateOf(preferences.getBoolean("biometric", false)); private set
+    var allowPrivateScreenshots by mutableStateOf(preferences.getBoolean("allow-private-screenshots", false)); private set
     var unlocked by mutableStateOf(false); private set
     var busy by mutableStateOf(false); private set
     var message by mutableStateOf<String?>(null); private set
@@ -43,6 +45,11 @@ internal class PrivacyController(
     fun changeLongPress(value: Boolean) {
         preferences.edit().putBoolean("long-press", value).apply()
         longPress = value
+    }
+    fun changePrivateScreenshots(value: Boolean) {
+        allowPrivateScreenshots = value
+        screenshotPreferenceChanged()
+        preferences.edit().putBoolean("allow-private-screenshots", value).apply()
     }
     fun dismissMessage() { message = null }
     fun clearGrant() { unlocked = false }

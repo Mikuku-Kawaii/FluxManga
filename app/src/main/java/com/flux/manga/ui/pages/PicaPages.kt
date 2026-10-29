@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.*
@@ -40,6 +39,7 @@ internal data class PicaUiState(val ready: Boolean = false, val busy: Boolean = 
 }
 
 internal class PicaModel(app: Application, private val session: WorldSession, private val selectedSource: String?) : AndroidViewModel(app) {
+    private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val store = PicaStore(app, session)
     private val data = WorldDataStore(app)
@@ -99,10 +99,11 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             else -> throw java.io.IOException("列表类型不受支持")
         }
         if (!active()) throw CancellationException()
+        val books = if (kind == "favorites") result.items else blacklist.items(api.source, result.items, { it.id }, { it.title })
         if (kind == "search") data.remember(identity.world, "online:${api.source}", value.trim(), ::active)
         val history = data.worldData(identity.world, ::active) { it.history("online:${api.source}") }
-        state.update { it.copy(books = result.items.distinctBy { row -> row.id }, page = result.page, next = result.next, history = history,
-            message = if (result.items.isEmpty()) "当前列表没有作品" else null) }
+        state.update { it.copy(books = books.distinctBy { row -> row.id }, page = result.page, next = result.next, history = history,
+            message = if (books.isEmpty()) "当前列表没有作品" else null) }
     }
     fun clearHistory(): Unit = work(::clearHistory) {
         data.clearHistory(identity.world, "online:${requireNotNull(state.value.source)}", ::active)
@@ -200,13 +201,10 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
 }
 @Composable internal fun PicaSettingsPage(session: WorldSession, back: () -> Unit, browse: (String, String) -> Unit) {
     val model = picaModel(session); val state by model.state.collectAsStateWithLifecycle()
-    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-    var token by remember { mutableStateOf("") }
-    var browserError by remember { mutableStateOf<String?>(null) }
     var webLogin by remember { mutableStateOf(false) }
     val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) { token = ""; webLogin = false } }
+    LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) webLogin = false }
     LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading(navigation.title("PicACG"), "", navigation::back) }
         sourceSettingsOverview(navigation,
@@ -220,30 +218,8 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
                 state.account != null -> "已保存登录会话"
                 else -> "未登录 · 请先连接账号"
             }, "云收藏", state.account?.name.orEmpty())
-            OutlinedTextField(token, { token = it }, Modifier.fillMaxWidth(), label = { Text("网页会话 Token") },
-                enabled = !state.busy, singleLine = true, visualTransformation = PasswordVisualTransformation())
-            ReferenceButton({ model.importWebToken(token.trim()) { token = ""; browse("favorites", "") } },
-                enabled = state.ready && !state.busy && token.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                Text("导入网页会话与收藏")
-            }
-            ReferenceButton({
-                browserError = null
-                try { uriHandler.openUri(PicaWebSite.url) }
-                catch (_: android.content.ActivityNotFoundException) { browserError = "未找到可打开网页的浏览器" }
-                catch (_: IllegalArgumentException) { browserError = "无法打开浏览器，请检查默认浏览器设置" }
-            }, enabled = state.ready && !state.busy, modifier = Modifier.fillMaxWidth()) {
-                Text("浏览器登录 / 注册")
-            }
-            browserError?.let { RequestFeedback(it, failure = true) }
-            Text("浏览器登录后需手动导入网页会话，返回本软件不会自动登录。", style = MaterialTheme.typography.bodySmall)
-            SettingsDisclosure("如何获取网页会话") {
-                Text("在电脑浏览器登录 manhuabika.com 后，打开开发者工具的「应用 / 存储 → 本地存储 → https://manhuabika.com」，复制 token 的值，再回本页粘贴。", style = MaterialTheme.typography.bodySmall)
-                Text("只需登录会话，不需要密码；会话可访问账号，请勿发给他人。", style = MaterialTheme.typography.bodySmall)
-            }
-            SettingsDisclosure("备用应用内登录") {
-                ReferenceButton({ token = ""; webLogin = true }, enabled = state.ready && !state.busy,
-                    modifier = Modifier.fillMaxWidth()) { Text("应用内网页登录 / 注册") }
-            }
+            ReferenceButton({ webLogin = true }, enabled = state.ready && !state.busy,
+                modifier = Modifier.fillMaxWidth()) { Text("网页登录 / 注册") }
             if (state.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部云收藏或逐页选择导入；已有书目与阅读进度保留。",
@@ -263,7 +239,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     if (webLogin) AccountWebLogin(PicaWebSite, close = { webLogin = false },
         autoConnectKey = { page, _, _ -> page.picaToken() },
         connect = { page, _, _ -> model.connectWebAccount(page.picaToken()) },
-        afterConnected = { token = ""; browse("favorites", "") })
+        afterConnected = { browse("favorites", "") })
 }
 
 @OptIn(ExperimentalLayoutApi::class)

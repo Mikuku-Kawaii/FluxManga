@@ -86,7 +86,11 @@ class MainActivity : ComponentActivity() {
     private val requestFeedback = com.flux.manga.ui.pages.RequestFeedbackState()
     private val privacy by lazy { com.flux.manga.privacy.PrivacyController(this,
         { worldSession.identity.value.toString() }, { worldSession.state.value.foreground },
-        { worldSession.identity.value.world == PrototypeWorld.NSFW }, ::privacyReturnToPublic) }
+        { worldSession.identity.value.world == PrototypeWorld.NSFW }, ::privacyReturnToPublic,
+        ::onScreenshotPreferenceChanged) }
+    private fun onScreenshotPreferenceChanged() {
+        if (!privacy.allowPrivateScreenshots && worldSession.identity.value.world == PrototypeWorld.NSFW) protectWindow()
+    }
     private fun privacyLocked() = worldSession.identity.value.world == PrototypeWorld.NSFW && privacy.biometric && !privacy.unlocked
     private fun privacyReturnToPublic() {
         coverWindow(); protectWindow()
@@ -381,13 +385,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 // Let the replacement/placeholder reach the render tree before removing native protection.
-                LaunchedEffect(identity, sessionState, locked) {
+                LaunchedEffect(identity, sessionState, locked, privacy.allowPrivateScreenshots) {
                     if (sessionState.foreground && !locked) {
                         withFrameNanos { }
                         withFrameNanos { }
                         if (!worldSession.state.value.foreground || privacyLocked() || worldSession.identity.value != identity) return@LaunchedEffect
-                        if (identity.world == PrototypeWorld.SFW && sessionState.phase == SwitchPhase.Stable) {
+                        if (sessionState.phase == SwitchPhase.Stable &&
+                            (identity.world == PrototypeWorld.SFW || privacy.allowPrivateScreenshots)) {
                             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        } else {
+                            protectWindow()
                         }
                         // The standalone glass study owns its own theme/system bars.
                         if (sessionState.phase != SwitchPhase.Stable || navigation.currentStack.last() != GlassLab) {
@@ -469,6 +476,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        if (worldSession.identity.value.world == PrototypeWorld.NSFW) protectWindow()
         coverWindow()
         privacy.pause()
         readerVolumeKeys.reset()

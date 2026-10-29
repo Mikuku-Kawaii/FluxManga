@@ -42,6 +42,7 @@ internal data class EhUiState(val ready: Boolean = false, val busy: Boolean = fa
 }
 
 internal class EhModel(app: Application, private val session: WorldSession, private val selectedSource: String?, private val site: GallerySite = GallerySite.EH) : AndroidViewModel(app) {
+    private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val store = EhStore(app, session, site)
     private val data = WorldDataStore(app)
@@ -94,7 +95,8 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     fun query(value: String) { retry = null; state.update { it.copy(query = value.take(300), batch = null, message = null, error = false, ehOverlap = 0) } }
     fun browse(favorites: Boolean, cursor: String? = null): Unit = work({ browse(favorites, cursor) }) {
         val api = client(); val query = state.value.query.trim()
-        val result = api.browse(favorites, query, state.value.folder, cursor)
+        val received = api.browse(favorites, query, state.value.folder, cursor)
+        val result = if (favorites) received else received.copy(books = blacklist.items(api.source, received.books, { it.id }, { it.title }))
         if (!active()) throw CancellationException()
         if (query.isNotBlank()) data.remember(identity.world, "online:${api.source}", query, ::active)
         val history = data.worldData(identity.world, ::active) { it.history("online:${api.source}") }

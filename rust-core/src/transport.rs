@@ -120,6 +120,13 @@ fn eh_https(url: &Url) -> bool {
         url.username().is_empty() && url.password().is_none() && url.fragment().is_none() &&
         url.host_str().is_some_and(|h| h.contains('.') && h.parse::<std::net::IpAddr>().is_err() && !h.starts_with('[') && !h.ends_with(".local") && !h.ends_with(".localhost"))
 }
+fn pica_image_url(url: &Url) -> bool {
+    eh_https(url) && url.query().is_none() && url.path().starts_with("/static/")
+}
+fn pica_image_redirect(url: &Url) -> bool {
+    pica_image_url(url) || (eh_https(url) && url.query().is_none() &&
+        url.host_str() == Some("img.safedataplj.com"))
+}
 fn gallery_protected_media(url: &Url, host: &str) -> bool {
     url.host_str() == Some(host) && (url.path() == "/fullimg.php" || (host == "exhentai.org" && url.path().starts_with("/t/")))
 }
@@ -401,10 +408,7 @@ impl SourceHttpSession {
             return Err(SourceError::InvalidRequest);
         }
         let url = Url::parse(&image_url).map_err(|_| SourceError::InvalidRequest)?;
-        let public_host = url.host_str().is_some_and(|h| h.parse::<std::net::IpAddr>().is_err() && !h.starts_with('['));
-        if !public_host || url.host_str().is_none_or(|h| !h.contains('.') || h.ends_with(".localhost") || h.ends_with(".local")) ||
-            url.scheme() != "https" || url.port_or_known_default() != Some(443) || !url.username().is_empty() || url.password().is_some() ||
-            url.fragment().is_some() || url.query().is_some() || !url.path().starts_with("/static/") { return Err(SourceError::InvalidRequest); }
+        if !pica_image_url(&url) { return Err(SourceError::InvalidRequest); }
         let mut headers = header::HeaderMap::new();
         headers.insert(header::USER_AGENT, header::HeaderValue::from_static("okhttp/3.8.1"));
         match self.dispatch_headers(context, url, None, None, false, headers).await? {
@@ -1072,7 +1076,34 @@ impl State {
                     .header("x-auth-timestamp", timestamp).header("x-auth-signature", signature);
             }
             let mut response = request.send().await.map_err(transport_error)?;
-            // Only EH/EX media follows redirects. Recheck destinations and remove Cookie
+            // PicACG's image CDN moves static files with 301/302. Follow only this
+            // anonymous image operation; API requests and credentials never redirect.
+            if self.context.source_id.starts_with("picacg-") && pica_image_url(&url) && body.is_none() {
+                let mut current = url.clone();
+                let mut hops = 0;
+                while matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
+                    if hops == 3 { return Err(SourceError::InvalidResponse); }
+                    let location = response.headers().get(header::LOCATION).and_then(|value| value.to_str().ok())
+                        .ok_or(SourceError::InvalidResponse)?;
+                    let next = current.join(location).map_err(|_| SourceError::InvalidResponse)?;
+                    // Observed on the admitted website's storage-b CDN: the image
+                    // redirect target uses a root-relative path without /static/.
+                    if !pica_image_redirect(&next) { return Err(SourceError::InvalidResponse); }
+                    drop(response);
+                    {
+                        let mut start = self.next_start.lock().await;
+                        tokio::time::sleep_until(*start).await;
+                        *start = Instant::now() + Duration::from_millis(self.config.min_interval_ms.into());
+                    }
+                    self.attempts.fetch_add(1, SeqCst);
+                    response = client.get(next.clone())
+                        .header(header::USER_AGENT, "okhttp/3.8.1")
+                        .send().await.map_err(transport_error)?;
+                    current = next;
+                    hops += 1;
+                }
+            }
+            // EH/EX media uses its own redirect rules. Recheck destinations and remove Cookie
             // on leaving protected same-site media; never forward credentials to H@H/CDNs.
             let gallery_source = self.context.source_id.starts_with("ehentai-") || self.context.source_id.starts_with("exhentai-user-");
             let gallery_host = self.base.host_str().unwrap_or_default();

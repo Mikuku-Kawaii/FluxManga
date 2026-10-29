@@ -22,6 +22,7 @@ import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.view.doOnLayout
 import com.flux.manga.data.JmAccount
 import com.flux.manga.data.BaoziBrowserSession
 import com.flux.manga.data.BaoziAccountOrigins
@@ -400,25 +401,6 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     var recoveryNeedsUser by remember { mutableStateOf(false) }
     var attemptedKey by remember { mutableStateOf<String?>(null) }
     var slowPage by remember { mutableStateOf(false) }
-    val loadDiagnostics = remember { mutableStateListOf<String>() }
-
-    // Keep only classified events in this window. Never retain raw console messages,
-    // request headers, URL paths/queries, response bodies or account storage.
-    fun diagnostic(message: String) {
-        if (!alive || site != PicaWebSite || message in loadDiagnostics) return
-        if (loadDiagnostics.size == 10) loadDiagnostics.removeAt(0)
-        loadDiagnostics.add(message)
-    }
-    fun resourceLabel(request: WebResourceRequest): String {
-        val kind = when {
-            request.isForMainFrame -> "主页面"
-            request.url.path.orEmpty().endsWith(".js", ignoreCase = true) -> "脚本"
-            request.url.path.orEmpty().endsWith(".css", ignoreCase = true) -> "样式"
-            else -> "子资源 / 接口"
-        }
-        return "$kind · ${request.url.host.orEmpty()}"
-    }
-
     LaunchedEffect(site, pageVersion, ready, error) {
         slowPage = false
         if (site == PicaWebSite && !ready && error == null) {
@@ -571,7 +553,6 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
         fun disposeBrowser() {
             if (disposed) return
             disposed = true; alive = false; connection?.cancel(); preparing?.cancel()
-            loadDiagnostics.clear()
             uid = ""; username = ""; baoziPassword = ""; baoziMemory.clear()
             browser?.apply {
                 BaoziBrowserProfile.detach(this)
@@ -593,6 +574,13 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             if (!ownsStorage) error = "上一登录窗口仍在清理，请关闭后重新打开"
             else {
                 browser = WebView(context).apply {
+                    if (site == PicaWebSite) {
+                        // WebView treats wrap-content height specially: viewport-height CSS can
+                        // resolve to zero even when Compose later gives the view a nonzero size.
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+                    }
                     persistent = site == BaoziWebSite && BaoziBrowserProfile.attach(this)
                     importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
                     if (backgroundRecovery) {
@@ -603,6 +591,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
+                        if (site == PicaWebSite) {
+                            useWideViewPort = true
+                            loadWithOverviewMode = true
+                        }
                         allowFileAccess = false
                         allowContentAccess = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -616,23 +608,6 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     BaoziBrowserProfile.cookies(this).setAcceptThirdPartyCookies(this, false)
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(web: WebView, value: Int) { if (alive) progress = value }
-                        override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                            if (site != PicaWebSite) return super.onConsoleMessage(message)
-                            val text = message.message().lowercase(java.util.Locale.ROOT)
-                            val category = when {
-                                "cors" in text || "access-control-allow-origin" in text -> "CORS 跨域校验消息"
-                                "content security policy" in text -> "CSP 内容安全策略消息"
-                                "mixed content" in text -> "HTTP / HTTPS 混合内容消息"
-                                "serviceworker" in text || "service worker" in text -> "Service Worker 消息"
-                                "mime type" in text -> "脚本 / 样式 MIME 类型消息"
-                                "dynamically imported module" in text || "module script" in text -> "模块脚本加载消息"
-                                "err_" in text || "failed to fetch" in text -> "网络请求失败消息"
-                                message.messageLevel() == ConsoleMessage.MessageLevel.ERROR -> "JavaScript 错误"
-                                else -> null
-                            }
-                            category?.let { diagnostic("控制台 · $it · ${message.messageLevel().name}") }
-                            return true
-                        }
                     }
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(web: WebView, request: WebResourceRequest): Boolean {
@@ -643,7 +618,6 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             return true
                         }
                         override fun onPageStarted(web: WebView, url: String?, icon: android.graphics.Bitmap?) {
-                            loadDiagnostics.clear()
                             pageVersion++; connection?.cancel(); busy = false
                             baoziMemory.candidate = null
                             verifyingBrowser = site == BaoziWebSite && Uri.parse(url.orEmpty()).path?.startsWith("/__gatekeeper_challenge/") == true
@@ -663,7 +637,6 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             }
                         }
                         override fun onReceivedError(web: WebView, request: WebResourceRequest, failure: WebResourceError) {
-                            diagnostic("${resourceLabel(request)} · 网络错误 ${failure.errorCode}")
                             if (alive && request.isForMainFrame) {
                                 ready = false
                                 val reason = when (failure.errorCode) {
@@ -678,10 +651,6 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             }
                         }
                         override fun onReceivedHttpError(web: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                            diagnostic("${resourceLabel(request)} · HTTP ${response.statusCode}")
-                            if (response.responseHeaders?.any { (key, value) ->
-                                key.equals("cf-mitigated", ignoreCase = true) && value.equals("challenge", ignoreCase = true)
-                            } == true) diagnostic("${resourceLabel(request)} · 响应标记为网站验证挑战")
                             if (alive && request.isForMainFrame) {
                                 ready = false
                                 if (site == BaoziWebSite && response.statusCode == 403 && !gateAttempted && !verifyingBrowser &&
@@ -734,7 +703,12 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                                 }
                                 loginUrl = "${profile.origin}user/my_bookshelf"
                             }
-                            if (alive && site.accepts(loginUrl)) browser?.loadUrl(loginUrl)
+                            if (site == PicaWebSite) {
+                                browser?.doOnLayout { laidOut ->
+                                    if (alive && laidOut.width > 0 && laidOut.height > 0 && site.accepts(loginUrl))
+                                        browser?.loadUrl(loginUrl)
+                                }
+                            } else if (alive && site.accepts(loginUrl)) browser?.loadUrl(loginUrl)
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) { if (alive) error = "账号读取失败，请关闭后重试。" }
                     }
@@ -797,42 +771,8 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     // Keep connection/load failures visible inside the window that owns the action.
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium) }
-                    if (slowPage && error == null) Text("网页登录仍未就绪，可重新打开；仍无法显示时，关闭窗口使用浏览器登录并导入 Token。",
+                    if (slowPage && error == null) Text("网页加载较慢，请检查网络或重新打开。",
                         style = MaterialTheme.typography.bodySmall)
-                    if (site == PicaWebSite) SettingsDisclosure("网页加载诊断") {
-                        TextButton(onClick = {
-                            val browser = view ?: return@TextButton
-                            if (!site.accepts(browser.url)) {
-                                diagnostic("当前尚未进入允许的 HTTPS 登录页")
-                                return@TextButton
-                            }
-                            val version = pageVersion
-                            val blocked = ServiceWorkerController.getInstance().serviceWorkerWebSettings.blockNetworkLoads
-                            diagnostic("Service Worker 网络策略 · ${if (blocked) "阻止网络" else "允许网络"}")
-                            browser.evaluateJavascript("""
-                                JSON.stringify({
-                                  secure: window.isSecureContext === true,
-                                  originMatches: location.origin === ${JSONObject.quote(PicaWebSite.url.removeSuffix("/"))},
-                                  loaded: document.readyState === 'complete',
-                                  rootMounted: !!document.getElementById('root')?.children.length,
-                                  workerSupported: 'serviceWorker' in navigator,
-                                  workerControlled: !!navigator.serviceWorker?.controller
-                                })
-                            """.trimIndent()) { result ->
-                                if (alive && version == pageVersion && site.accepts(browser.url)) {
-                                    try {
-                                        val snapshot = JSONObject(JSONTokener(result).nextValue() as? String ?: "{}")
-                                        fun flag(key: String) = if (snapshot.optBoolean(key)) "是" else "否"
-                                        diagnostic("页面 · HTTPS 安全上下文 ${flag("secure")} · Origin 符合入口 ${flag("originMatches")}")
-                                        diagnostic("页面 · 加载完成 ${flag("loaded")} · 应用根节点有内容 ${flag("rootMounted")}")
-                                        diagnostic("Service Worker · 支持 ${flag("workerSupported")} · 当前控制页面 ${flag("workerControlled")}")
-                                    } catch (_: org.json.JSONException) { diagnostic("页面状态读取失败") }
-                                }
-                            }
-                        }, enabled = view != null && !busy) { Text("读取页面状态") }
-                        if (loadDiagnostics.isEmpty()) Text("尚未捕获错误；不代表页面已正常加载。", style = MaterialTheme.typography.bodySmall)
-                        loadDiagnostics.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-                    }
                     if (site == BaoziWebSite && error != null) TextButton(onClick = {
                         connection?.cancel(); attemptedKey = null
                         baoziMemory.automaticAttempted = false
@@ -873,10 +813,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         }
                         if (busy) TextButton({ connection?.cancel() }) { Text("取消连接") }
                     }
-                    Text(if (connect == null) "请在网页中登录或注册，完成后返回账号设置连接。"
-                        else if (autoConnectKey != null) "登录后自动连接，失败时可手动重试。"
-                        else "网页登录后，请点击连接。",
-                        style = MaterialTheme.typography.bodySmall)
+
                 }
             }
         }

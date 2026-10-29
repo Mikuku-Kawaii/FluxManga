@@ -53,6 +53,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
                         "category" -> client.catalog(query, number)
                         else -> client.search(query, number)
                     }
+                    batch.items.forEach { rememberPicaCover(data, session, account.source, it) }
                     SourceCardPage(batch.items.map { card(account.source, it.id, it.title, it.author).copy(updatedAt = it.updatedAt.takeIf(String::isNotBlank)) }, next(batch.next))
                 }
             }

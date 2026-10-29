@@ -34,6 +34,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
     val library = com.flux.manga.data.OnlineLibrary(app, session)
     private val selection = SourceSelection(app, identity.world)
     val featured = HomeFeaturedMetadata(app, session)
+    private val blacklist = TagBlacklistFilter(app, session)
     val updateInfo = mutableStateMapOf<MangaKey, HomeUpdateInfo>()
     val updateVersions = mutableStateMapOf<String, Int>()
     private val updateLoaded = mutableMapOf<MangaKey, Int>()
@@ -101,7 +102,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                 updateVersions[it] = (updateVersions[it] ?: 0) + 1
             }
         }
-        result
+        blacklist.apply(result)
     }
     /** Fill missing list metadata only for visible cards, using existing detail/directory contracts. */
     suspend fun loadUpdate(card: MangaCard, version: Int) {
@@ -143,8 +144,9 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
 internal fun mixedModel(session: WorldSession, komgaId: String?, section: DiscoverySection?, targets: List<TagTarget> = emptyList(), tagLabel: String = ""): MixedDiscoveryModel {
     val app = LocalContext.current.applicationContext as Application
     val selection = SourceSelection(app, session.identity.value.world).fingerprint()
+    val pages = preloadedPages(session)
     val model: MixedDiscoveryModel = if (section != null) preloadedPages(session).mixed(komgaId, section)
-    else viewModel(key = "mixed:$komgaId:$section:$targets:$tagLabel:$selection", factory = viewModelFactory {
+    else viewModel(key = "mixed:$komgaId:$section:$targets:$tagLabel:$selection:${pages.revision.value}", factory = viewModelFactory {
         initializer { MixedDiscoveryModel(app, session, komgaId, section, targets, tagLabel) }
     })
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()

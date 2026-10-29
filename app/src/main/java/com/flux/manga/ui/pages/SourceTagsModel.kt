@@ -97,13 +97,15 @@ internal class SourceTagsModel(app: Application, session: WorldSession, sourceId
 }
 
 internal class SourceTagBooksModel(app: Application, session: WorldSession, sourceId: String, tag: String) : AndroidViewModel(app) {
+    private val blacklist = TagBlacklistFilter(app, session)
     private val access = KomgaAccess(app, session, sourceId)
     val library = OnlineLibrary(app, session)
     val feed = DiscoveryFeedController(viewModelScope, access::isActive,
         if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (sourceId == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure) { page ->
-        if (sourceId == BaoziEndpoint.SOURCE_ID) withContext(Dispatchers.IO) {
+        val result = if (sourceId == BaoziEndpoint.SOURCE_ID) withContext(Dispatchers.IO) {
             val type = BaoziCategories.tags[tag] ?: throw SourceException.InvalidRequest()
             session.baoziSources.client(app).source.search("", page, tag = type)
         } else if (sourceId == CopyMangaEndpoint.SOURCE_ID) withContext(Dispatchers.IO) { session.copyMangaSources.client().themed(tag, page) } else access.client().tagged(tag, page)
+        blacklist.apply(result)
     }
 }

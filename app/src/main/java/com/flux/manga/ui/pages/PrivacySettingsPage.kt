@@ -45,6 +45,10 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
                 Text("无障碍可使用切换键的长按动作。长按与生物识别设置即时生效，默认均关闭。")
             }
         } }
+        item { SettingsPanel {
+            PrivacyToggle("允许里世界截图", "默认关闭；开启后允许前台截图和录屏，后台仍遮挡，账号登录窗口仍受保护",
+                privacy.allowPrivateScreenshots, !privacy.busy, "privacy-allow-screenshots", privacy::changePrivateScreenshots)
+        } }
         item { SettingsPanel { SettingsDisclosure("桌面图标与名称", "当前：${privacy.launcher}") {
             LauncherStyle.entries.forEach { style ->
                 OutlinedButton(onClick = { pending = style }, enabled = !privacy.busy,
