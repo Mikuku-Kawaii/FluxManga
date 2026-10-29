@@ -12,7 +12,7 @@
 
 [![Release](https://img.shields.io/github/v/release/Mikuku-Kawaii/FluxManga?label=Release&color=4B8DFF)](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest)
 [![Android](https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white)](#下载与安装)
-[![License](https://img.shields.io/badge/License-GPL--3.0--blue)](LICENSE)
+[![License](https://img.shields.io/badge/any_text-you_like-blue)](LICENSE)
 
 
 </div>
