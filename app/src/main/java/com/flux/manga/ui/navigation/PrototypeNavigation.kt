@@ -427,6 +427,21 @@ class PrototypeNavigation(
         if (world == PrototypeWorld.SFW) currentStack.add(LocalBookReader(id, bookmarkId))
     }
 
+    fun finishOnlineReading(sourceId: String, mangaId: String) {
+        // A reader may have been opened directly from the shelf or downloads.
+        back()
+        val detail: NavKey = when {
+            com.flux.manga.data.isCopySource(sourceId) -> CopyMangaBook(sourceId, mangaId)
+            com.flux.manga.data.isBaoziSource(sourceId) -> BaoziBookRoute(sourceId, mangaId)
+            com.flux.manga.data.isExSource(sourceId) -> ExBookRoute(sourceId, mangaId)
+            com.flux.manga.data.isEhSource(sourceId) -> EhBookRoute(sourceId, mangaId)
+            com.flux.manga.data.isPicaSource(sourceId) -> PicaBookRoute(sourceId, mangaId)
+            com.flux.manga.data.isJmSource(sourceId) -> JmBookRoute(sourceId, mangaId)
+            else -> KomgaBook(sourceId, mangaId)
+        }
+        if (currentStack.last() != detail) openKomgaBook(sourceId, mangaId)
+    }
+
     fun back() {
         if (currentStack.size > 1) currentStack.removeAt(currentStack.lastIndex)
         else select(MainTab.HOME)

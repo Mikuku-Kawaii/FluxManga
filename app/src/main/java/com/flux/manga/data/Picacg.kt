@@ -86,7 +86,7 @@ internal class PicaClient(private val session: WorldSession, private val account
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
     private suspend fun request(path: String, body: JSONObject? = null, token: String? = account?.token): JSONObject = withContext(Dispatchers.IO) {
         active()
-        if (path != "auth/sign-in" && token.isNullOrBlank()) throw IOException("请先登录 PicACG 账号")
+        if (token.isNullOrBlank()) throw IOException("请先导入 PicACG 网页登录会话")
         val time = (System.currentTimeMillis() / 1000).toString()
         val nonce = UUID.randomUUID().toString().replace("-", "")
         val method = if (body == null) "GET" else "POST"
@@ -102,10 +102,6 @@ internal class PicaClient(private val session: WorldSession, private val account
             json.getJSONObject("data")
         } finally { reply.body.fill(0) }
     }
-    suspend fun login(email: String, password: String): PicaAccount {
-        val token = request("auth/sign-in", JSONObject().put("email", email.trim()).put("password", password), null).getString("token")
-        return verifyToken(token)
-    }
     suspend fun verifyToken(token: String): PicaAccount {
         require(token.isNotBlank() && token.length <= 4096 && token.all { it.code in 33..126 })
         val profile = request("users/profile", token = token).getJSONObject("user")
@@ -116,7 +112,7 @@ internal class PicaClient(private val session: WorldSession, private val account
         val path = value.getString("path")
         require(server.scheme == "https" && server.host != null && server.userInfo == null && server.query == null && server.fragment == null)
         require(path.isNotBlank() && path.split('/').none { it.isEmpty() || it == "." || it == ".." } && path.none { it == '\\' || it == '?' || it == '#' })
-        val url = server.toString().trimEnd('/') + "/static/" + path.split('/').joinToString("/") { encode(it) }
+        val url = server.toString().trimEnd('/').removeSuffix("/static") + "/static/" + path.split('/').joinToString("/") { encode(it) }
         return url
     }
     private fun book(row: JSONObject) = PicaBook(row.getString("_id").also { require(picaId(it)) }, row.getString("title"),
@@ -195,7 +191,18 @@ internal class PicaClient(private val session: WorldSession, private val account
     }
     suspend fun image(url: String): ByteArray {
         active()
-        val reply = native.picaImage(context, url)
+        // Apply the site's fixed image routes to fresh and previously saved cover/page addresses.
+        val original = URI(url)
+        val host = original.host.orEmpty()
+        val websiteHost = when {
+            host == "manhuabika.com" || host == "picacomic.com" -> "go2778.com"
+            host.endsWith(".picacomic.com") -> host.removeSuffix("picacomic.com") + "go2778.com"
+            host == "diwodiwo.xyz" -> "storage1.go2778.com"
+            else -> host
+        }
+        val routed = if (websiteHost == host) url else URI(original.scheme, original.userInfo, websiteHost,
+            original.port, original.path, original.query, original.fragment).toASCIIString()
+        val reply = native.picaImage(context, routed)
         try { currentCoroutineContext().ensureActive(); active(); require(reply.contentType?.startsWith("image/") == true) }
         catch (error: Throwable) { reply.body.fill(0); throw error }
         return reply.body

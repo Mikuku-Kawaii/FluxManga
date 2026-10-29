@@ -457,7 +457,8 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: String,
-    chapterId: String?, back: () -> Unit, offlineOnly: Boolean = false, syntheticPrivate: Boolean = false) {
+    chapterId: String?, back: () -> Unit, offlineOnly: Boolean = false, syntheticPrivate: Boolean = false,
+    finished: () -> Unit = back) {
     val app = LocalContext.current.applicationContext as Application
     val model: OnlineReaderModel = viewModel(key = if (syntheticPrivate) "private-synthetic-reader" else null, factory = viewModelFactory {
         initializer { OnlineReaderModel(app, session, sourceId, mangaId, chapterId, createSavedStateHandle(), offlineOnly, syntheticPrivate) }
@@ -482,6 +483,12 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
         }
     }
     BackHandler(onBack = leave)
+    val finish: () -> Unit = {
+        if (!leaving) {
+            leaving = true
+            scope.launch { model.flush().join(); if (model.state.value.saveError == null) finished(); leaving = false }
+        }
+    }
     val owner = LocalLifecycleOwner.current
     val sessionState by session.state.collectAsState()
     LaunchedEffect(model, sessionState.foreground) {
@@ -524,9 +531,9 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
                 val width = with(LocalDensity.current) { maxWidth.roundToPx() }
                 key(state.pages.first().chapterId, state.mode) {
                     if (state.mode == ReadingMode.STRIP) key(state.jumpRevision) {
-                        OnlineStrip(model, state, width, options, !chrome && tool == null && !chaptersOpen && !leaving)
+                        OnlineStrip(model, state, width, options, !chrome && tool == null && !chaptersOpen && !leaving, finish)
                     } else OnlinePagedReader(model, state, width, options, !chrome && tool == null && !chaptersOpen && !leaving,
-                        readerSpreadEnabled(options.spread, state.mode, maxWidth.value, maxHeight.value))
+                        readerSpreadEnabled(options.spread, state.mode, maxWidth.value, maxHeight.value), finish)
                 }
             }
             if (state.pages.isNotEmpty() && state.index >= state.pages.lastIndex - 1 && state.nextError != null) {
@@ -585,11 +592,17 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
 
 @Composable
 private fun OnlinePagedReader(model: OnlineReaderModel, state: OnlineReaderState, width: Int,
-    options: ReaderOptions, keysEnabled: Boolean, spread: Boolean) {
+    options: ReaderOptions, keysEnabled: Boolean, spread: Boolean, finished: () -> Unit) {
     val unit = if (spread) 2 else 1
     val groups = (state.pages.size + unit - 1) / unit
     key(spread) {
-        val pager = rememberPagerState(initialPage = state.index / unit) { groups + if (state.atSeriesEnd) 1 else 0 }
+        val pager = rememberPagerState(initialPage = state.index / unit) { groups + if (state.atSeriesEnd) 2 else 0 }
+        val onFinished by rememberUpdatedState(finished)
+        LaunchedEffect(pager, groups, state.atSeriesEnd) {
+            snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
+                if (state.atSeriesEnd && page == groups + 1) onFinished()
+            }
+        }
         val scope = rememberCoroutineScope()
         var zoomedPages by remember(pager.settledPage) { mutableStateOf(emptySet<Int>()) }
         LaunchedEffect(state.index, state.jumpRevision) {
@@ -611,12 +624,12 @@ private fun OnlinePagedReader(model: OnlineReaderModel, state: OnlineReaderState
         ReaderVolumeKeys(options.volume && keysEnabled && zoomedPages.isEmpty() && !state.loading, options.invertVolume) { direction ->
             val target = pager.settledPage + direction
             if (target in 0 until groups) scope.launch { pager.animateScrollToPage(target) }
-            else if (target == groups && state.atSeriesEnd) scope.launch { pager.animateScrollToPage(target) }
+            else if (target in groups..groups + 1 && state.atSeriesEnd) scope.launch { pager.animateScrollToPage(target) }
             else if (options.continuous) { if (direction > 0) model.prefetchNext(true, retry = true) else model.adjacent(direction) }
         }
-        ReadingPager(pager, state.mode, "online-pager", { group -> if (group < groups) "${state.pages[group * unit].chapterId}:${state.pages[group * unit].id}" else "series-end" },
+        ReadingPager(pager, state.mode, "online-pager", { group -> if (group < groups) "${state.pages[group * unit].chapterId}:${state.pages[group * unit].id}" else "series-end-${group - groups}" },
             enabled = zoomedPages.isEmpty() && !state.loading) { group ->
-            if (group == groups) ReaderSeriesEnd(Modifier.fillMaxSize())
+            if (group >= groups) ReaderSeriesEnd(Modifier.fillMaxSize())
             else Row(Modifier.fillMaxSize()) {
                 spreadIndices(group, state.pages.size, spread, state.mode == ReadingMode.RTL).forEach { index ->
                     OnlineReaderImage(model, state.pages[index], width / unit,
@@ -634,7 +647,7 @@ private fun OnlinePagedReader(model: OnlineReaderModel, state: OnlineReaderState
 @Composable
 private fun ReaderSeriesEnd(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().heightIn(min = 320.dp).padding(24.dp), contentAlignment = Alignment.Center) {
-        Text("已读到最后一话", color = WorldColors.DarkInk, style = MaterialTheme.typography.titleLarge)
+        Text("已读到当前目录最后一话\n再翻一页返回详情", color = WorldColors.DarkInk, style = MaterialTheme.typography.titleLarge)
     }
 }
 
@@ -695,7 +708,7 @@ private fun OnlineReaderImage(model: OnlineReaderModel, page: SourcePageResource
 }
 
 @Composable
-private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, width: Int, options: ReaderOptions, keysEnabled: Boolean) {
+private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, width: Int, options: ReaderOptions, keysEnabled: Boolean, finished: () -> Unit) {
     val tiles = remember(state.pages) { onlineTiles(state.pages) }
     val initial = remember(width) { state.index to state.fraction }
     val list = remember(width) { LazyListState(tiles.indexOfFirst { it.index == initial.first }.coerceAtLeast(0)) }
@@ -759,19 +772,38 @@ private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, widt
     ReaderVolumeKeys(options.volume && keysEnabled && !zoomed && !state.loading, options.invertVolume) { direction ->
         if (keyScroll?.isActive != true) keyScroll = scope.launch {
             if ((direction > 0 && !list.canScrollForward) || (direction < 0 && !list.canScrollBackward)) {
-                if (options.continuous) { if (direction > 0) model.prefetchNext(true, retry = true) else model.adjacent(direction) }
+                if (direction > 0 && state.atSeriesEnd) finished()
+                else if (options.continuous) { if (direction > 0) model.prefetchNext(true, retry = true) else model.adjacent(direction) }
             } else list.scrollBy(direction * list.layoutInfo.viewportSize.height * .85f)
         }
     }
     val threshold = with(LocalDensity.current) { 64.dp.toPx() }
     val boundary = remember(state.pages.first().chapterId, threshold) { ReaderBoundaryDrag(threshold) }
     val mayContinue by rememberUpdatedState(options.continuous && !zoomed && !state.loading && state.error == null && restored)
+    val mayFinish by rememberUpdatedState(state.atSeriesEnd && !zoomed && !state.loading && state.error == null && restored && keysEnabled)
+    val onFinished by rememberUpdatedState(finished)
     val connection = remember(list, boundary) { object : NestedScrollConnection {
-        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-            if (source == NestedScrollSource.UserInput && boundary.drag(available.y, mayContinue && !list.canScrollForward)) model.prefetchNext(true, retry = true)
+        private var gestureStarted = false
+        private var finishGesture = false
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            if (source == NestedScrollSource.UserInput && !gestureStarted) {
+                gestureStarted = true
+                // Reaching the end card in this drag must not also dismiss it.
+                finishGesture = mayFinish && !list.canScrollForward
+            }
             return Offset.Zero
         }
-        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity { boundary.reset(); return Velocity.Zero }
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            if (source == NestedScrollSource.UserInput && boundary.drag(available.y,
+                    !list.canScrollForward && (if (mayFinish) finishGesture else mayContinue))) {
+                if (mayFinish) onFinished() else model.prefetchNext(true, retry = true)
+            }
+            return Offset.Zero
+        }
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+            boundary.reset(); gestureStarted = false; finishGesture = false
+            return Velocity.Zero
+        }
     } }
     LazyColumn(state = list, userScrollEnabled = !zoomed && !state.loading,
         modifier = Modifier.fillMaxSize().nestedScroll(connection).testTag("online-strip")) {

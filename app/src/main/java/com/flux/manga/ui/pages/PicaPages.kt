@@ -144,19 +144,32 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         work(::favorite) { store.remember(requireNotNull(state.value.source), book, value)
             state.update { it.copy(favorite = value, message = "本机收藏已更新，未修改网站收藏") } }
     }
-    fun login(email: String, password: String) = work({ state.update { it.copy(message = "请重新输入密码登录") } }) {
-        PicaClient(session, null, viewModelScope).use { api ->
-            val account = api.login(email, password); store.save(account)
-            client?.close(); client = null
-            state.update { it.copy(account = account, source = account.source, message = "已登录，可读取收藏和浏览作品") }
-        }
+    fun importWebToken(token: String, connected: () -> Unit): Unit = work({
+        state.update { it.copy(message = "请确认网页会话后再次点击导入", error = true) }
+    }) {
+        saveWebAccount(token)
+        if (foreground()) connected()
     }
-    fun connectToken(token: String) = work({ state.update { it.copy(message = "请重新输入会话 Token") } }) {
-        PicaClient(session, null, viewModelScope).use { api ->
-            val account = api.verifyToken(token); store.save(account)
-            client?.close(); client = null
+    suspend fun connectWebAccount(token: String) {
+        if (!foreground()) throw CancellationException()
+        if (state.value.busy) throw java.io.IOException("账号正在处理请求，请稍后连接")
+        state.update { it.copy(busy = true, message = null, error = false) }
+        try { saveWebAccount(token) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { throw java.io.IOException(picaFailure(failure)) }
+        finally { if (active()) state.update { it.copy(busy = false) } }
+    }
+    private suspend fun saveWebAccount(token: String) {
+        val account = PicaClient(session, null, viewModelScope).use { it.verifyToken(token) }
+        currentCoroutineContext().ensureActive()
+        if (!foreground()) throw CancellationException()
+        store.save(account)
+        currentCoroutineContext().ensureActive()
+        if (!foreground()) throw CancellationException()
+        client?.close(); client = null; retry = null
+        if (foreground()) {
             state.update { PicaUiState(ready = true, busy = true, account = account, source = account.source,
-                message = "会话账号已验证，可读取收藏和浏览作品") }
+                message = "网页会话已验证，可读取收藏和浏览作品") }
         }
     }
     fun logout(): Unit = work(::logout) {
@@ -187,10 +200,13 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
 }
 @Composable internal fun PicaSettingsPage(session: WorldSession, back: () -> Unit, browse: (String, String) -> Unit) {
     val model = picaModel(session); val state by model.state.collectAsStateWithLifecycle()
-    var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    var token by remember { mutableStateOf("") }
+    var browserError by remember { mutableStateOf<String?>(null) }
+    var webLogin by remember { mutableStateOf(false) }
     val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) password = "" }
+    LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) { token = ""; webLogin = false } }
     LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading(navigation.title("PicACG"), "", navigation::back) }
         sourceSettingsOverview(navigation,
@@ -204,11 +220,29 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
                 state.account != null -> "已保存登录会话"
                 else -> "未登录 · 请先连接账号"
             }, "云收藏", state.account?.name.orEmpty())
-            SettingsDisclosure("API 账号连接") {
-                OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("邮箱 / 账号") }, enabled = !state.busy, singleLine = true)
-                OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("密码") }, enabled = !state.busy,
-                    singleLine = true, visualTransformation = PasswordVisualTransformation())
-                ReferenceButton(feedbackAttempt({ model.login(email, password); password = "" }), enabled = state.ready && !state.busy && email.isNotBlank() && password.isNotBlank()) { Text("登录") }
+            OutlinedTextField(token, { token = it }, Modifier.fillMaxWidth(), label = { Text("网页会话 Token") },
+                enabled = !state.busy, singleLine = true, visualTransformation = PasswordVisualTransformation())
+            ReferenceButton({ model.importWebToken(token.trim()) { token = ""; browse("favorites", "") } },
+                enabled = state.ready && !state.busy && token.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                Text("导入网页会话与收藏")
+            }
+            ReferenceButton({
+                browserError = null
+                try { uriHandler.openUri(PicaWebSite.url) }
+                catch (_: android.content.ActivityNotFoundException) { browserError = "未找到可打开网页的浏览器" }
+                catch (_: IllegalArgumentException) { browserError = "无法打开浏览器，请检查默认浏览器设置" }
+            }, enabled = state.ready && !state.busy, modifier = Modifier.fillMaxWidth()) {
+                Text("浏览器登录 / 注册")
+            }
+            browserError?.let { RequestFeedback(it, failure = true) }
+            Text("浏览器登录后需手动导入网页会话，返回本软件不会自动登录。", style = MaterialTheme.typography.bodySmall)
+            SettingsDisclosure("如何获取网页会话") {
+                Text("在电脑浏览器登录 manhuabika.com 后，打开开发者工具的「应用 / 存储 → 本地存储 → https://manhuabika.com」，复制 token 的值，再回本页粘贴。", style = MaterialTheme.typography.bodySmall)
+                Text("只需登录会话，不需要密码；会话可访问账号，请勿发给他人。", style = MaterialTheme.typography.bodySmall)
+            }
+            SettingsDisclosure("备用应用内登录") {
+                ReferenceButton({ token = ""; webLogin = true }, enabled = state.ready && !state.busy,
+                    modifier = Modifier.fillMaxWidth()) { Text("应用内网页登录 / 注册") }
             }
             if (state.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
@@ -226,6 +260,10 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         } }
 
     }
+    if (webLogin) AccountWebLogin(PicaWebSite, close = { webLogin = false },
+        autoConnectKey = { page, _, _ -> page.picaToken() },
+        connect = { page, _, _ -> model.connectWebAccount(page.picaToken()) },
+        afterConnected = { token = ""; browse("favorites", "") })
 }
 
 @OptIn(ExperimentalLayoutApi::class)

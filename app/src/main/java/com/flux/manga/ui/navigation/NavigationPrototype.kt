@@ -182,7 +182,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         }
         entry<BaoziReaderRoute> { route ->
             com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) {
-            com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back)
+            com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) })
             }
         }
         entry<CopyMangaBrowse> {
@@ -192,7 +192,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
             com.flux.manga.ui.pages.CopyMangaPage(session, navigation::back, navigation::openCopyMangaBook, route.sourceId, route.mangaId, read = { navigation.openCopyMangaReader(route.sourceId, route.mangaId, it) }, openTag = navigation::openNamedTag, download = { navigation.openDownloadChapters(route.sourceId,route.mangaId) }, searchAuthor = navigation::openAuthorSearch)
         } }
         entry<CopyMangaReader> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) {
-            com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back)
+            com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) })
         } }
         entry<OnlineSearch> {
             com.flux.manga.ui.pages.OnlineSearchPage(session, navigation::back,
@@ -216,13 +216,13 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         }
         entry<DownloadedBook> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.DownloadedBookPage(session,route.sourceId,route.mangaId,navigation::back,
             { navigation.openDownloadedReader(route.sourceId,route.mangaId,it) }, { navigation.openDownloadChapters(route.sourceId,route.mangaId) },navigation::openDownloads) } }
-        entry<DownloadedReader> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session,route.sourceId,route.mangaId,route.chapterId,navigation::back,offlineOnly=true) } }
+        entry<DownloadedReader> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session,route.sourceId,route.mangaId,route.chapterId,navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) },offlineOnly=true) } }
         entry<DownloadQueue> {
             if (navigation.world == PrototypeWorld.NSFW) com.flux.manga.ui.pages.PrivateDownloadsPage(session, back = navigation::back, read = navigation::openPrivateOfflineReader)
             else com.flux.manga.ui.pages.DownloadQueuePage(session,navigation::back,navigation::openDownloadedBook) { source,manga,chapter -> navigation.openDownloadedReader(source,manga,chapter) }
         }
         entry<PrivateDownloadsRoute> { route -> com.flux.manga.ui.pages.PrivateDownloadsPage(session, route.sourceId, route.mangaId, navigation::back, navigation::openPrivateOfflineReader) }
-        entry<PrivateOfflineReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, offlineOnly = true) } }
+        entry<PrivateOfflineReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) }, offlineOnly = true) } }
         entry<DownloadChapters> { route -> com.flux.manga.ui.pages.DownloadChaptersPage(session,route.sourceId,route.mangaId,navigation::back,navigation::openDownloads) }
         entry<AppSettings> {
             com.flux.manga.ui.pages.SettingsPage(navigation::back,
@@ -285,25 +285,25 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
             navigation::openKomgaBook, route.favorites, route.query, route.sourceId, site = com.flux.manga.data.GallerySite.EX, tags = { navigation.openGalleryTags(true, route.sourceId) }, library = navigation::openOnlineLibrary) }
         entry<ExBookRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.EhDetailPage(session, route.sourceId, route.mangaId, navigation::back,
             { navigation.openKomgaReader(route.sourceId, route.mangaId, "gallery") }, { navigation.openExBrowse(false, it, route.sourceId) }, site = com.flux.manga.data.GallerySite.EX, tags = { navigation.openGalleryTags(true, route.sourceId) }, interactions = { navigation.openEhInteraction(route.sourceId, route.mangaId, it) }, download = { navigation.openPrivateDownloads(route.sourceId, route.mangaId) }, searchAuthor = navigation::openAuthorSearch) } }
-        entry<ExReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, "gallery", navigation::back) } }
+        entry<ExReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, "gallery", navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) }) } }
         entry<EhSettingsRoute> { com.flux.manga.ui.pages.EhSettingsPage(session, navigation::back, { navigation.openEhBrowse(it) }, tags = { navigation.openGalleryTags(false) }) }
         entry<EhBrowseRoute> { route -> com.flux.manga.ui.pages.EhBrowsePage(session, navigation::back, navigation::openEhSettings,
             navigation::openKomgaBook, route.favorites, route.query, route.sourceId, tags = { navigation.openGalleryTags(false, route.sourceId) }, library = navigation::openOnlineLibrary) }
         entry<EhBookRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.EhDetailPage(session, route.sourceId, route.mangaId, navigation::back,
             { navigation.openKomgaReader(route.sourceId, route.mangaId, "gallery") }, { navigation.openEhBrowse(false, it, route.sourceId) }, tags = { navigation.openGalleryTags(false, route.sourceId) }, interactions = { navigation.openEhInteraction(route.sourceId, route.mangaId, it) }, download = { navigation.openPrivateDownloads(route.sourceId, route.mangaId) }, searchAuthor = navigation::openAuthorSearch) } }
-        entry<EhReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, "gallery", navigation::back) } }
+        entry<EhReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, "gallery", navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) }) } }
         entry<PicaSettingsRoute> { com.flux.manga.ui.pages.PicaSettingsPage(session, navigation::back, { kind, value -> navigation.openPicaList(kind, value) }) }
         entry<PicaBrowseRoute> { route -> com.flux.manga.ui.pages.PicaBrowsePage(session, navigation::back, navigation::openPicaSettings,
             navigation::openKomgaBook, navigation::openPicaList, route.kind, route.value, route.sourceId, library = navigation::openOnlineLibrary) }
         entry<PicaBookRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.PicaDetailPage(session, route.sourceId, route.mangaId, navigation::back,
             { navigation.openKomgaReader(route.sourceId, route.mangaId, it) }, { kind, value -> navigation.openPicaList(kind, value, route.sourceId) }, download = { navigation.openPrivateDownloads(route.sourceId, route.mangaId) }, searchAuthor = navigation::openAuthorSearch) } }
-        entry<PicaReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back) } }
+        entry<PicaReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) }) } }
         entry<JmSettingsRoute> { com.flux.manga.ui.pages.JmSettingsPage(session, navigation::back, navigation::openJmBrowse, navigation::openJmFavorites) }
         entry<JmBrowseRoute> { route -> com.flux.manga.ui.pages.JmBrowsePage(session, navigation::back, navigation::openJmSettings,
             navigation::openKomgaBook, route.favorites, route.query, source = route.sourceId, library = navigation::openOnlineLibrary) }
         entry<JmBookRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.JmDetailPage(session, route.sourceId, route.mangaId, navigation::back,
             { navigation.openKomgaReader(route.sourceId, route.mangaId, it) }, { navigation.openJmTag(route.sourceId, it) }, download = { navigation.openPrivateDownloads(route.sourceId, route.mangaId) }, searchAuthor = navigation::openAuthorSearch) } }
-        entry<JmReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back) } }
+        entry<JmReaderRoute> { route -> com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) { com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) }) } }
         entry<CopyAccountSettings> { com.flux.manga.ui.pages.CopyAccountPage(session, navigation::back, navigation::openKomgaBook, navigation::openOnlineLibrary) }
         entry<BaoziAccountSettings> { com.flux.manga.ui.pages.BaoziAccountPage(session, navigation::back, navigation::openKomgaBook, navigation::openOnlineLibrary) }
         entry<KomgaConfiguration> { com.flux.manga.ui.pages.KomgaSettingsPage(session, navigation::back, navigation::openKomga, navigation::openKomgaImport) }
@@ -322,7 +322,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         }
         entry<KomgaReader> { route ->
             com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) {
-                com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back)
+                com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) })
             }
         }
         entry<GlassLab> { GlassLabPage(back = navigation::back) }

@@ -2,6 +2,7 @@ package com.flux.manga.ui.pages
 
 import com.flux.manga.core.*
 import com.flux.manga.data.ReadingMode
+import com.flux.manga.data.isCopySource
 import kotlin.math.max
 import kotlin.math.min
 
@@ -60,7 +61,14 @@ internal suspend fun adjacentReaderChapter(key: SourceMangaKey, current: String,
         require(directory.chapters.map { it.id }.distinct().size == directory.chapters.size) { "章节目录包含重复标识" }
         val index = directory.chapters.indexOfFirst { it.id == current }
         if (index >= 0) {
-            directory.chapters.getOrNull(index + direction)?.let { return it }
+            directory.chapters.getOrNull(index + direction)?.let { candidate ->
+                // Copy's flattened catalog resets its one-based ordinal for each group.
+                // Preserve that boundary, including when the next group arrives on a new page.
+                val ordinal = directory.chapters[index].ordinal
+                if (isCopySource(key.sourceId) &&
+                    (if (direction > 0) candidate.ordinal <= ordinal else candidate.ordinal >= ordinal)) return null
+                return candidate
+            }
             if (direction < 0) return null
         }
         val request = (directory.next as? SourceContinuation.Next)?.request

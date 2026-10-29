@@ -81,6 +81,11 @@ internal val JmWebLoginUrls = listOf("18comic.vip", "18comic.ink", "jmcomic-zzz.
 internal val JmWebSite = AccountWebSite("JMComic 网页账号", JmWebLoginUrls.first(),
     JmWebLoginUrls.flatMap { val host = requireNotNull(Uri.parse(it).host); listOf(host, "www.$host") }.toSet())
 
+// User-provided website entries; the API destination remains pinned in PicaClient's transport.
+internal val PicaWebLoginUrls = listOf("https://manhuabika.com/")
+internal val PicaWebSite = AccountWebSite("PicACG 网页账号", PicaWebLoginUrls.first(),
+    PicaWebLoginUrls.map { requireNotNull(Uri.parse(it).host) }.toSet())
+
 // Official cn.baozimh.com redirect, observed 2026-10-26. Open the website's
 // browser verification normally; do not emulate its proof or reuse other origins' cookies.
 internal const val BaoziWebOrigin = "https://cn.bzmgcn.com/"
@@ -95,6 +100,22 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
     private fun checkPage() {
         if (!current()) throw CancellationException()
         if (!site.accepts(view.url)) throw IOException("请先返回本站登录页面")
+    }
+
+    suspend fun picaToken(): String {
+        checkPage()
+        require(site == PicaWebSite)
+        val origins = PicaWebLoginUrls.joinToString(",") { JSONObject.quote(it.removeSuffix("/")) }
+        val value = suspendCancellableCoroutine<String> { continuation ->
+            view.evaluateJavascript("[$origins].includes(location.origin) ? (localStorage.getItem('token') || '') : ''") {
+                if (continuation.isActive) continuation.resume(it)
+            }
+        }
+        checkPage()
+        val token = JSONTokener(value).nextValue() as? String
+        if (token.isNullOrBlank()) throw IOException("请先在网页完成登录，再连接账号与收藏")
+        if (token.length > 4096 || token.any { it.code !in 33..126 }) throw IOException("网页会话格式无效，请重新登录")
+        return token
     }
 
     fun cookie(url: String, name: String): String {
@@ -378,6 +399,33 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     var verifyingBrowser by remember { mutableStateOf(false) }
     var recoveryNeedsUser by remember { mutableStateOf(false) }
     var attemptedKey by remember { mutableStateOf<String?>(null) }
+    var slowPage by remember { mutableStateOf(false) }
+    val loadDiagnostics = remember { mutableStateListOf<String>() }
+
+    // Keep only classified events in this window. Never retain raw console messages,
+    // request headers, URL paths/queries, response bodies or account storage.
+    fun diagnostic(message: String) {
+        if (!alive || site != PicaWebSite || message in loadDiagnostics) return
+        if (loadDiagnostics.size == 10) loadDiagnostics.removeAt(0)
+        loadDiagnostics.add(message)
+    }
+    fun resourceLabel(request: WebResourceRequest): String {
+        val kind = when {
+            request.isForMainFrame -> "主页面"
+            request.url.path.orEmpty().endsWith(".js", ignoreCase = true) -> "脚本"
+            request.url.path.orEmpty().endsWith(".css", ignoreCase = true) -> "样式"
+            else -> "子资源 / 接口"
+        }
+        return "$kind · ${request.url.host.orEmpty()}"
+    }
+
+    LaunchedEffect(site, pageVersion, ready, error) {
+        slowPage = false
+        if (site == PicaWebSite && !ready && error == null) {
+            delay(30_000)
+            slowPage = true
+        }
+    }
 
     // A recovery may need human verification. End quietly instead of keeping a hidden
     // browser alive indefinitely or promoting it into a modal over the current page.
@@ -523,6 +571,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
         fun disposeBrowser() {
             if (disposed) return
             disposed = true; alive = false; connection?.cancel(); preparing?.cancel()
+            loadDiagnostics.clear()
             uid = ""; username = ""; baoziPassword = ""; baoziMemory.clear()
             browser?.apply {
                 BaoziBrowserProfile.detach(this)
@@ -567,6 +616,23 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     BaoziBrowserProfile.cookies(this).setAcceptThirdPartyCookies(this, false)
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(web: WebView, value: Int) { if (alive) progress = value }
+                        override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                            if (site != PicaWebSite) return super.onConsoleMessage(message)
+                            val text = message.message().lowercase(java.util.Locale.ROOT)
+                            val category = when {
+                                "cors" in text || "access-control-allow-origin" in text -> "CORS 跨域校验消息"
+                                "content security policy" in text -> "CSP 内容安全策略消息"
+                                "mixed content" in text -> "HTTP / HTTPS 混合内容消息"
+                                "serviceworker" in text || "service worker" in text -> "Service Worker 消息"
+                                "mime type" in text -> "脚本 / 样式 MIME 类型消息"
+                                "dynamically imported module" in text || "module script" in text -> "模块脚本加载消息"
+                                "err_" in text || "failed to fetch" in text -> "网络请求失败消息"
+                                message.messageLevel() == ConsoleMessage.MessageLevel.ERROR -> "JavaScript 错误"
+                                else -> null
+                            }
+                            category?.let { diagnostic("控制台 · $it · ${message.messageLevel().name}") }
+                            return true
+                        }
                     }
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(web: WebView, request: WebResourceRequest): Boolean {
@@ -577,21 +643,27 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             return true
                         }
                         override fun onPageStarted(web: WebView, url: String?, icon: android.graphics.Bitmap?) {
+                            loadDiagnostics.clear()
                             pageVersion++; connection?.cancel(); busy = false
                             baoziMemory.candidate = null
                             verifyingBrowser = site == BaoziWebSite && Uri.parse(url.orEmpty()).path?.startsWith("/__gatekeeper_challenge/") == true
-                            if (alive) { ready = false; error = null; host = Uri.parse(url.orEmpty()).host.orEmpty() }
+                            if (alive) { ready = false; progress = 0; error = null; host = Uri.parse(url.orEmpty()).host.orEmpty() }
                         }
                         override fun onPageFinished(web: WebView, url: String?) {
                             // Error pages also finish loading: they must not enable session import.
-                            if (alive) ready = error == null && site.accepts(url)
+                            // Pica may already be connecting after the visible commit; an account
+                            // verification error must not disable manual retry when subresources finish.
+                            if (alive && !(site == PicaWebSite && ready)) ready = error == null && site.accepts(url)
                         }
                         override fun onPageCommitVisible(web: WebView, url: String?) {
+                            // SPA login can be usable before slow subresources finish loading.
+                            if (alive && site == PicaWebSite && error == null && site.accepts(url)) ready = true
                             if (alive && site == BaoziWebSite && site.accepts(url)) {
                                 web.evaluateJavascript(BAOZI_LOGIN_EMAIL, null)
                             }
                         }
                         override fun onReceivedError(web: WebView, request: WebResourceRequest, failure: WebResourceError) {
+                            diagnostic("${resourceLabel(request)} · 网络错误 ${failure.errorCode}")
                             if (alive && request.isForMainFrame) {
                                 ready = false
                                 val reason = when (failure.errorCode) {
@@ -606,6 +678,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             }
                         }
                         override fun onReceivedHttpError(web: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                            diagnostic("${resourceLabel(request)} · HTTP ${response.statusCode}")
+                            if (response.responseHeaders?.any { (key, value) ->
+                                key.equals("cf-mitigated", ignoreCase = true) && value.equals("challenge", ignoreCase = true)
+                            } == true) diagnostic("${resourceLabel(request)} · 响应标记为网站验证挑战")
                             if (alive && request.isForMainFrame) {
                                 ready = false
                                 if (site == BaoziWebSite && response.statusCode == 403 && !gateAttempted && !verifyingBrowser &&
@@ -711,7 +787,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 }
                 Text(site.title, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium)
                 Text(host.ifBlank { "正在准备登录页面…" }, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
-                if (busy || (error == null && progress < 100)) RequestLoading()
+                if (busy || (error == null && progress < 100 && (site != PicaWebSite || !ready))) RequestLoading()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     view?.let { browser -> AndroidView(factory = { browser }, modifier = Modifier.fillMaxSize()) }
                 }
@@ -721,6 +797,42 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     // Keep connection/load failures visible inside the window that owns the action.
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium) }
+                    if (slowPage && error == null) Text("网页登录仍未就绪，可重新打开；仍无法显示时，关闭窗口使用浏览器登录并导入 Token。",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (site == PicaWebSite) SettingsDisclosure("网页加载诊断") {
+                        TextButton(onClick = {
+                            val browser = view ?: return@TextButton
+                            if (!site.accepts(browser.url)) {
+                                diagnostic("当前尚未进入允许的 HTTPS 登录页")
+                                return@TextButton
+                            }
+                            val version = pageVersion
+                            val blocked = ServiceWorkerController.getInstance().serviceWorkerWebSettings.blockNetworkLoads
+                            diagnostic("Service Worker 网络策略 · ${if (blocked) "阻止网络" else "允许网络"}")
+                            browser.evaluateJavascript("""
+                                JSON.stringify({
+                                  secure: window.isSecureContext === true,
+                                  originMatches: location.origin === ${JSONObject.quote(PicaWebSite.url.removeSuffix("/"))},
+                                  loaded: document.readyState === 'complete',
+                                  rootMounted: !!document.getElementById('root')?.children.length,
+                                  workerSupported: 'serviceWorker' in navigator,
+                                  workerControlled: !!navigator.serviceWorker?.controller
+                                })
+                            """.trimIndent()) { result ->
+                                if (alive && version == pageVersion && site.accepts(browser.url)) {
+                                    try {
+                                        val snapshot = JSONObject(JSONTokener(result).nextValue() as? String ?: "{}")
+                                        fun flag(key: String) = if (snapshot.optBoolean(key)) "是" else "否"
+                                        diagnostic("页面 · HTTPS 安全上下文 ${flag("secure")} · Origin 符合入口 ${flag("originMatches")}")
+                                        diagnostic("页面 · 加载完成 ${flag("loaded")} · 应用根节点有内容 ${flag("rootMounted")}")
+                                        diagnostic("Service Worker · 支持 ${flag("workerSupported")} · 当前控制页面 ${flag("workerControlled")}")
+                                    } catch (_: org.json.JSONException) { diagnostic("页面状态读取失败") }
+                                }
+                            }
+                        }, enabled = view != null && !busy) { Text("读取页面状态") }
+                        if (loadDiagnostics.isEmpty()) Text("尚未捕获错误；不代表页面已正常加载。", style = MaterialTheme.typography.bodySmall)
+                        loadDiagnostics.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    }
                     if (site == BaoziWebSite && error != null) TextButton(onClick = {
                         connection?.cancel(); attemptedKey = null
                         baoziMemory.automaticAttempted = false

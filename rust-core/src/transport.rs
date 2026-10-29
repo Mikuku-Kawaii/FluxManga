@@ -354,7 +354,8 @@ impl SourceHttpSession {
         if context.world != SourceWorld::Nsfw || !context.source_id.starts_with("picacg-") {
             return Err(SourceError::InvalidRequest);
         }
-        Self::build(context, "https://picaapi.picacomic.com/".into(), None, None, None,
+        // manhuabika.com published default API; never select a credential destination from input.
+        Self::build(context, "https://picaapi.go2778.com/".into(), None, None, None,
             SourceHttpConfig { timeout_ms: 30_000, max_in_flight: 2, min_interval_ms: 150, max_retries: 0, max_body_bytes: 32 * 1024 * 1024 })
     }
 
@@ -367,7 +368,7 @@ impl SourceHttpSession {
         let parts: Vec<_> = url.path_segments().ok_or(SourceError::InvalidRequest)?.collect();
         let id = |s: &str| s.len() == 24 && s.bytes().all(|b| b.is_ascii_hexdigit());
         let allowed = match parts.as_slice() {
-            ["auth", "sign-in"] | ["comics", "advanced-search"] => body.is_some(),
+            ["comics", "advanced-search"] => body.is_some(),
             ["users", "profile" | "favourite"] | ["categories"] | ["collections"] | ["comics"] | ["comics", "leaderboard"] => body.is_none(),
             ["comics", comic] | ["comics", comic, "eps"] => id(comic) && body.is_none(),
             ["comics", comic, "order", order, "pages"] => id(comic) && order.parse::<u32>().is_ok_and(|n| n > 0) && body.is_none(),
@@ -382,9 +383,10 @@ impl SourceHttpSession {
                 value.set_sensitive(true); headers.insert(header::HeaderName::from_static(name), value);
             }
         }
-        for (name, value) in [("api-key", "C69BAF41DA5ABD1FFEDC6D2FEA56B"), ("app-channel", "1"),
-            ("app-version", "2.2.1.3.3.4"), ("app-uuid", "defaultUuid"), ("app-platform", "android"),
-            ("app-build-version", "44"), ("user-agent", "okhttp/3.8.1"), ("accept", "application/vnd.picacomic.com.v1+json"),
+        for (name, value) in [("app-channel", "1"),
+            ("app-version", "20251017"), ("app-uuid", "webUUIDv2"), ("app-platform", "android"),
+            ("origin", "https://manhuabika.com"), ("referer", "https://manhuabika.com/"),
+            ("user-agent", "okhttp/3.8.1"), ("accept", "application/vnd.picacomic.com.v1+json"),
             ("image-quality", "original"), ("content-type", "application/json; charset=UTF-8")] {
             headers.insert(header::HeaderName::from_static(name), header::HeaderValue::from_static(value));
         }
