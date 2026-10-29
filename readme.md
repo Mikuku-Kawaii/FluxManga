@@ -14,9 +14,6 @@
 [![Android](https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white)](#下载与安装)
 [![License](https://img.shields.io/badge/License-GPL--3.0--blue)](LICENSE)
 
-<img src="assets/readme/discovery-sfw.jpg" width="340" alt="FluxManga 首页：图源推荐与最近更新" />
-
-<sub>实际应用界面 · 作品及封面版权属于各自权利人</sub>
 
 </div>
 
@@ -52,12 +49,6 @@
 表世界采用白蓝配色，里世界采用黑橙配色。两个空间分别保存书库、进度、账号和缓存，可以通过底部切换键进入。里世界提供加密存储、窗口保护和可选身份验证；可在设置中选择退出后自动返回表世界的等待时间。
 
 界面提供低效果和减少动画选项，漫画正文不模糊。窗口保护会阻止系统截取里世界画面；空间保护仍需配合设备自身的安全设置使用。
-
-<p align="center">
-  <img src="assets/readme/inner-world-empty.png" width="320" alt="里世界黑橙主题的空书库" />
-</p>
-
-<sub>里世界界面：独立截图版的空书库，不含个人阅读记录或作品。</sub>
 
 <a id="ui-reference-20261019"></a>
 
