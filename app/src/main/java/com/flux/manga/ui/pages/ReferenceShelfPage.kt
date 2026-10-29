@@ -167,7 +167,6 @@ internal fun ReferenceShelfPage(
     ReferenceRefreshBox(state.loading && state.showLoading, { model.refresh() }, Modifier.fillMaxSize(),
         enabled = canEdit && !selecting) { BoxWithConstraints(Modifier.fillMaxSize()) {
         val columns = shelfColumns(maxWidth.value, fontScale, state.layout)
-        val compactContinue = maxWidth < 340.dp || fontScale >= 1.5f
         Column(Modifier.fillMaxSize()) {
         LazyVerticalGrid(GridCells.Fixed(columns), state = shownScroll,
             modifier = Modifier.weight(1f).fillMaxWidth().testTag("reference-shelf"),
@@ -208,7 +207,7 @@ internal fun ReferenceShelfPage(
                 item(key = "continue", span = { GridItemSpan(maxLineSpan) }) {
                   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     DiscoverySectionHeading("继续阅读", "shelf-history", "阅读记录") { list(ShelfSection.HISTORY) }
-                    if (latest != null) ContinueCard(latest, model, open, read, compactContinue)
+                    if (latest != null) ContinueCard(latest, model, open, read)
                     else if (state.loading) Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
                         Box(Modifier.fillMaxWidth().heightIn(min = 150.dp), contentAlignment = Alignment.Center) { Text("正在读取阅读记录…") }
                     }
@@ -410,18 +409,19 @@ private fun ShelfCover(book: ShelfBook, model: ShelfViewModel, modifier: Modifie
 
 @Composable
 private fun ContinueCard(book: ShelfBook, model: ShelfViewModel, open: (ShelfBook) -> Unit,
-                         read: (ShelfBook) -> Unit, stacked: Boolean) {
+                         read: (ShelfBook) -> Unit) {
+    val cardHeight = featuredCardHeight()
     @Composable fun Info(modifier: Modifier) {
-        Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(modifier.padding(top = 8.dp, bottom = 8.dp, end = 12.dp)
+            .verticalScroll(rememberScrollState()).heightIn(min = cardHeight - 16.dp),
+            verticalArrangement = Arrangement.SpaceBetween) {
             Text(book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable(onClickLabel = "查看详情") { open(book) },
                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             ShelfUpdateLabel(book.information, book.chapterId, book.online)
-            Text(shelfReadingLabel(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
-                book.information, book.chapterId, book.online),
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-            book.ratio?.let { fraction ->
-                Text("${(fraction * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            DetailInfoText(listOfNotNull(shelfReadingLabel(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
+                book.information, book.chapterId, book.online), book.ratio?.let { "${(it * 100).toInt()}%" }).joinToString(" · "),
+                label = "阅读位置", style = MaterialTheme.typography.bodySmall)
             ReferenceButton(onClick = { read(book) }, modifier = Modifier.testTag("shelf-continue")) {
                 ReferenceIcon(ReferenceSymbol.PLAY)
                 Spacer(Modifier.width(8.dp))
@@ -429,17 +429,14 @@ private fun ContinueCard(book: ShelfBook, model: ShelfViewModel, open: (ShelfBoo
             }
         }
     }
-    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
-        if (stacked) Column {
-            ShelfCover(book, model, Modifier.fillMaxWidth().height(190.dp).clickable { open(book) }, ContentScale.Crop)
-            Info(Modifier.fillMaxWidth())
-        } else BoxWithConstraints(Modifier.fillMaxWidth()) {
-            // The text and controls determine height; the cover follows that measured height.
-            // An intrinsic Row can constrain a wrapped title's button below its touch target.
-            Box(Modifier.matchParentSize()) {
-                ShelfCover(book, model, Modifier.fillMaxWidth(.36f).fillMaxHeight().clickable(onClickLabel = "查看详情") { open(book) }, ContentScale.Crop)
+    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
+            Row(Modifier.fillMaxWidth().height(cardHeight), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ShelfCover(book, model, Modifier.width(coverWidth).fillMaxHeight()
+                    .clickable(onClickLabel = "查看详情") { open(book) }, ContentScale.Crop)
+                Info(Modifier.weight(1f).fillMaxHeight())
             }
-            Info(Modifier.fillMaxWidth().padding(start = maxWidth * .36f))
         }
     }
 }

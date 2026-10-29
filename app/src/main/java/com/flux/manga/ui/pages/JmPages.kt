@@ -332,16 +332,16 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         item { JmFeedback(model, state) }
         state.detail?.let { book ->
             item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(id) } }, titleLines = 5) {
-                    if (book.author.isNotBlank()) Text(authorNames(book.author.split(" / ").map { it to it }, searchAuthor), style = MaterialTheme.typography.bodyMedium)
-                    if (book.chapters.size > 1) Text("${book.chapters.size} 章", style = MaterialTheme.typography.bodySmall)
+                DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(id) } }) {
+                    DetailAuthors(book.author.split(" / ").map { it to it }, searchAuthor)
+                    if (book.chapters.size > 1) DetailInfoText("${book.chapters.size} 章", style = MaterialTheme.typography.bodySmall)
+                    WorkTags(book.tags.map { it to it }) { value, _ -> tag(value) }
                 }
                 DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                     read = { (state.resume ?: book.chapters.firstOrNull()?.id)?.let(read) },
                     canRead = (state.resume != null || book.chapters.isNotEmpty()) && !state.busy, hasProgress = state.resume != null,
                     description = book.description, descriptionIdentity = "$source:${book.id}",
-                    readingPosition = readingPosition(state.progress, book.chapters.mapIndexed { index, chapter -> DetailCatalogEntry(chapter.id, chapterTitle(chapter.title, index + 1)) }),
-                    belowActions = { WorkTags(book.tags.map { it to it }, maxRows = 2) { value, _ -> tag(value) } })
+                    readingPosition = readingPosition(state.progress, book.chapters.mapIndexed { index, chapter -> DetailCatalogEntry(chapter.id, chapterTitle(chapter.title, index + 1)) }))
             } }
             if (book.chapters.size > 1) item { RecordedDetailCatalog(session, source, id, book.chapters.mapIndexed { index, chapter -> DetailCatalogEntry(chapter.id, chapterTitle(chapter.title, index + 1)) }, state.resume, read,
                 enabled = !state.busy) }

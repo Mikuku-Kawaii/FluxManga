@@ -31,20 +31,32 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
     openInDialog: Boolean = false, maxRows: Int? = null, open: (String, String) -> Unit) {
     if (tags.isNullOrEmpty()) return
     var expanded by rememberSaveable(tags) { mutableStateOf(false) }
+    val dialog = openInDialog || LocalDetailHeroTags.current
+    val full = LocalDetailFullInformation.current
+    val dismissInformation = LocalDetailInformationDismiss.current
+    val truncated = remember(tags) { mutableStateMapOf<String, Boolean>() }
     val rows = maxRows ?: LocalDetailTagRows.current
     @Composable fun Tag(name: String, id: String, dismiss: Boolean = false) {
-        if (canOpen(id)) OutlinedButton(onClick = { if (dismiss) expanded = false; open(id, name) },
+        if (canOpen(id)) OutlinedButton(onClick = { if (dismiss) expanded = false; dismissInformation?.invoke(); open(id, name) },
             modifier = Modifier.defaultMinSize(minHeight = 32.dp), shape = RoundedCornerShape(6.dp),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)) {
-            Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        } else Text(name, Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
+                onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
+        } else Text(name, Modifier.padding(8.dp), maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
+            onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
+    }
+    if (full) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            tags.forEach { (name, id) -> Tag(name, id) }
+        }
+        return
     }
     Layout(content = {
         tags.forEach { (name, id) -> Tag(name, id) }
         OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.defaultMinSize(minHeight = 32.dp)
             .testTag("detail-tags-expand"), shape = RoundedCornerShape(6.dp),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)) {
-            Text(if (expanded && !openInDialog) "收起" else "展开", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (expanded && !dialog) "收起" else "展开", maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }, modifier = Modifier.fillMaxWidth().testTag("detail-tags")) { measurables, constraints ->
         val children = measurables.map { it.measure(constraints.copy(minWidth = 0, minHeight = 0)) }
@@ -63,10 +75,10 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
             }
         }
         val natural = arrange(chips)
-        val overflow = natural.any { it.row >= rows }
+        val overflow = natural.any { it.row >= rows } || truncated.values.any { it }
         val placed = when {
             !overflow -> natural
-            expanded && !openInDialog -> arrange(chips + toggle)
+            expanded && !dialog -> arrange(chips + toggle)
             else -> {
                 var count = natural.count { it.row < rows }
                 var result = arrange(chips.take(count) + toggle)
@@ -82,7 +94,7 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
             placed.forEach { it.item.placeRelative(it.x, it.y) }
         }
     }
-    if (openInDialog && expanded) ReferenceDialog(onDismissRequest = { expanded = false }, title = { Text("作品标签") },
+    if (dialog && expanded) ReferenceDialog(onDismissRequest = { expanded = false }, title = { Text("作品标签") },
         text = {
             FlowRow(Modifier.fillMaxWidth().heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {

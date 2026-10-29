@@ -412,10 +412,11 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                         }
                     }
                 }, titleTag = "local-book-title") {
-                    Text("本地 CBZ · ${detail.card.pageCount} 页", Modifier.testTag("local-book-summary"), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    detail.metadata.author?.takeIf { it.isNotBlank() }?.let { Text(authorNames(listOf(it to it), searchAuthor, "作者：")) }
-                    detail.metadata.volume?.takeIf { it.isNotBlank() }?.let { Text("卷号：$it") }
-                    if (!detail.card.available) RequestFeedback(ImportFailure.MISSING.userMessage, Modifier.testTag("local-missing"))
+                    DetailInfoText("本地 CBZ · ${detail.card.pageCount} 页", modifier = Modifier.testTag("local-book-summary"))
+                    detail.metadata.author?.takeIf { it.isNotBlank() }?.let { DetailAuthors(listOf(it to it), searchAuthor) }
+                    detail.metadata.volume?.takeIf { it.isNotBlank() }?.let { DetailInfoText("卷号：$it") }
+                    if (!detail.card.available) DetailInfoText(ImportFailure.MISSING.userMessage, modifier = Modifier.testTag("local-missing"),
+                        color = MaterialTheme.colorScheme.error)
                 }
             }
             item {

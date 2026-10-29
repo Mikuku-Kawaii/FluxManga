@@ -142,14 +142,14 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
     val loaded = metadata.books[card.key]
     val information = loaded?.info
     val error = metadata.errors[card.key]
-    val scale = LocalDensity.current.fontScale
+    val cardHeight = featuredCardHeight()
     Surface(onClick = { open(card.key.sourceId, card.key.mangaId) },
         shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
         BoxWithConstraints(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = .08f), MaterialTheme.colorScheme.surface)))) {
             // Bound the preview, even when cached metadata arrives later. Full text lives in detail.
-            val contentHeight = 144.dp.coerceAtLeast(80.dp * scale)
-            val coverWidth = ((contentHeight + 16.dp) * .7f).coerceAtMost(maxWidth * .4f)
+            val contentHeight = cardHeight - 16.dp
+            val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
             val informationWidth = (maxWidth - coverWidth - 20.dp).coerceAtLeast(1.dp)
             Row(Modifier.fillMaxWidth().height(contentHeight + 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically) {

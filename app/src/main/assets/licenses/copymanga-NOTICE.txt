@@ -72,3 +72,9 @@ Same pinned commit/license: ui/cardflow/newest/NewestFragment.kt,
 json/TypeBookListStructure.java and TypeBookStructure.java, and newestApiUrl in strings.xml.
 Added update/newest pagination via the existing Rust source, scoped transport and
 Compose mixed discovery/cache; no upstream UI or additional runtime imported.
+
+2026-10-29 recent-updates routing correction:
+Reused the existing comics endpoint with ordering=-datetime_updated on the current
+reading API, replacing the separately hosted website update feed. Maps flat comic
+entries and optional update dates with existing pagination and session checks.
+No additional upstream code, dependency or account credential forwarding added.

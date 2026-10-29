@@ -67,14 +67,6 @@ struct UpdateComic {
     #[serde(default)]
     datetime_updated: serde_json::Value,
 }
-#[derive(Deserialize)]
-struct UpdateEntry {
-    comic: UpdateComic,
-    #[serde(default)]
-    last_chapter: serde_json::Value,
-    #[serde(default)]
-    datetime_created: serde_json::Value,
-}
 fn update_text(value: &serde_json::Value) -> Option<String> {
     value.as_str().map(str::trim).filter(|s| !s.is_empty() && s.len() <= 512).map(str::to_owned)
 }
@@ -499,15 +491,17 @@ impl CopyMangaSource {
     ) -> Result<SourceSearchPage, SourceError> {
         self.check(&context)?;
         let expected = offset(page)?;
-        let page: Page<UpdateEntry> = parse(
-            self.http.copy_updates(context.clone(), expected, LIMIT).await?
+        // Use the reading API's update ordering; the separate website feed may be blocked.
+        let page: Page<UpdateComic> = parse(
+            self.http.get(context.clone(), format!(
+                "api/v3/comics?limit={LIMIT}&offset={expected}&ordering=-datetime_updated&platform={}",
+                self.platform()
+            )).await?
         )?;
         let continuation = continuation(&page, expected)?;
         let items = page.list.into_iter().map(|entry| {
-            let mut manga = self.manga(entry.comic.base)?;
-            manga.updated_at = update_text(&entry.datetime_created)
-                .or_else(|| update_text(&entry.comic.datetime_updated));
-            manga.latest_chapter = entry.last_chapter.get("name").and_then(update_text);
+            let mut manga = self.manga(entry.base)?;
+            manga.updated_at = update_text(&entry.datetime_updated);
             Ok(manga)
         }).collect::<Result<Vec<_>, SourceError>>()?;
         self.check(&context)?;

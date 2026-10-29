@@ -393,21 +393,21 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
         }
         item { EhFeedback(model, state) }
         state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }, titleLines = 5) {
-                Text("${book.category} · ${book.pages} 页", style = MaterialTheme.typography.bodyMedium)
+            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }) {
+                DetailInfoText("${book.category} · ${book.pages} 页")
                 val artists = book.tags.filter { it.startsWith("artist:") }.map { it.substringAfter(':').trim() }.filter(String::isNotBlank)
-                if (artists.isNotEmpty()) Text(authorNames(artists.map { it to it }, searchAuthor, "作者："), style = MaterialTheme.typography.bodyMedium)
-                if (book.uploader.isNotBlank()) Text("上传者：${book.uploader}", style = MaterialTheme.typography.bodySmall)
-                if (book.subtitle.isNotBlank()) Text(book.subtitle, style = MaterialTheme.typography.bodyMedium)
+                DetailAuthors(artists.map { it to it }, searchAuthor)
+                if (book.uploader.isNotBlank()) DetailInfoText("上传者：${book.uploader}", style = MaterialTheme.typography.bodySmall)
+                if (book.subtitle.isNotBlank()) DetailInfoText(book.subtitle, label = "副标题")
+                WorkTags(book.tags.map { text ->
+                    (if (translated.enabled) translated.dictionary?.label(text) ?: text else text) to text
+                }) { text, _ ->
+                    tag(text.substringBefore(':') + ":\"" + text.substringAfter(':').replace("\"", "") + "\"")
+                }
             }
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                 read = read, canRead = !state.busy, hasProgress = state.resume,
                 readingPosition = readingPosition(state.progress, emptyList()), belowActions = {
-                    WorkTags(book.tags.map { text ->
-                        (if (translated.enabled) translated.dictionary?.label(text) ?: text else text) to text
-                    }, maxRows = 2) { text, _ ->
-                        tag(text.substringBefore(':') + ":\"" + text.substringAfter(':').replace("\"", "") + "\"")
-                    }
                     translated.message?.let { Text("中文标签暂不可用；原标签仍可搜索。", style = MaterialTheme.typography.bodySmall) }
                 })
             tags?.let { TextButton(it) { Text("中文标签与词库管理") } }

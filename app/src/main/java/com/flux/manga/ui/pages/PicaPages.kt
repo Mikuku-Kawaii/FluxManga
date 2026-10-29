@@ -332,20 +332,18 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         }
         item { PicaFeedback(model, state) }
         state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }, titleLines = 5) {
-                if (book.author.isNotBlank() || book.artist.isNotBlank()) Text(authorNames(listOf(book.author, book.artist).map { it to it }, searchAuthor), style = MaterialTheme.typography.bodyMedium)
-                Text(if (book.finished) "已完结" else "连载中", style = MaterialTheme.typography.bodySmall)
+            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }) {
+                DetailAuthors(listOf(book.author, book.artist).map { it to it }, searchAuthor)
+                DetailInfoText(if (book.finished) "已完结" else "连载中", style = MaterialTheme.typography.bodySmall)
+                WorkTags(book.categories.map { it to "category:$it" } + book.tags.map { it to "search:$it" }) { value, _ ->
+                    list(value.substringBefore(':'), value.substringAfter(':'))
+                }
             }
             val target = state.resume ?: state.chapters.firstOrNull()?.order?.toString()
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                 read = { target?.let(read) }, canRead = target != null && !state.busy, hasProgress = state.resume != null,
                 description = book.description, descriptionIdentity = "$source:${book.id}",
-                readingPosition = readingPosition(state.progress, state.chapters.map { DetailCatalogEntry(it.order.toString(), chapterTitle(it.title, it.order)) }),
-                belowActions = {
-                    WorkTags(book.categories.map { it to "category:$it" } + book.tags.map { it to "search:$it" }, maxRows = 2) { value, _ ->
-                        list(value.substringBefore(':'), value.substringAfter(':'))
-                    }
-                })
+                readingPosition = readingPosition(state.progress, state.chapters.map { DetailCatalogEntry(it.order.toString(), chapterTitle(it.title, it.order)) }))
         } } }
         if (state.chapters.size != 1) {
             item { TextButton({ model.chapters(id) }, enabled = state.book != null && !state.busy) { Text("刷新章节目录") } }
