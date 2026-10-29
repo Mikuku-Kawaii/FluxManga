@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/readme/app-icon.png" width="88" height="88" alt="FluxManga 图标" />
+<img src="app/src/main/res/drawable-nodpi/ic_launcher_artwork.png" width="88" height="88" alt="FluxManga 图标" />
 
 # FluxManga · 流光漫匣
 
@@ -10,7 +10,9 @@
 
 [下载最新版](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest) · [功能介绍](#功能介绍) · [支持的来源](#支持的来源) · [反馈问题](https://github.com/Mikuku-Kawaii/FluxManga/issues)
 
-`Android 12+`　`Jetpack Compose`　`Kotlin`　`Rust + UniFFI`
+[![Release](https://img.shields.io/github/v/release/Mikuku-Kawaii/FluxManga?label=Release&color=4B8DFF)](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest)
+[![Android](https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white)](#下载与安装)
+[![License](https://img.shields.io/badge/License-GPL--3.0--blue)](LICENSE)
 
 <img src="assets/readme/discovery-sfw.jpg" width="340" alt="FluxManga 首页：图源推荐与最近更新" />
 
@@ -51,6 +53,12 @@
 
 界面提供低效果和减少动画选项，漫画正文不模糊。窗口保护会阻止系统截取里世界画面；空间保护仍需配合设备自身的安全设置使用。
 
+<p align="center">
+  <img src="assets/readme/inner-world-empty.png" width="320" alt="里世界黑橙主题的空书库" />
+</p>
+
+<sub>里世界界面：独立截图版的空书库，不含个人阅读记录或作品。</sub>
+
 <a id="ui-reference-20261019"></a>
 
 ## 支持的来源
@@ -65,7 +73,10 @@
 | **PicACG** | 在里世界浏览、搜索、阅读及导入收藏 | 需要有效账号，可手动导入网页会话 Token |
 | **E-Hentai / ExHentai** | 在里世界搜索、阅读画廊及导入收藏 | ExHentai 权限需要单独确认 |
 
-各来源的功能、登录方式和导入范围不同。**部分图源可能需要可用的网络代理才能正常访问**，具体取决于所在网络和站点状态；请自行配置设备网络。项目不提供漫画资源、账号或服务镜像。[查看详细图源说明](docs/release/supported-sources.md)。
+各来源的功能、登录方式和导入范围不同。项目不提供漫画资源、账号或服务镜像。[查看详细图源说明](docs/release/supported-sources.md)。
+
+> [!NOTE]
+> 部分图源可能需要可用的网络代理才能正常访问，具体取决于所在网络和站点状态；请自行配置设备网络。
 
 ## 下载与安装
 
@@ -93,7 +104,12 @@ cd FluxManga
 .\gradlew.bat :app:assembleDebug
 ```
 
+<details>
+<summary>构建环境与签名说明</summary>
+
 详细配置见[构建与安装](docs/release/build-and-install.md)。自行签名的构建通常不能覆盖官方安装包。
+
+</details>
 
 <a id="upstream-reuse"></a>
 
