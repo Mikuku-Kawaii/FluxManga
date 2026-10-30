@@ -78,3 +78,15 @@ Reused the existing comics endpoint with ordering=-datetime_updated on the curre
 reading API, replacing the separately hosted website update feed. Maps flat comic
 entries and optional update dates with existing pagination and session checks.
 No additional upstream code, dependency or account credential forwarding added.
+
+2026-10-30 discovery-tag filtering correction:
+Preserved existing list theme names in SourceManga for local blacklist matching,
+avoiding redundant detail requests when the list supplies tags. No new upstream
+implementation or runtime dependency imported; source identity remains unchanged.
+
+2026-10-30 anonymous API fallback:
+The previously observed /api/v3/system/network2 service configuration supplies
+mapi.hotmangasg.com and mapi.elfgjfghkk.club. Bounded anonymous reading fallback
+reuses the current Rust client and protocol. Account login/import endpoints,
+source keys and stored credentials are unchanged. No additional upstream
+implementation or dependency is imported.

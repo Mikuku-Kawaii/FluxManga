@@ -22,7 +22,7 @@ internal fun CompactFeedFeedback(controller: AggregateSearchController, state: A
         val unsupported = issues.filter { state.results[it.id]?.unsupported == true }.distinctBy { it.sourceId }.size
         val summary = listOfNotNull(
             "$failed 个图源加载失败".takeIf { failed > 0 },
-            "$interrupted 个图源请求中断".takeIf { interrupted > 0 },
+            "$interrupted 个图源有加载提示".takeIf { interrupted > 0 },
             "$unsupported 个图源不支持此查询".takeIf { unsupported > 0 },
         ).joinToString(" · ")
         @Composable fun Summary(modifier: Modifier = Modifier) {
@@ -209,7 +209,7 @@ internal fun MixedResultEmpty(feeds: List<ResultFeed>, state: AggregateSearchSta
             if (results.any { it.loaded && it.error == null && it.appendError == null })
                 "部分图源加载失败，其余图源暂无匹配作品"
             else "暂未获取到作品，可分别重试失败图源"
-        results.any { it.notice != null } -> "请求已中断，可继续读取作品"
+        results.any { it.notice != null } -> "本页暂无可显示作品，请查看来源提示后重试"
         results.all { it.unsupported } -> "所选来源不支持此查询"
         results.any { it.next is SourceContinuation.Next } -> "本页暂无可见作品，仍可加载后续页"
         results.any { it.unsupported } -> "部分来源不支持此查询，其他来源暂无作品"
@@ -240,8 +240,8 @@ internal fun MixedSourceStatusDialog(controller: AggregateSearchController, stat
                         result.busy -> "读取中 · 已加载 ${result.cards.size} 部"
                         result.unsupported -> "不支持此查询"
                         result.error != null -> "读取失败 · 保留 ${result.cards.size} 部"
-                        result.appendError != null -> "后续页失败 · 已加载 ${result.cards.size} 部"
-                        result.notice != null -> "请求已中断 · 保留 ${result.cards.size} 部"
+                        result.appendError != null -> "部分内容失败 · 已加载 ${result.cards.size} 部"
+                        result.notice != null -> "有加载提示 · 已显示 ${result.cards.size} 部"
                         resultFeedComplete(result) -> "已加载 ${result.cards.size} 部 · 已到末页"
                         result.loaded -> "已加载 ${result.cards.size} 部 · 还有后续页"
                         else -> "尚未请求"
@@ -257,7 +257,7 @@ internal fun MixedSourceStatusDialog(controller: AggregateSearchController, stat
                             if (result.error != null) TextButton(onClick = feedbackAttempt({ controller.refresh(feed.id) }),
                                 modifier = Modifier.semantics { contentDescription = "$title，重试读取" }) { Text("重试读取") }
                             if (result.next is SourceContinuation.Next && (result.appendError != null || result.notice != null)) {
-                                val moreLabel = if (result.appendError != null) "重试后续页" else "继续读取"
+                                val moreLabel = if (result.appendError != null) "重试未完成内容" else "继续读取"
                                 TextButton(onClick = feedbackAttempt({ controller.more(feed.id) }),
                                     modifier = Modifier.semantics { contentDescription = "$title，$moreLabel" }) { Text(moreLabel) }
                             }

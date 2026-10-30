@@ -100,9 +100,10 @@ internal fun ReferenceShelfPage(
     val fontScale = LocalDensity.current.fontScale
     val collectionHeader: @Composable () -> Unit = {
         Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
-            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            verticalArrangement = Arrangement.spacedBy(0.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-              FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp),
+              // Anchor the heading near the filter row while keeping toolbar touch targets intact.
+              FlowRow(Modifier.weight(1f).align(Alignment.Bottom).padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
                   itemVerticalAlignment = Alignment.CenterVertically) {
                 Text(if (searchMode) "搜索结果" else if (isRoot) "收藏" else "书目", style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.semantics { heading() })
@@ -403,7 +404,7 @@ private fun ShelfCover(book: ShelfBook, model: ShelfViewModel, modifier: Modifie
     }
     CoverArtwork(bitmap?.takeIf { !private || active }, active && book.available && bitmap == null && !failed && !missing,
         when { !book.available -> "封面不可用"; !active -> "封面"; missing -> "暂无封面"; failed -> "封面加载失败"; else -> "正在加载封面" },
-        modifier, retry = if (active && failed) ({ attempt++ }) else null,
+        modifier, retry = if (active && failed) ({ model.session.pageCovers().retry(book.key.sourceId, book.key.mangaId); attempt++ }) else null,
         description = "《${book.title}》封面", contentScale = contentScale)
 }
 

@@ -363,6 +363,7 @@ impl CopyMangaSource {
             page_count: None,
             updated_at: None,
             latest_chapter: None,
+            tags: comic.theme.map(|themes| themes.into_iter().map(|theme| theme.name).collect()),
         })
     }
     fn key_check(&self, context: &SourceContext, key: &SourceMangaKey) -> Result<(), SourceError> {

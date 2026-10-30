@@ -12,11 +12,7 @@ internal suspend fun jmCover(data: WorldDataStore, session: WorldSession, client
     val identity = session.identity.value
     require(identity.world == PrototypeWorld.NSFW && jmId(id))
     val key = ResourceKey(SampleKey(identity.world, client.source, id), "cover-v1")
-    return PrivateImagePipeline(key.manga, object : PrivateEncodedCache {
-        override suspend fun read(key: ResourceKey, allowed: () -> Boolean) = data.resource(key, allowed)
-        override suspend fun write(key: ResourceKey, bytes: ByteArray, allowed: () -> Boolean) = data.putResource(key, bytes, allowed)
-        override fun clearMemory() = data.clearMemory()
-    }, PrivateImageTransport {
+    return PrivateImagePipeline(key.manga, privateCache(data), PrivateImageTransport {
         val bytes = client.image("media/albums/$id.jpg")
         object : ByteArrayInputStream(bytes) { override fun close() { bytes.fill(0); super.close() } }
     }, { session.state.value.visibilityEpoch }, { epoch ->

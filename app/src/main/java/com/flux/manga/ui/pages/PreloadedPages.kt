@@ -1,5 +1,7 @@
 package com.flux.manga.ui.pages
 
+import kotlinx.coroutines.withContext
+
 import android.app.Application
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +59,9 @@ internal class PreloadedPages(private val app: Application, private val session:
             model.feed.state.map { mixedCards(model.feed.sources, it.results).take(3).map { it.key } }
                 .distinctUntilChanged().collectLatest { keys -> coroutineScope {
                     keys.forEach { key -> launch {
-                        try { model.library.cover(key.sourceId, key.mangaId) }
+                        try { withContext(com.flux.manga.data.ContentPriorityContext(com.flux.manga.data.ContentPriority.PRELOAD)) {
+                            model.library.cover(key.sourceId, key.mangaId)
+                        } }
                         catch (cancelled: CancellationException) { throw cancelled }
                         // Optional warming never records a failed image as loaded. The visible
                         // cover retains its existing error/retry flow if fetching still fails.
@@ -70,6 +74,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     fun tags(komga: String?): UnifiedTagsModel = directories.getOrPut(komga) {
         obtain(networkStore, "tags:$komga") { UnifiedTagsModel(app, session, komga) }
     }
+    fun loadedFeeds(): List<MixedDiscoveryModel> = feeds.values.toList()
     fun privateTags(): PrivateTagsModel = privateDirectory ?: obtain(networkStore, "private-tags") {
         PrivateTagsModel(app, session)
     }.also { privateDirectory = it }
@@ -99,7 +104,9 @@ internal class PreloadedPages(private val app: Application, private val session:
         if (running || !session.accepts(identity) || !session.state.value.foreground) return
         running = true
         // Returning to the foreground keeps yesterday's cards visible while each source updates.
-        feeds.values.forEach { model -> model.feed.state.value.results.filterValues { it.loaded }.keys.forEach(model.feed::refresh) }
+        feeds.values.forEach { model -> model.feed.state.value.results.filterValues {
+            it.loaded && System.currentTimeMillis() - it.fetchedAt > 5L * 60 * 1000
+        }.keys.forEach(model.feed::refresh) }
         if (configurationFingerprint == null && configurationCheck?.isActive != true) configurationCheck = viewModelScope.launch {
             try { configurationFingerprint = catalogConfiguration(com.flux.manga.data.WorldDataStore(app), session) }
             catch (cancelled: CancellationException) { throw cancelled }
@@ -150,7 +157,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     }
 
     fun localDataChanged() {
-        visits().refresh(); searchHistory().refresh(); shelf().refresh()
+        visits().refresh(); searchHistory().refresh(); shelf().refresh(silent = true)
         reading().load(); statistics().refresh(); storage().refresh()
     }
 
@@ -194,7 +201,7 @@ internal class PreloadedPages(private val app: Application, private val session:
         configuration = null; feeds.clear(); directories.clear(); searches.clear(); privateDirectory = null
         revision.value++
         if (resume) start()
-        shelf().refresh()
+        shelf().refresh(silent = true)
     }
 
     override fun onCleared() {

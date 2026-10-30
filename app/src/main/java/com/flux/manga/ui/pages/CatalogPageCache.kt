@@ -12,51 +12,70 @@ import java.security.MessageDigest
 
 /** Last successful lists only; no credentials, reader progress or screenshots in the payload.
  * WorldDataStore supplies atomic cache files, private encryption and generation checks. */
-internal class CatalogPageCache(context: Context, private val session: WorldSession, private val slot: String,
-    private val identity: com.flux.manga.session.SessionIdentity = session.identity.value) {
+internal class CatalogPageCache(private val context: Context, private val session: WorldSession, private val slot: String,
+    private val identity: com.flux.manga.session.SessionIdentity = session.identity.value,
+    private val includeBlacklist: Boolean = true, private val source: String? = null) {
     private val data = WorldDataStore(context)
     private fun active() = session.accepts(identity) && session.state.value.foreground
-    private val key = ResourceKey(SampleKey(identity.world, "catalog-pages", slot), "catalog-page-v1")
+    private fun key(query: String, owner: String) = ResourceKey(SampleKey(identity.world, "catalog-pages", "$slot|$owner|$query"), "catalog-page-v1")
     private var owner: String? = null
-    private suspend fun owner() = owner ?: catalogConfiguration(data, session).also { owner = it }
+    private suspend fun owner() = owner ?: (source?.let { sourceCacheIdentity(context, session, it) }
+        ?: catalogConfiguration(data, session, includeBlacklist)).also { owner = it }
 
-    suspend fun read(query: String = ""): JSONObject? = withContext(Dispatchers.IO) {
-        val current = owner()
-        val bytes = data.resource(key, ::active) ?: return@withContext null
+    suspend fun read(query: String = "", configuration: String? = null): JSONObject? = withContext(Dispatchers.IO) {
+        val current = configuration ?: owner()
+        val bytes = readDisplayCache { data.resource(key(query, current), ::active) }
+            ?: (if (source == null) readDisplayCache { data.resource(ResourceKey(SampleKey(identity.world, "catalog-pages", slot), "catalog-page-v1"), ::active) } else null)
+            ?: return@withContext null
         try {
             val value = JSONObject(bytes.toString(Charsets.UTF_8))
             if (value.getString("owner") == current && value.getString("query") == query) value.getJSONObject("data") else null
-        } finally { bytes.fill(0) }
+        } catch (_: org.json.JSONException) { null }
+        finally { bytes.fill(0) }
     }
+
+    suspend fun <T> decode(query: String = "", parse: (JSONObject) -> T): T? =
+        read(query)?.let { json -> readDisplayCache { parse(json) } }
 
     suspend fun write(value: JSONObject, query: String = "") = withContext(Dispatchers.IO) {
-        val bytes = JSONObject().put("owner", owner()).put("query", query).put("data", value).toString().toByteArray()
-        try { data.putResource(key, bytes, ::active) } finally { bytes.fill(0) }
+        val current = owner()
+        val bytes = JSONObject().put("owner", current).put("query", query).put("data", value).toString().toByteArray()
+        try { data.putResource(key(query, current), bytes, ::active) } finally { bytes.fill(0) }
     }
 
-    suspend fun feed(query: String): DiscoveryFeedState? = read(query)?.let { json ->
+    suspend fun feed(query: String): DiscoveryFeedState? {
+        val json = read(query) ?: return null
+        val saved = readDisplayCache { decodeFeed(json) } ?: return null
+        val filtered = TagBlacklistFilter(context.applicationContext as android.app.Application, session)
+            .apply(SourceCardPage(saved.cards, saved.next))
+        return saved.copy(cards = filtered.cards, unfilteredCards = saved.cards)
+    }
+
+    private fun decodeFeed(json: JSONObject): DiscoveryFeedState {
         val rows = json.getJSONArray("cards")
-        DiscoveryFeedState(cards = List(rows.length()) { index ->
+        return DiscoveryFeedState(cards = List(rows.length()) { index ->
             val row = rows.getJSONObject(index)
             MangaCard(MangaKey(identity.world, row.getString("source"), row.getString("id")), row.getString("title"),
                 if (row.isNull("pages")) null else row.getInt("pages"), row.getBoolean("available"), author = row.getString("author"),
                 updatedAt = row.optString("updatedAt").takeUnless { it.isBlank() || it == "null" },
-                latestChapter = row.optString("latestChapter").takeUnless { it.isBlank() || it == "null" })
-        }, next = continuation(json), attempted = true, loaded = true)
+                latestChapter = row.optString("latestChapter").takeUnless { it.isBlank() || it == "null" },
+                sourceTags = row.optJSONArray("sourceTags")?.let { tags -> List(tags.length()) { tags.getString(it) } })
+        }, next = continuation(json), attempted = true, loaded = true, fetchedAt = json.optLong("fetchedAt"))
     }
 
     suspend fun saveFeed(query: String, state: DiscoveryFeedState) {
         val cards = JSONArray()
-        state.cards.forEach { card -> cards.put(JSONObject().put("source", card.key.sourceId).put("id", card.key.mangaId)
+        state.unfilteredCards.ifEmpty { state.cards }.forEach { card -> cards.put(JSONObject().put("source", card.key.sourceId).put("id", card.key.mangaId)
             .put("title", card.title).put("pages", card.pageCount ?: JSONObject.NULL)
             .put("available", card.available).put("author", card.author)
-            .put("updatedAt", card.updatedAt ?: JSONObject.NULL).put("latestChapter", card.latestChapter ?: JSONObject.NULL)) }
-        write(withContinuation(JSONObject().put("cards", cards), state.next), query)
+            .put("updatedAt", card.updatedAt ?: JSONObject.NULL).put("latestChapter", card.latestChapter ?: JSONObject.NULL)
+            .put("sourceTags", card.sourceTags?.let { JSONArray(it) } ?: JSONObject.NULL)) }
+        write(withContinuation(JSONObject().put("cards", cards).put("fetchedAt", state.fetchedAt), state.next), query)
     }
 }
 
 /** Compare decrypted configuration, not randomized ciphertext; merely visiting settings is unchanged. */
-internal suspend fun catalogConfiguration(data: WorldDataStore, session: WorldSession): String {
+internal suspend fun catalogConfiguration(data: WorldDataStore, session: WorldSession, includeBlacklist: Boolean = true): String {
     val identity = session.identity.value
     val slots = if (identity.world == PrototypeWorld.SFW)
         listOf("komga-user-configuration-v1", "copy-account-v1", "baozi-active-account-v1")
@@ -64,7 +83,8 @@ internal suspend fun catalogConfiguration(data: WorldDataStore, session: WorldSe
     return data.accountImportDatabase(identity.world).transaction({ session.accepts(identity) }) { rows ->
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(data.sourceSelection(identity.world).fingerprint().toByteArray())
-        (slots + TagBlacklist.SLOT).forEach { slot ->
+        if (includeBlacklist) digest.update("known-tags-only-v2".toByteArray())
+        (slots + if (includeBlacklist) listOf(TagBlacklist.SLOT) else emptyList()).forEach { slot ->
             digest.update(slot.toByteArray())
             val bytes = rows.read(slot)
             try { digest.update((bytes?.size ?: -1).toString().toByteArray()); if (bytes != null) digest.update(bytes) }
@@ -109,7 +129,7 @@ internal fun continuation(json: JSONObject): SourceContinuation {
         "start" -> SourcePageRequest.Start
         "page" -> SourcePageRequest.Page(next.getLong("number").toUInt())
         "cursor" -> SourcePageRequest.Cursor(next.getString("token"))
-        else -> error("Unknown saved continuation")
+        else -> throw org.json.JSONException("Unknown saved continuation")
     })
 }
 

@@ -282,7 +282,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
     }
 
     private class UnverifiedShelf : Exception()
-    private fun failureMessage(error: Exception) = when (error) {
+    private fun failureMessage(error: Exception) = sourceNetworkFailure(error) ?: when (error) {
         is UnverifiedShelf -> "书架验证失败，可能为空书架或登录已过期。请重试或重新登录。"
         is SourceException.AuthenticationRequired -> "登录已失效，请重新登录。"
         is SourceException.Timeout -> "请求超时，请重试。"

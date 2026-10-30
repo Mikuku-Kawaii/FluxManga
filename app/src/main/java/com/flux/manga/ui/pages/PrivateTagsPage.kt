@@ -40,11 +40,11 @@ internal class PrivateTagsModel(app: Application, private val session: WorldSess
     val states = MutableStateFlow<Map<String, SourceTagsState>>(emptyMap())
     private fun active() = session.accepts(identity) && session.state.value.foreground
     private val enabledSources = listOf(JM_SOURCE, PrivateCatalog.PICA).filter(selection::enabled)
-    private val snapshots = enabledSources.associateWith { CatalogPageCache(app, session, "tags:$it") }
+    private val snapshots = enabledSources.associateWith { CatalogPageCache(app, session, "tags:$it", includeBlacklist = false, source = it) }
     val directories = enabledSources.associateWith { source ->
         SourceTagsController(viewModelScope, ::active,
             failureMessage = if (source == JM_SOURCE) ::jmFailure else ::picaFailure,
-            restore = { query -> snapshots.getValue(source).read(query)?.let { json ->
+            restore = { query -> snapshots.getValue(source).decode(query) { json ->
                 val rows = json.getJSONArray("entries")
                 entries[source] = List(rows.length()) { index -> rows.getJSONObject(index).let {
                     PrivateCatalogTag(it.getString("name"), it.getString("query"), it.getBoolean("category"))
@@ -98,7 +98,7 @@ internal fun PrivateTagsPage(session: WorldSession, bottom: Dp, settings: () -> 
         if (gallerySources.isNotEmpty()) value = words.dictionary?.search(query, null, limit) ?: GalleryTagMatches(emptyList(), false)
     }
     val names = remember(states, matches, query) {
-        (states.values.filter { it.busy || it.error == null }.flatMap { it.tags }.filter { it.contains(query.trim(), true) } + matches.entries.map { it.name }).distinct()
+        (states.values.flatMap { it.tags }.filter { it.contains(query.trim(), true) } + matches.entries.map { it.name }).distinct()
     }
     val targets: (String) -> List<TagTarget> = { name ->
         (model.targets(name) + matches.entries.filter { it.name == name }.flatMap {
@@ -161,17 +161,6 @@ internal fun PrivateTagsPage(session: WorldSession, bottom: Dp, settings: () -> 
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submit() }), trailingIcon = {
                     IconButton(feedbackAttempt(submit), Modifier.semantics { contentDescription = "查找标签" }) { DiscoverySearchGlyph() }
                 }) }
-            item("feedback") {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text(when {
-                        busy -> "正在更新标签…"
-                        issues > 0 || (gallerySources.isNotEmpty() && words.message != null) -> "部分标签来源需要查看"
-                        else -> "分类与标签"
-                    }, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton({ showStatus = true }) { Text(if (issues > 0) "查看与重试" else "来源状态") }
-                }
-            }
             if (names.isEmpty() && busy) item("layout") { ReadTagPlaceholder(columns) }
             if (names.isEmpty() && !busy && issues > 0) item("read-failure") {
                 ReadFailure(states.values.mapNotNull { it.error ?: it.notice }.distinct().joinToString("\n"), refresh)

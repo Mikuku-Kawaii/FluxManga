@@ -3,17 +3,12 @@ package com.flux.manga.ui.pages
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.flux.manga.data.TagBlacklist
 import com.flux.manga.data.normalizedBlockedTag
@@ -64,38 +59,29 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
     val duplicate = tags.any { normalizedBlockedTag(it) == normalizedBlockedTag(input) }
     val canAdd = ready && !busy && input.isNotBlank() && !duplicate
     val add = { if (canAdd) save(tags + input.trim(), clearInput = true) }
+    var suggestionLimit by remember(identity, input) { mutableIntStateOf(12) }
+    val suggestions = blacklistSuggestions(session, input, tags, blacklistPresets, suggestionLimit)
     if (showHelp) ReferenceDialog(onDismissRequest = { showHelp = false },
         title = { Text("标签匹配规则") },
-        text = { Text("屏蔽含这些标签的推荐、最近更新、搜索和标签结果，已有书库与阅读进度保留。\n\n按完整标签匹配，不区分大小写与全半角，不做近义词扩展；可填写命名空间，如 female:标签。") },
+        text = { Text("只屏蔽已知标签命中黑名单的作品；标签暂未读取的正常显示，已有书库与阅读进度保留。\n\n按完整标签匹配，不区分大小写与全半角，不做近义词扩展；可填写命名空间，如 female:标签。联想来自当前空间已读取的图源标签、书库资料和本地词库。") },
         confirmButton = { TextButton({ showHelp = false }) { Text("知道了") } })
     LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SettingsHeading("标签黑名单", if (identity.world == PrototypeWorld.SFW) "表世界" else "里世界", back) }
         item("input") { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                @Composable fun Input(modifier: Modifier) {
-                    TextField(input, { input = it }, modifier.semantics { contentDescription = "标签名称" },
-                        enabled = ready && !busy, singleLine = true, placeholder = { Text("输入标签名称") },
-                        shape = ReferenceSearchShape,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { add() }),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent))
+            ReferenceSubmitSearchField(input, { input = it }, "输入标签名称", submit = add,
+                inputEnabled = ready && !busy, submitEnabled = canAdd, actionLabel = "添加")
+            if (ready && suggestions.isNotEmpty()) Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("标签建议", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    suggestions.take(suggestionLimit).forEach { suggestion -> key(suggestion.value) {
+                        BlacklistTagButton(suggestion.label, selected = false, removable = false, enabled = !busy) {
+                            save(tags + suggestion.value, clearInput = true)
+                        }
+                    } }
                 }
-                if (maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.3f) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Input(Modifier.fillMaxWidth())
-                        ReferenceButton(add, Modifier.align(Alignment.End), enabled = canAdd) { Text("添加") }
-                    }
-                } else Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Input(Modifier.weight(1f).fillMaxHeight())
-                    ReferenceButton(add, Modifier.fillMaxHeight(), enabled = canAdd) { Text("添加") }
-                }
+                if (suggestions.size > suggestionLimit) TextButton({ suggestionLimit += 12 }) { Text("更多建议") }
             }
             if (duplicate && input.isNotBlank()) Text("该标签已在黑名单中", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

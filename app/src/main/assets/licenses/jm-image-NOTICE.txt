@@ -35,6 +35,16 @@ recorded in docs/verification/m4-storage-foundation-local/jm-connectivity-upstre
 The previous host remains accepted for saved settings. No automatic credential
 migration or replay of login across hosts; no account/content requests or tests.
 
+API route selection (2026-10-30): the same pinned MIT jm_client_impl.py
+request_with_retry / JmApiClient inform bounded domain failover. FluxManga uses
+anonymous setting probes, a generation-owned success hint, and its existing
+Kotlin coroutine / Rust reqwest pool instead of the upstream HTTP runtime.
+Only reviewed HTTPS API hosts are eligible; each host gets fresh anonymous
+cookies, with only the existing AVS account session carried between JM APIs.
+Login POSTs are not replayed. No database/credential migration, new dependency,
+tests, build or installation for this implementation. APK static investigation
+provided protocol evidence only; no APK code is redistributed or copied.
+
 Catalog integration (2026-10-25): the same pinned MIT jm_client_impl.py and
 jm_config.py inform /categories/filter (c=0, empty order, o=mr for latest or
 o=mv for all-time views, 80 items per page). Reuses the existing Kotlin parser
@@ -61,3 +71,12 @@ contract reviewed against JUKOMU/JMComic-Api-Java at
 ApiParser.parseUserProfile. No Java implementation or OkHttp dependency copied.
 The WebView lifecycle, DOM metadata extraction and account commit are original
 FluxManga integration; existing source keys and favorites import remain intact.
+
+2026-10-30 image CDN fallback:
+Existing domain evidence from hect0x7/JMComic-Crawler-Python at
+fd8953025db5b844f1b7f025d063f544e61a2dbd (MIT), jm_config.py, and the
+archived official 2.1.12 configuration supplies the same six image CDNs.
+FluxManga adapts bounded sequential image fallback and a client-local success
+hint within its existing Rust session. Image requests remain anonymous;
+no Python runtime, official APK code/assets or new dependency is bundled.
+The retained MIT notice remains in jm-image-MIT.txt.

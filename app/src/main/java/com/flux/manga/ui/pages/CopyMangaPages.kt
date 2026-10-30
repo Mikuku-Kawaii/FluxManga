@@ -91,7 +91,7 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                     SourceBrowseStatus(feed, model.feed::refresh, model.feed::cancel,
                         if (model.submitted.isEmpty()) "图源暂无推荐" else "没有匹配作品，可修改搜索词")
                 }
-                bookGridItems(if (feed.error != null && !feed.busy) emptyList() else feed.cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card ->
+                bookGridItems(feed.cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card ->
                     BookResultCard(card.title, { open(card.key.sourceId, card.key.mangaId) }, cover = {
                         CopyMangaCover(model.covers, card.key.mangaId, fillWidth = true)
                     })
@@ -105,9 +105,10 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                 item("state") { CopyRequestStatus(detail.busy, detail.detail != null, detail.error, detail.notice, model::refreshDetail, model::cancelDetail) }
                 detail.detail?.let { result ->
                     item("title") {
-                        DetailHero(result.manga.title, { CopyMangaCover(model.covers, result.manga.key.mangaId, fillWidth = true) }) {
-                            WorkMetadata(result.metadata, "$sourceId:$mangaId", searchAuthor)
+                        DetailHero(result.manga.title, { CopyMangaCover(model.covers, result.manga.key.mangaId, fillWidth = true) }, tags = {
                             WorkTags(detail.themes?.map { it.name to it.pathWord }, compact = true, openInDialog = true) { id, name -> openTag(CopyMangaEndpoint.SOURCE_ID, id, name) }
+                        }) {
+                            WorkMetadata(result.metadata, "$sourceId:$mangaId", searchAuthor)
                         }
                     }
                     item("actions") {

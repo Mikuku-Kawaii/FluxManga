@@ -28,6 +28,7 @@ class WorldDataStore(context: Context, private val namespace: String = "business
     companion object {
         private val ioLock = Mutex()
         private val preparedReaderDirectories = mutableSetOf<String>()
+        private val catalogTrimAt = mutableMapOf<String, Long>()
         private val memoryEpoch = java.util.concurrent.atomic.AtomicLong()
         private val memory = object : LruCache<MemoryResourceKey, ByteArray>(1024 * 1024) {
             override fun sizeOf(key: MemoryResourceKey, value: ByteArray) = value.size
@@ -46,6 +47,7 @@ class WorldDataStore(context: Context, private val namespace: String = "business
             currentCoroutineContext().ensureActive()
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
+            catch (full: ReaderStorageFullException) { throw full }
             catch (failure: Exception) { throw StorageAccessException(storageProblem(failure), failure) }
         }
     }
@@ -206,20 +208,50 @@ class WorldDataStore(context: Context, private val namespace: String = "business
     })
 
     private fun resourceFiles(world: PrototypeWorld) = OwnedCacheFiles(cacheDirectory(world), Regex("[0-9a-f]{64}(\\.bak|\\.new)?"))
-    private fun readerResourceFiles(world: PrototypeWorld) = OwnedCacheFiles(File(cacheDirectory(world), "reader-pages"), Regex("[0-9a-f]{64}(\\.bak|\\.new)?"))
-    internal suspend fun prepareReaderResources(world: PrototypeWorld) = io {
-        // Once per process/world, remove only abandoned reader files from a previous process.
-        val path = File(cacheDirectory(world), "reader-pages").absolutePath
-        if (path !in preparedReaderDirectories) {
-            val result = readerResourceFiles(world).clear(active = { })
-            if (result.failed != 0) throw IOException("旧阅读缓存未清理完成")
-            preparedReaderDirectories += path
+    private fun readerResourceFiles(world: PrototypeWorld) = OwnedCacheFiles(File(cacheDirectory(world), "reader-pages"), Regex("(?:[0-9a-f-]{36}_)?[0-9a-f]{64}(\\.bak|\\.new)?"))
+    internal suspend fun prepareReaderResources(world: PrototypeWorld, session: String) = io {
+        val directory = File(cacheDirectory(world), "reader-pages")
+        check(directory.isDirectory || directory.mkdirs())
+        val registration = "${directory.absolutePath}/$session"
+        if (preparedReaderDirectories.add(registration)) {
+            val cutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+            directory.listFiles()?.filter { it.isFile && it.name.matches(Regex("[0-9a-f-]{36}_[0-9a-f]{64}(\\.bak|\\.new)?")) }
+                ?.filter { "${directory.absolutePath}/${it.name.substringBefore('_')}" !in preparedReaderDirectories && it.lastModified() < cutoff }
+                ?.forEach { it.delete() }
+        }
+    }
+    internal suspend fun closeReaderResources(world: PrototypeWorld, session: String) = io {
+        require(session.matches(Regex("[0-9a-f-]{36}")))
+        val directory = File(cacheDirectory(world), "reader-pages")
+        val result = OwnedCacheFiles(directory, Regex("${Regex.escape(session)}_[0-9a-f]{64}(\\.bak|\\.new)?")).clear(active = { })
+        if (result.failed > 0) throw IOException("部分阅读临时缓存未清理完成")
+        preparedReaderDirectories.remove("${directory.absolutePath}/$session")
+        synchronized(memory) {
+            memory.snapshot().keys.filter { it.namespace == namespace && it.resource.manga.world == world &&
+                it.resource.resourceId.startsWith("reader-session:$session:") }.forEach { memory.remove(it) }
+        }
+    }
+    private fun activeReaderFile(file: File) = "${file.parentFile!!.absolutePath}/${file.name.substringBefore('_')}" in preparedReaderDirectories
+    internal suspend fun readerCacheUsage(world: PrototypeWorld): CacheUsage = io { readerResourceFiles(world).usage() }
+    internal suspend fun clearReaderCache(world: PrototypeWorld, allowed: () -> Boolean): CacheCleared {
+        val context = currentCoroutineContext()
+        return io {
+            synchronized(memory) {
+                memoryEpoch.incrementAndGet()
+                memory.snapshot().keys.filter { it.namespace == namespace && it.resource.manga.world == world &&
+                    it.resource.resourceId.startsWith("reader-session:") && !activeReaderFile(cacheFile(it.resource)) }
+                    .forEach { memory.remove(it) }
+            }
+            readerResourceFiles(world).clearRetaining(active = {
+                context.ensureActive(); if (!allowed()) throw CancellationException("Expired cache cleanup")
+            }, retain = ::activeReaderFile)
         }
     }
     internal suspend fun privateResourceUsage(): CacheUsage = io {
         val saved = resourceFiles(PrototypeWorld.NSFW).usage()
         val reader = readerResourceFiles(PrototypeWorld.NSFW).usage()
-        CacheUsage(saved.files + reader.files, saved.bytes + reader.bytes)
+        val catalog = catalogPageFiles(PrototypeWorld.NSFW).usage()
+        CacheUsage(saved.files + reader.files + catalog.files, saved.bytes + reader.bytes + catalog.bytes)
     }
     internal suspend fun clearPrivateResources(allowed: () -> Boolean): CacheCleared {
         val context = currentCoroutineContext()
@@ -233,8 +265,9 @@ class WorldDataStore(context: Context, private val namespace: String = "business
                     .forEach { memory.remove(it) }
             }
             val saved = resourceFiles(PrototypeWorld.NSFW).clear(::active)
-            val reader = readerResourceFiles(PrototypeWorld.NSFW).clear(::active)
-            CacheCleared(saved.files + reader.files, saved.bytes + reader.bytes, saved.failed + reader.failed)
+            val reader = readerResourceFiles(PrototypeWorld.NSFW).clearRetaining(::active, retain = ::activeReaderFile)
+            val catalog = catalogPageFiles(PrototypeWorld.NSFW).clear(::active)
+            CacheCleared(saved.files + reader.files + catalog.files, saved.bytes + reader.bytes + catalog.bytes, saved.failed + reader.failed + catalog.failed)
         }
     }
 
@@ -402,7 +435,7 @@ class WorldDataStore(context: Context, private val namespace: String = "business
             libraryCoverFiles().clear(::active)
         }
     }
-    private fun catalogPageFiles() = OwnedCacheFiles(File(cacheDirectory(PrototypeWorld.SFW), "catalog-pages"), Regex("[0-9a-f]{64}(\\.bak|\\.new)?"))
+    private fun catalogPageFiles(world: PrototypeWorld = PrototypeWorld.SFW) = OwnedCacheFiles(File(cacheDirectory(world), "catalog-pages"), Regex("[0-9a-f]{64}(\\.bak|\\.new)?"))
     internal suspend fun catalogPageUsage(): CacheUsage = io { catalogPageFiles().usage() }
     internal suspend fun clearCatalogPages(allowed: () -> Boolean): CacheCleared {
         val context = currentCoroutineContext()
@@ -420,12 +453,18 @@ class WorldDataStore(context: Context, private val namespace: String = "business
     internal fun cacheFile(key: ResourceKey) = File(
         if (key.resourceId.startsWith("reader-session:")) File(cacheDirectory(key.manga.world), "reader-pages")
         else if (key.manga.world == PrototypeWorld.SFW && key.resourceId == "library-cover-v1") File(cacheDirectory(key.manga.world), "online-library-covers")
-        else if (key.manga.world == PrototypeWorld.SFW && key.resourceId == "catalog-page-v1") File(cacheDirectory(key.manga.world), "catalog-pages")
-        else cacheDirectory(key.manga.world), hash(aad(key)))
-    private fun resourceLimit(key: ResourceKey) = if (key.manga.world == PrototypeWorld.NSFW)
+        else if (key.resourceId == "catalog-page-v1") File(cacheDirectory(key.manga.world), "catalog-pages")
+        else cacheDirectory(key.manga.world),
+        (if (key.resourceId.startsWith("reader-session:")) key.resourceId.removePrefix("reader-session:").substringBefore(':') + "_" else "") + hash(aad(key)))
+    private fun resourceLimit(key: ResourceKey) = if (key.manga.world == PrototypeWorld.NSFW || key.resourceId.startsWith("reader-session:"))
         BoundedResourceInput.PRIVATE_BYTES else BoundedResourceInput.PUBLIC_BYTES
     internal suspend fun removeReaderResource(key: ResourceKey) = io {
         require(key.resourceId.startsWith("reader-session:"))
+        synchronized(memory) { memory.remove(MemoryResourceKey(namespace, key)) }
+        AtomicFile(cacheFile(key)).delete()
+    }
+    internal suspend fun removeCachedResource(key: ResourceKey, allowed: () -> Boolean) = io {
+        if (!allowed()) throw CancellationException()
         synchronized(memory) { memory.remove(MemoryResourceKey(namespace, key)) }
         AtomicFile(cacheFile(key)).delete()
     }
@@ -440,6 +479,8 @@ class WorldDataStore(context: Context, private val namespace: String = "business
                 operation.check()
                 val file = cacheFile(key)
                 check(file.parentFile!!.isDirectory || file.parentFile!!.mkdirs())
+                if (file.parentFile!!.usableSpace < bytes.size + 16L * 1024 * 1024)
+                    throw ReaderStorageFullException()
                 val atomic = AtomicFile(file)
                 val stream = atomic.startWrite()
                 try {
@@ -450,6 +491,14 @@ class WorldDataStore(context: Context, private val namespace: String = "business
                 operation.check()
                 synchronized(memory) { if (bytes.size <= memory.maxSize() && allowed() && epoch == memoryEpoch.get())
                     memory.put(MemoryResourceKey(namespace, key), bytes.copyOf()) }
+                if (key.resourceId == "catalog-page-v1") {
+                    val path = file.parentFile!!.absolutePath
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    if (now - (catalogTrimAt[path] ?: -60_000L) >= 60_000L) {
+                        catalogPageFiles(key.manga.world).trimTo(128L * 1024 * 1024, operation::check)
+                        catalogTrimAt[path] = now
+                    }
+                }
             }
         }
     }
@@ -471,6 +520,7 @@ class WorldDataStore(context: Context, private val namespace: String = "business
                             active()
                             owned = if (private) open(raw, secret, aad(key)) else raw
                             active()
+                            file.setLastModified(System.currentTimeMillis())
                             val value = requireNotNull(owned)
                             synchronized(memory) { if (value.size <= memory.maxSize() && allowed() && epoch == memoryEpoch.get())
                                 memory.put(MemoryResourceKey(namespace, key), value.copyOf()) }

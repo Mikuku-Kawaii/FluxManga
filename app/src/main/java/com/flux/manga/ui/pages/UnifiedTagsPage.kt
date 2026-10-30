@@ -41,10 +41,10 @@ internal class UnifiedTagsModel(app: Application, private val session: WorldSess
     private val enabledSources = listOfNotNull(BaoziEndpoint.SOURCE_ID, CopyMangaEndpoint.SOURCE_ID, komgaId)
         .filter(SourceSelection(app, identity.world)::enabled)
     private val snapshots = enabledSources
-        .associateWith { CatalogPageCache(app, session, "tags:$it") }
+        .associateWith { CatalogPageCache(app, session, "tags:$it", includeBlacklist = false, source = it) }
     val directories = enabledSources.associateWith { source ->
         SourceTagsController(viewModelScope, ::active, failureMessage = if (source == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure,
-            restore = { query -> snapshots.getValue(source).read(query)?.let { json ->
+            restore = { query -> snapshots.getValue(source).decode(query) { json ->
                 if (source == CopyMangaEndpoint.SOURCE_ID) {
                     val themes = json.getJSONArray("themes")
                     copyThemes = List(themes.length()) { index -> themes.getJSONObject(index).let { CopyTheme(it.getString("name"), it.getString("id")) } }
@@ -100,7 +100,7 @@ internal fun UnifiedTagsPage(session: WorldSession, configuration: DiscoveryStat
     states.forEach { (source, result) ->
         (result.error ?: result.appendError)?.let { RequestFeedback("${discoverySourceName(source)}：$it", busy = result.busy) }
     }
-    val names = model.directories.keys.flatMap { source -> states[source]?.let { if (it.error != null && !it.busy) emptyList() else it.tags }.orEmpty() }.distinct()
+    val names = model.directories.keys.flatMap { source -> states[source]?.let { it.tags }.orEmpty() }.distinct()
     var query by rememberSaveable { mutableStateOf("") }
     val scroll = rememberLazyListState()
     val scope = rememberCoroutineScope()

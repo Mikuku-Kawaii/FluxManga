@@ -7,10 +7,10 @@ import kotlinx.coroutines.ensureActive
 
 internal data class SpaceUsage(val covers: CacheUsage, val searches: Int, val visits: Int, val privateResources: CacheUsage = CacheUsage(),
     val coverPolicy: CoverCachePolicy? = null, val coverPolicyError: String? = null, val localCoverBytes: Long = covers.bytes,
-    val catalogPages: CacheUsage = CacheUsage())
+    val catalogPages: CacheUsage = CacheUsage(), val readerPages: CacheUsage = CacheUsage())
 internal data class CleanupChoice(val covers: Boolean = false, val searches: Boolean = false, val visits: Boolean = false,
-    val privateResources: Boolean = false, val catalogPages: Boolean = false) {
-    val any get() = covers || searches || visits || privateResources || catalogPages
+    val privateResources: Boolean = false, val catalogPages: Boolean = false, val readerPages: Boolean = false) {
+    val any get() = covers || searches || visits || privateResources || catalogPages || readerPages
 }
 internal fun clearSpaceRecords(dao: WorldDao, choice: CleanupChoice): Pair<Int, Int> {
     val searches = if (choice.searches) dao.searchHistoryCount() else 0
@@ -29,11 +29,12 @@ internal class SpaceStorage(private val data: WorldDataStore, private val world:
         val onlineCovers = if (world == PrototypeWorld.SFW) data.libraryCoverUsage() else CacheUsage()
         val localCovers = cache?.usage ?: CacheUsage()
         val pages = if (world == PrototypeWorld.SFW) data.catalogPageUsage() else CacheUsage()
+        val reader = if (world == PrototypeWorld.SFW) data.readerCacheUsage(world) else CacheUsage()
         val context = currentCoroutineContext()
         return data.worldData(world, allowed) { dao ->
             context.ensureActive(); active()
             SpaceUsage(CacheUsage(localCovers.files + onlineCovers.files, localCovers.bytes + onlineCovers.bytes), dao.searchHistoryCount(), dao.visitCount(), resources,
-                cache?.policy, cache?.error, localCovers.bytes, pages).also { active() }
+                cache?.policy, cache?.error, localCovers.bytes, pages, reader).also { active() }
         }
     }
     suspend fun applyCoverPolicy(policy: CoverCachePolicy): String {
@@ -70,6 +71,11 @@ internal class SpaceStorage(private val data: WorldDataStore, private val world:
                     if (removed.failed > 0) "，${removed.failed} 个未完成，请刷新核对" else ""
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { results += "页面缓存清理未完成，请刷新核对" }
+        }
+        if (choice.readerPages && world == PrototypeWorld.SFW) {
+            val removed = data.clearReaderCache(world, allowed)
+            results += "阅读临时缓存：已清理 ${removed.files} 个文件；正在阅读的章节与离线下载保留" +
+                if (removed.failed > 0) "，${removed.failed} 个未完成，请刷新核对" else ""
         }
         if (choice.searches || choice.visits) {
             try {

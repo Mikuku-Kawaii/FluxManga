@@ -28,6 +28,13 @@ data class SessionState(
 
 /** Activity-retained, never serialized. A generation owns page stores and requests. */
 class WorldSession : ViewModel() {
+    private var jmRouteOwner: Pair<SessionIdentity, com.flux.manga.data.JmApiRoutes>? = null
+    @Synchronized internal fun jmApiRoutes(): com.flux.manga.data.JmApiRoutes {
+        val owner = identity.value
+        check(owner.world == PrototypeWorld.NSFW && accepts(owner))
+        return jmRouteOwner?.takeIf { it.first == owner }?.second
+            ?: com.flux.manga.data.JmApiRoutes().also { jmRouteOwner = owner to it }
+    }
     private var pageCoverOwner: Pair<SessionIdentity, com.flux.manga.data.PageCoverCache>? = null
     @Synchronized internal fun pageCovers(): com.flux.manga.data.PageCoverCache {
         val owner = identity.value
@@ -140,6 +147,7 @@ class WorldSession : ViewModel() {
     private fun invalidate(world: PrototypeWorld) {
         startup?.rememberWorld(world)
         pageCoverOwner?.second?.clear(); pageCoverOwner = null
+        jmRouteOwner = null
         navigationEpoch++
         downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); baoziAccountOwner = null
         baoziSources.close(); copyMangaSources.close()

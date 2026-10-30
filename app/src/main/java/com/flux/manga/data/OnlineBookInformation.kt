@@ -7,8 +7,6 @@ import com.flux.manga.core.*
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -48,6 +46,11 @@ internal class OnlineBookInformationStore(private val data: WorldDataStore, priv
         } finally { bytes.fill(0) }
     }
     suspend fun read(source: String, id: String) = db.transaction(::active) { it.readInfo(source, id) }
+    suspend fun readTags(keys: List<MangaKey>) = db.transaction(::active) { rows ->
+        keys.filter { it.world == identity.world }.mapNotNull { key ->
+            rows.readInfo(key.sourceId, key.mangaId)?.takeIf { it.detailsReady }?.tags?.let { key to it }
+        }.toMap()
+    }
     suspend fun readAll(books: List<OnlineBook>) = db.transaction(::active) { rows ->
         books.mapNotNull { book -> rows.readInfo(book.sourceId, book.mangaId)?.let { (book.sourceId to book.mangaId) to it } }.toMap()
     }
@@ -111,7 +114,6 @@ internal class OnlineBookInformationLoader(private val app: Application, private
     private val identity = session.identity.value
     private val data = WorldDataStore(app)
     private val store = OnlineBookInformationStore(data, session)
-    companion object { private val slots = Semaphore(2) }
     private fun active() = session.accepts(identity) && session.state.value.foreground
     private fun SourceDetail.info() = OnlineBookInformation(manga.title, metadata.authors.joinToString(" / ") { it.name },
         description.orEmpty(), tags.orEmpty(), metadata.status.orEmpty(), metadata.updatedAt.orEmpty(), metadata.partial,
@@ -128,12 +130,12 @@ internal class OnlineBookInformationLoader(private val app: Application, private
         return ids.distinct()
     }
     suspend fun load(source: String, id: String, force: Boolean = false, refreshMetadata: Boolean = false,
-        loadCover: Boolean = true, loadChapters: Boolean = true, onMetadata: suspend (OnlineBookInformation) -> Unit = {}): BookInformationResult = slots.withPermit { coroutineScope {
+        loadCover: Boolean = true, loadChapters: Boolean = true, onMetadata: suspend (OnlineBookInformation) -> Unit = {}): BookInformationResult = coroutineScope {
         if (!active()) throw CancellationException()
         var info = store.read(source, id)
         var metadataError: String? = null
         if (info == null || !info.detailsReady || (loadChapters && !info.chaptersKnown) || force || refreshMetadata) {
-            info = try { if (identity.world == PrototypeWorld.SFW) when {
+            info = try { ContentRequests.run(source, ContentPriority.DETAIL) { if (identity.world == PrototypeWorld.SFW) when {
                 isCopySource(source) -> copyMangaClient(session, source).let { client ->
                     val details = client.detail(id).info()
                     if (loadChapters) details.copy(chapterGroups = mapOf("default" to chapterIds { client.allChapters(id, it) }), chaptersKnown = true) else details
@@ -178,7 +180,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                     } }
                 }
             }
-            } catch (cancelled: CancellationException) { throw cancelled }
+            } } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
                 metadataError = "作品资料未补齐，可重试；已保存资料保留"
                 info ?: OnlineBookInformation(data.worldData(identity.world, ::active) { it.onlineBook(source, id)?.title.orEmpty() }, detailsReady = false)
@@ -214,5 +216,5 @@ internal class OnlineBookInformationLoader(private val app: Application, private
         if (current != info) current = store.save(source, id, current)
         ensureActive(); if (!active()) throw CancellationException()
         BookInformationResult(current, coverError, metadataError)
-    } }
+    }
 }

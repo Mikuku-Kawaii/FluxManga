@@ -191,7 +191,7 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
         mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false) }
     fun close() { leave(); closed = true; mutable.value = CopyAccountState() }
 }
-internal fun copyAccountFailure(error: Exception) = when (error) {
+internal fun copyAccountFailure(error: Exception) = sourceNetworkFailure(error) ?: when (error) {
     is SourceException.LoginRejected -> when (error.reason) {
         "account_missing" -> "账户不存在（${error.code}）。若官方 App 能登录，可能是接口不兼容。"
         "password_incorrect" -> "服务器提示密码不正确，请重新输入（${error.code}）。"

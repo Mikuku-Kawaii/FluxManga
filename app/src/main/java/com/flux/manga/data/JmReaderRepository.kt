@@ -13,7 +13,7 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 internal class JmReaderRepository(context: Context, private val session: WorldSession, private val source: String,
-    private val manga: String) : PrivateDownloadReader {
+    private val manga: String, cacheSession: String = java.util.UUID.randomUUID().toString()) : PrivateDownloadReader {
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     private val settings = JmStore(context, session)
@@ -46,7 +46,7 @@ internal class JmReaderRepository(context: Context, private val session: WorldSe
             synchronized(chapterData) { chapterData[page.chapterId]?.filenames?.getOrNull(page.ordinal.toInt() - 1) } == page.id)
         return ResourceKey(owner, "${page.chapterId}/${page.id}")
     }
-    private val pageCache = ReaderEncodedCache(data)
+    private val pageCache = ReaderEncodedCache(data, cacheSession)
     private val pipeline = PrivateImagePipeline(owner, pageCache, PrivateImageTransport { key ->
         val bytes = client().image("media/photos/${key.resourceId}")
         object : ByteArrayInputStream(bytes) { override fun close() { bytes.fill(0); super.close() } }
@@ -58,8 +58,17 @@ internal class JmReaderRepository(context: Context, private val session: WorldSe
         }, SourceContinuation.End, detail().chapters.size.toUInt())
     }
     override suspend fun pages(chapterId: String): List<SourcePageResource> {
-        require(detail().chapters.any { it.id == chapterId }) { "章节不属于当前作品" }
-        val chapter = client().pages(chapterId); active()
+        client() // Validate the current account before reusing this reader session.
+        val saved = pageCache.decode(owner, "pages:$chapterId", ::isActive) { json -> JmPages(chapterId,
+            json.getJSONArray("files").let { rows -> List(rows.length()) { rows.getString(it) } }, json.getLong("scramble")) }
+        val chapter = saved ?: run {
+            require(detail().chapters.any { it.id == chapterId }) { "章节不属于当前作品" }
+            ContentRequests.run(source, ContentPriority.READER) { client().pages(chapterId) }.also {
+                pageCache.json(owner, "pages:$chapterId", org.json.JSONObject().put("files", org.json.JSONArray(it.filenames))
+                    .put("scramble", it.scramble), ::isActive)
+            }
+        }
+        active()
         synchronized(chapterData) { chapterData[chapterId] = chapter }
         return chapter.filenames.mapIndexed { index, name ->
             SourcePageResource(mangaKey, chapterId, name, (index + 1).toUInt(), "jm-private-v1", null, null, null, sourceContext)

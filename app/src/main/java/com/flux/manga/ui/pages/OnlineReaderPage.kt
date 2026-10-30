@@ -55,6 +55,7 @@ internal data class OnlineReaderState(
     val chapters: List<SourceChapter> = emptyList(), val chapterNext: SourceContinuation = SourceContinuation.Next(SourcePageRequest.Start),
     val boundaryMessage: String? = null, val chapterBusy: Boolean = false, val chapterError: String? = null, val offlineIds: Set<String> = emptySet(),
     val nextBusy: Boolean = false, val nextError: String? = null, val atSeriesEnd: Boolean = false,
+    val cacheNotice: String? = null,
 )
 
 internal data class OnlineReaderBitmapKey(val chapter: String, val page: String, val width: Int,
@@ -69,12 +70,15 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     private val copy = isCopySource(sourceId)
     val privateContent = syntheticPrivate || isPrivateComicSource(sourceId)
     fun failure(error: Exception) = if (syntheticPrivate) "合成图片读取失败，可重试" else if (isEhSource(sourceId) || isExSource(sourceId)) ehFailure(error, GallerySite.forSource(sourceId)) else if (isPicaSource(sourceId)) picaFailure(error) else if (isJmSource(sourceId)) jmFailure(error) else if (baozi) baoziFailure(error) else if (copy) copyMangaFailure(error) else komgaFailure(error)
+    private val cacheSession = savedState.get<String>("reader-cache-session") ?: java.util.UUID.randomUUID().toString()
+        .also { savedState["reader-cache-session"] = it }
+    private val previewFiles = ReaderEncodedCache(data, cacheSession)
     val repository: ReaderRepository = readerRepository ?: if (syntheticPrivate) SyntheticPrivateReaderRepository(app, session, syntheticNamespace)
         else if (offlineOnly && isPrivateComicSource(sourceId)) PrivateOfflineReader(app, session, sourceId, mangaId)
-        else if (isJmSource(sourceId)) JmReaderRepository(app, session, sourceId, mangaId)
-        else if (isPicaSource(sourceId)) PicaReaderRepository(app, session, sourceId, mangaId)
-        else if (isEhSource(sourceId) || isExSource(sourceId)) EhReaderRepository(app, session, sourceId, mangaId)
-        else OnlineReaderRepository(app, session, sourceId, mangaId, offlineOnly = offlineOnly)
+        else if (isJmSource(sourceId)) JmReaderRepository(app, session, sourceId, mangaId, cacheSession)
+        else if (isPicaSource(sourceId)) PicaReaderRepository(app, session, sourceId, mangaId, cacheSession)
+        else if (isEhSource(sourceId) || isExSource(sourceId)) EhReaderRepository(app, session, sourceId, mangaId, cacheSession)
+        else OnlineReaderRepository(app, session, sourceId, mangaId, offlineOnly = offlineOnly, cacheSession = cacheSession)
     private val identity = session.identity.value
     private val mangaKey = repository.mangaKey
     private val mutable = MutableStateFlow(OnlineReaderState())
@@ -119,20 +123,78 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     }
     private var continuousReading = true
     private fun pageIdentity(page: SourcePageResource) = "${page.chapterId}:${page.id}"
-    // Recent screen-sized tiles only; encoded chapter files remain in the repository cache.
-    private val bitmaps = object : android.util.LruCache<OnlineReaderBitmapKey, Bitmap>(24 * 1024 * 1024) {
-        override fun sizeOf(key: OnlineReaderBitmapKey, value: Bitmap) = value.allocationByteCount
-        // Never recycle an evicted bitmap: a Compose/GPU draw may still own it.
-    }
+    private val bitmaps = DisplayBitmapStore<OnlineReaderBitmapKey>(reader = true)
+    private val previews = DisplayBitmapStore<OnlineReaderBitmapKey>(reader = true, preview = true)
     fun cachedBitmap(key: OnlineReaderBitmapKey): Bitmap? =
         if (repository.isActive() && (!privateContent || session.state.value.foreground)) bitmaps.get(key) else null
+    fun cachedPreview(key: OnlineReaderBitmapKey): Bitmap? =
+        if (repository.isActive() && (!privateContent || session.state.value.foreground)) previews.get(key) else null
+    private fun previewKey(key: OnlineReaderBitmapKey) = ResourceKey(
+        SampleKey(identity.world, mangaKey.sourceId, mangaKey.mangaId),
+        "preview:${key.chapter.length}:${key.chapter}${key.page.length}:${key.page}:${key.width}:${key.top}:${key.bottom}")
+    suspend fun preview(key: OnlineReaderBitmapKey): Bitmap? {
+        cachedPreview(key)?.let { return it }
+        val epoch = session.state.value.visibilityEpoch
+        val bytes = previewFiles.read(previewKey(key)) {
+            repository.isActive() && session.state.value.foreground && session.state.value.visibilityEpoch == epoch
+        } ?: return null
+        return try { withContext(Dispatchers.Default) {
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        }?.also {
+            currentCoroutineContext().ensureActive(); repository.active()
+            if (!session.state.value.foreground || session.state.value.visibilityEpoch != epoch) throw CancellationException()
+            previews.put(key, it)
+        } } finally { bytes.fill(0) }
+    }
+    private val imageWork = mutableMapOf<OnlineReaderBitmapKey, Deferred<Bitmap>>()
+    private val imagePriorities = mutableMapOf<OnlineReaderBitmapKey, ContentPriority>()
     suspend fun image(page: SourcePageResource, key: OnlineReaderBitmapKey): Bitmap {
+        cachedBitmap(key)?.let { return it }
+        val priority = currentCoroutineContext()[ContentPriorityContext] ?: ContentPriorityContext(ContentPriority.READER)
+        if (priority.priority == ContentPriority.READER && imagePriorities[key] != ContentPriority.READER) {
+            imageWork.remove(key)?.cancel()
+        }
+        val task = imageWork[key]?.takeUnless { it.isCancelled } ?: viewModelScope.async(priority, start = CoroutineStart.LAZY) {
+            decodeImage(page, key)
+        }.also { created ->
+            imageWork[key] = created
+            imagePriorities[key] = priority.priority
+            created.invokeOnCompletion { if (imageWork[key] === created) { imageWork.remove(key); imagePriorities.remove(key) } }
+        }
+        task.start()
+        try { return task.await() }
+        catch (cancelled: CancellationException) {
+            if (priority.priority != ContentPriority.READER && imageWork[key] === task) task.cancel()
+            throw cancelled
+        }
+    }
+    private suspend fun decodeImage(page: SourcePageResource, key: OnlineReaderBitmapKey): Bitmap {
         cachedBitmap(key)?.let { return it }
         val epoch = session.state.value.visibilityEpoch
         val bitmap = repository.image(page, key.width, key.top, key.bottom)
         try {
+            val preview = if (key.bottom != null && cachedPreview(key) == null) withContext(Dispatchers.Default) {
+                val width = minOf(160, bitmap.width)
+                Bitmap.createScaledBitmap(bitmap, width, (bitmap.height.toLong() * width / bitmap.width).toInt().coerceAtLeast(1), true)
+            } else null
             currentCoroutineContext().ensureActive(); repository.active()
             if (privateContent && (!session.state.value.foreground || session.state.value.visibilityEpoch != epoch)) throw CancellationException()
+            if (preview != null) {
+                val bytes = withContext(Dispatchers.Default) {
+                    java.io.ByteArrayOutputStream().use { output ->
+                        check(preview.compress(Bitmap.CompressFormat.WEBP_LOSSY, 85, output))
+                        output.toByteArray()
+                    }
+                }
+                try { previewFiles.write(previewKey(key), bytes) {
+                    repository.isActive() && session.state.value.foreground && session.state.value.visibilityEpoch == epoch
+                } } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: IOException) { mutable.value = state.value.copy(cacheNotice = "预览缓存未保存，当前图片仍可阅读；请检查剩余空间") }
+                finally { bytes.fill(0) }
+            }
+            currentCoroutineContext().ensureActive(); repository.active()
+            if (!session.state.value.foreground || session.state.value.visibilityEpoch != epoch) throw CancellationException()
+            if (preview != null) previews.put(key, preview)
             bitmaps.put(key, bitmap)
             return bitmap
         } catch (failure: Throwable) {
@@ -159,10 +221,14 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
             val page = remaining.firstOrNull { it.ordinal >= ordinal } ?: remaining.first()
             try {
                 // Every repository fetches/caches the encoded image before reading its bounds.
-                val size = repository.dimensions(page)
+                val size = withContext(ContentPriorityContext(ContentPriority.CHAPTER)) { repository.dimensions(page) }
                 currentCoroutineContext().ensureActive(); active()
                 dimensions(page, size)
             } catch (cancelled: CancellationException) { throw cancelled }
+            catch (full: ReaderStorageFullException) {
+                mutable.value = state.value.copy(cacheNotice = full.message)
+                return
+            }
             catch (_: Exception) {
                 // A speculative failure must not block other pages. The page's existing
                 // foreground loader reports the actual error and offers image retry.
@@ -441,16 +507,19 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
             boundaryMessage = null, nextError = null, atSeriesEnd = false, jumpRevision = state.value.jumpRevision + 1)
     }
     fun background() {
+        imageWork.values.toList().forEach { it.cancel() }; imageWork.clear(); imagePriorities.clear()
         stopPrefetch()
         bitmaps.evictAll()
+        previews.evictAll()
         if (privateContent) { loadJob?.cancel(); chapterJob?.cancel(); mutable.value = state.value.copy(loading = false, chapterBusy = false) }
         loadedTiles.clear(); visibleLoaded = null; flush(); writer.launch { repository.clearImages() }
     }
     fun leave() { loadJob?.cancel(); chapterJob?.cancel(); mutable.value = state.value.copy(loading = false, chapterBusy = false); background() }
     override fun onCleared() {
         bitmaps.evictAll()
+        previews.evictAll()
         saveDelay?.cancel()
-        flush().invokeOnCompletion { writer.launch { try { repository.releaseImages() } finally { repository.close(); writer.cancel() } } }
+        flush().invokeOnCompletion { writer.launch { try { repository.releaseImages() } finally { try { previewFiles.close() } finally { repository.close(); writer.cancel() } } } }
     }
 }
 
@@ -505,8 +574,8 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
     var tools by remember { mutableStateOf(false) }
     val chrome = state.pages.isNotEmpty() && (tools || state.error != null)
     ReaderImmersive(chrome || tool != null || chaptersOpen)
-    LaunchedEffect(state.saveError, state.boundaryMessage) {
-        if (state.saveError != null || state.boundaryMessage != null) tools = true
+    LaunchedEffect(state.saveError, state.boundaryMessage, state.cacheNotice) {
+        if (state.saveError != null || state.boundaryMessage != null || state.cacheNotice != null) tools = true
     }
     val currentChapter = state.pages.getOrNull(state.index)?.chapterId.orEmpty()
     val chapterStart = state.pages.indexOfFirst { it.chapterId == currentChapter }.coerceAtLeast(0)
@@ -570,6 +639,7 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
                     previous = { model.advance(-1, options.continuous) }, next = { model.advance(1, options.continuous) },
                     canPrevious = state.index > 0 || options.continuous, canNext = state.index < state.pages.lastIndex || options.continuous,
                     showPage = { tool = ReaderTool.PAGE }) {
+                    state.cacheNotice?.let { RequestFeedback(it, persistent = true) }
                     if (!state.saved || state.saveError != null) ReaderSaveFeedback(state.saved, state.saveError, { model.flush() }, "online-reader-save", forceBack = back)
                 }
             }
@@ -665,23 +735,32 @@ private fun OnlineReaderImage(model: OnlineReaderModel, page: SourcePageResource
         OnlineReaderBitmapKey(page.chapterId, page.id, width, top, bottom)
     }
     var bitmap by remember(bitmapKey) { mutableStateOf(model.cachedBitmap(bitmapKey)) }
+    var preview by remember(bitmapKey) { mutableStateOf(model.cachedPreview(bitmapKey)) }
     var error by remember(bitmapKey) { mutableStateOf<String?>(null) }
     var attempt by remember(bitmapKey) { mutableIntStateOf(0) }
-    var bitmapEpoch by remember(bitmapKey) { mutableLongStateOf(if (bitmap != null) epoch else -1) }
+    var bitmapEpoch by remember(bitmapKey) { mutableLongStateOf(if (bitmap != null || preview != null) epoch else -1) }
     DisposableEffect(bitmapKey) {
         onDispose {
             // Published Bitmap pixels can still be in a render command. Drop UI ownership;
             // do not recycle memory underneath a queued GPU draw or promise zeroization.
             bitmap = null
+            preview = null
             model.unloaded(page.id, top, page.chapterId)
         }
     }
     LaunchedEffect(bitmapKey, attempt, active, epoch) {
         model.unloaded(page.id, top, page.chapterId)
         bitmap = if (active) model.cachedBitmap(bitmapKey) else null
-        if (bitmap != null) bitmapEpoch = epoch
+        preview = if (active) model.cachedPreview(bitmapKey) else null
+        if (bitmap != null || preview != null) bitmapEpoch = epoch
         error = null
         if (active) try {
+            if (bitmap == null && preview == null && bottom != null) {
+                preview = try { model.preview(bitmapKey) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: IOException) { null }
+                if (preview != null) bitmapEpoch = epoch
+            }
             val result = bitmap ?: model.image(page, bitmapKey)
             bitmapEpoch = epoch; bitmap = result
         }
@@ -693,7 +772,7 @@ private fun OnlineReaderImage(model: OnlineReaderModel, page: SourcePageResource
     LaunchedEffect(bitmap, selected, gestureActive, changing, active) { if (active && !changing && bitmap != null && (selected || gestureActive || bottom != null)) model.displayed(page.id, top, page.chapterId) }
     ReadingImageVisibility(selected && active && !changing && bitmap != null && bitmapEpoch == epoch)
     Box(modifier.clipToBounds(), contentAlignment = Alignment.Center) {
-        bitmap?.takeIf { active && bitmapEpoch == epoch }?.let { pixels ->
+        (bitmap ?: preview.takeIf { error == null })?.takeIf { active && bitmapEpoch == epoch }?.let { pixels ->
             @Composable fun Pixels() {
                 Image(pixels.asImageBitmap(), "第 ${page.ordinal} 页${if (bottom != null) "，分段 ${top + 1} 至 $bottom" else ""}",
                     contentScale = if (bottom == null) ContentScale.Fit else ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
@@ -728,18 +807,26 @@ private fun OnlineStrip(model: OnlineReaderModel, state: OnlineReaderState, widt
     val visibility by model.session.state.collectAsState()
     val predecodeActive = lifecycle.isAtLeast(Lifecycle.State.STARTED) && visibility.foreground && !state.loading
     LaunchedEffect(list, width, predecodeActive, visibility.visibilityEpoch) {
+        var previousFirst = list.firstVisibleItemIndex
         if (predecodeActive) snapshotFlow {
             val visible = list.layoutInfo.visibleItemsInfo
             val firstKey = visible.firstOrNull()?.key
+            val first = currentTiles.indexOfFirst { it.key == firstKey }
             val last = currentTiles.indexOfFirst { it.key == visible.lastOrNull()?.key }
             val chapter = currentTiles.firstOrNull { it.key == firstKey }?.page?.chapterId
-            if (last < 0 || chapter == null) emptyList()
-            else currentTiles.drop(last + 1).take(2).filter { it.bottom != null && it.page.chapterId == chapter }
-        }.distinctUntilChanged().collectLatest { upcoming ->
-            // Keep only a small decoded look-ahead; the full chapter stays encoded on disk.
+            val before = if (first < 0) emptyList() else currentTiles.subList((first - 2).coerceAtLeast(0), first).asReversed()
+            val after = if (last < 0) emptyList() else currentTiles.drop(last + 1).take(2)
+            Triple(first, before.filter { it.bottom != null && it.page.chapterId == chapter },
+                after.filter { it.bottom != null && it.page.chapterId == chapter })
+        }.distinctUntilChanged().collectLatest { (first, before, after) ->
+            val upcoming = if (first < previousFirst) before + after else after + before
+            previousFirst = first
+            // Warm both directions; reversing a scroll should not expose recycled lazy-cell loaders.
             for (tile in upcoming) {
                 try {
-                    model.image(tile.page, OnlineReaderBitmapKey(tile.page.chapterId, tile.page.id, width, tile.top, tile.bottom))
+                    withContext(ContentPriorityContext(ContentPriority.NEIGHBOR)) {
+                        model.image(tile.page, OnlineReaderBitmapKey(tile.page.chapterId, tile.page.id, width, tile.top, tile.bottom))
+                    }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { /* The visible tile retains its own error/retry UI. */ }
             }

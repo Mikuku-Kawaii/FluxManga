@@ -10,11 +10,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import org.json.JSONArray
+import org.json.JSONException
 import java.io.Closeable
 import java.io.IOException
 import java.net.URLEncoder
 import java.net.HttpCookie
 import java.security.MessageDigest
+import java.security.GeneralSecurityException
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
@@ -22,7 +24,7 @@ import javax.crypto.spec.SecretKeySpec
 internal const val JM_SOURCE = "jmcomic-public"
 internal fun isJmSource(id: String) = id == JM_SOURCE || id.matches(Regex("jmcomic-user-[0-9]+"))
 internal fun jmId(id: String) = id.matches(Regex("[1-9][0-9]{0,14}"))
-// Public domain configuration reviewed 2026-10-25; retain the old host for saved accounts.
+// Public domain configuration reviewed 2026-10-30; retain the old host for saved accounts.
 internal val JM_APIS = listOf("www.cdnhjk.net", "www.cdnutc.cc", "www.cdngwc.net", "www.cdngwc.club", "www.cdnutc.me", "www.cdngwc.cc")
 internal const val JM_APP_VERSION = "2.1.12"
 internal val JM_IMAGES = listOf("cdn-msp.jmapiproxy1.cc", "cdn-msp.jmapiproxy2.cc", "cdn-msp2.jmapiproxy2.cc",
@@ -37,7 +39,7 @@ internal data class JmChapter(val id: String, val title: String)
 internal data class JmFolder(val id: String, val title: String)
 internal data class JmPage(val books: List<JmBook>, val next: Int?, val folders: List<JmFolder> = emptyList())
 internal data class JmPages(val chapter: String, val filenames: List<String>, val scramble: Long)
-internal fun jmFailure(error: Exception): String = when (error) {
+internal fun jmFailure(error: Exception): String = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is SourceException.AuthenticationRequired -> "登录已失效或访问受限，请检查账号与所选线路"
     is SourceException.Timeout -> "请求超时，请重试或在图源管理更换线路"
     is SourceException.Transport -> "JMComic 线路连接失败，请检查网络或在图源管理更换 API 线路"
@@ -95,7 +97,10 @@ internal class JmClient(private val session: WorldSession, private val settings:
     private val context = SourceContext(SourceWorld.NSFW, source, identity.processSession, identity.generation.toULong(), source)
     private val lock = Mutex()
     private val sessionLock = Mutex()
-    private var anonymousCookies = emptyMap<String, String>()
+    private data class ApiRoute(val host: String, val cookies: Map<String, String> = emptyMap())
+    private val routeMemory = session.jmApiRoutes()
+    // Selection / setting / login share sessionLock because Rust exposes the last Set-Cookie response.
+    private var selectedRoute: ApiRoute? = null
     private val closed = java.util.concurrent.atomic.AtomicBoolean()
     private val api = SourceHttpSession.jm(context, "https://${settings.api}/", SourceHttpConfig(30_000u, 2u, 150u, 0u, 4u * 1024u * 1024u))
     private val images = SourceHttpSession.jm(context, "https://${settings.image}/", SourceHttpConfig(30_000u, 2u, 150u, 0u, 32u * 1024u * 1024u))
@@ -115,31 +120,98 @@ internal class JmClient(private val session: WorldSession, private val settings:
     private fun active() { if (closed.get() || !session.accepts(identity) || !session.state.value.foreground) throw CancellationException("Expired JM session") }
     private fun md5(value: String) = MessageDigest.getInstance("MD5").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
     private fun query(values: Map<String, String>) = values.entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
-    private fun responseCookies(): Map<String, String> = buildMap {
+    private fun responseCookies(host: String): Map<String, String> = buildMap {
         api.jmCookies().forEach { header -> HttpCookie.parse(header).forEach {
-            if (!it.hasExpired() && (it.domain == null || settings.api == it.domain.trimStart('.') || settings.api.endsWith(".${it.domain.trimStart('.')}"))) put(it.name, it.value)
+            if (!it.hasExpired() && (it.domain == null || host == it.domain.trimStart('.') || host.endsWith(".${it.domain.trimStart('.')}"))) put(it.name, it.value)
         } }
     }
-    private suspend fun request(path: String, params: Map<String, String> = emptyMap(), form: Map<String, String>? = null, template: Boolean = false): Pair<JSONObject?, String?> {
-        sessionLock.withLock {
-            active()
-            if (settings.account?.takeIf { it.source == source }?.cookie.isNullOrBlank() && anonymousCookies.isEmpty()) {
-                requestRaw("setting")
-                val cookies = responseCookies()
-                if (cookies.isEmpty()) throw IOException("当前 JMComic 线路未返回会话，请重试或更换 API 线路")
-                active(); currentCoroutineContext().ensureActive()
-                anonymousCookies = cookies
-            }
-        }
-        return requestRaw(path, params, form, template)
+    private fun canChangeRoute(error: Exception): Boolean = when (error) {
+        is SourceException.Timeout, is SourceException.Transport, is SourceException.Network -> true
+        is SourceException.HttpStatus -> error.status.toInt() in 500..599 || error.status.toInt() == 408
+        else -> false
     }
-    private suspend fun requestRaw(path: String, params: Map<String, String> = emptyMap(), form: Map<String, String>? = null, template: Boolean = false): Pair<JSONObject?, String?> = withContext(Dispatchers.IO) {
+    private suspend fun route(excluded: MutableSet<String>): ApiRoute = sessionLock.withLock route@{
+        active(); currentCoroutineContext().ensureActive()
+        selectedRoute?.takeIf { it.host !in excluded }?.let { return@route it }
+        selectedRoute = null
+        routeMemory.selection.withLock choose@{
+            active(); currentCoroutineContext().ensureActive()
+            routeMemory.forget(excluded)
+            var failure: Exception? = null
+            for (host in routeMemory.candidates(settings.api, excluded)) {
+                active(); currentCoroutineContext().ensureActive()
+                try {
+                    // Probe without account credentials and validate the decrypted JM response.
+                    val candidate = withTimeoutOrNull(4_000L) {
+                        requestRaw(ApiRoute(host), "setting", authenticated = false)
+                        val cookies = responseCookies(host)
+                        if (cookies.isEmpty()) throw JmRouteProbeFailure("线路未返回匿名会话")
+                        ApiRoute(host, cookies)
+                    } ?: throw SourceException.Timeout()
+                    active(); currentCoroutineContext().ensureActive()
+                    routeMemory.remember(settings.api, host)
+                    selectedRoute = candidate
+                    return@choose candidate
+                } catch (cancelled: CancellationException) { throw cancelled
+                } catch (error: Exception) {
+                    // Authentication failure here is from the anonymous probe, not the user's account.
+                    if (!canChangeRoute(error) && error !is SourceException.AuthenticationRequired &&
+                        error !is SourceException.InvalidResponse && error !is JmRouteProbeFailure &&
+                        error !is JSONException && error !is GeneralSecurityException && error !is IllegalArgumentException) throw error
+                    excluded += host
+                    routeMemory.forget(setOf(host))
+                    failure = error
+                }
+            }
+            throw IOException("JMComic 暂无可用 API 线路，请检查网络后重试；账号和书库已保留", failure)
+        }
+    }
+    private suspend fun request(path: String, params: Map<String, String> = emptyMap(), template: Boolean = false): Pair<JSONObject?, String?> {
+        val result = withTimeoutOrNull(30_000L) attempt@{
+            val failed = mutableSetOf<String>()
+            var failure: Exception? = null
+            while (failed.size < JM_APIS.size) {
+                val current = route(failed)
+                try {
+                    return@attempt withTimeoutOrNull(8_000L) {
+                        requestRaw(current, path, params, template = template)
+                    } ?: throw SourceException.Timeout()
+                } catch (cancelled: CancellationException) { throw cancelled
+                } catch (error: Exception) {
+                    // GETs only: no replay of login, auth rejection, rate limits or business errors.
+                    if (!canChangeRoute(error)) throw error
+                    failed += current.host
+                    failure = error
+                    sessionLock.withLock {
+                        if (selectedRoute === current) selectedRoute = null
+                        routeMemory.selection.withLock { routeMemory.forget(setOf(current.host)) }
+                    }
+                }
+            }
+            throw IOException("JMComic 可用 API 线路均请求失败，请稍后重试；账号和书库已保留", failure)
+        }
+        active(); currentCoroutineContext().ensureActive()
+        return result ?: throw IOException("JMComic 自动选择线路超时，请检查网络后重试；账号和书库已保留")
+    }
+    private class JmRouteProbeFailure(message: String) : IOException(message)
+    private fun requestCookies(route: ApiRoute, authenticated: Boolean): String {
+        val cookies = route.cookies.toMutableMap()
+        val account = settings.account?.takeIf { authenticated && it.source == source }
+        if (account != null) {
+            // AVS is JM's portable account session. Never forward challenge / host-private cookies.
+            val avs = account.cookie.split(';').map(String::trim).firstOrNull { it.startsWith("AVS=") }?.substringAfter('=')
+            if (avs.isNullOrBlank() || avs.any { it == '\r' || it == '\n' })
+                throw IOException("JMComic 登录会话不完整，请重新登录；原账号和书库已保留")
+            cookies["AVS"] = avs
+        }
+        return cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
+    }
+    private suspend fun requestRaw(route: ApiRoute, path: String, params: Map<String, String> = emptyMap(),
+        form: Map<String, String>? = null, template: Boolean = false, authenticated: Boolean = true): Pair<JSONObject?, String?> = withContext(Dispatchers.IO) {
         active(); currentCoroutineContext().ensureActive()
         val ts = (System.currentTimeMillis() / 1000).toString()
-        val cookie = settings.account?.takeIf { it.source == source }?.cookie
-            ?: anonymousCookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
-        val result = api.jmRequest(context, path + if (params.isEmpty()) "" else "?${query(params)}",
-            md5(ts + if (template) "18comicAPPContent" else "185Hcomic3PAPP7R"), "$ts,$JM_APP_VERSION", cookie, form?.let(::query))
+        val result = api.jmRequest(context, "https://${route.host}/$path" + if (params.isEmpty()) "" else "?${query(params)}",
+            md5(ts + if (template) "18comicAPPContent" else "185Hcomic3PAPP7R"), "$ts,$JM_APP_VERSION", requestCookies(route, authenticated), form?.let(::query))
         val key = md5(ts + "185Hcomic3PAPP7R").toByteArray()
         try {
             active(); currentCoroutineContext().ensureActive()
@@ -147,6 +219,7 @@ internal class JmClient(private val session: WorldSession, private val settings:
             val envelope = JSONObject(result.body.toString(Charsets.UTF_8))
             val code = envelope.optInt("code")
             if (code != 200) {
+                if (path == "setting") throw JmRouteProbeFailure("线路未返回有效 JM 配置（$code）")
                 if (path == "login") {
                     val message = envelope.optString("errorMsg", envelope.optString("message"))
                     val reason = when {
@@ -170,12 +243,18 @@ internal class JmClient(private val session: WorldSession, private val settings:
         } finally { result.body.fill(0); key.fill(0) }
     }
     suspend fun login(username: String, password: String): JmAccount = lock.withLock {
-        val json = requireNotNull(request("login", form = mapOf("username" to username, "password" to password)).first)
-        val uid = json.getString("uid"); require(jmId(uid))
-        val cookies = anonymousCookies.toMutableMap().apply { putAll(responseCookies()) }
-        cookies["AVS"] = json.getString("s")
-        require(cookies.values.all { it.isNotBlank() && it.none { c -> c == ';' || c == '\r' || c == '\n' } })
-        JmAccount(uid, json.optString("username", username), cookies.entries.joinToString("; ") { "${it.key}=${it.value}" })
+        val current = withTimeoutOrNull(30_000L) { route(mutableSetOf()) }
+            ?: throw IOException("JMComic 自动选择线路超时，请重试；原账号保持不变")
+        // Only the anonymous probe changes routes. Submit the password once on the chosen host.
+        sessionLock.withLock {
+            val json = requireNotNull(requestRaw(current, "login", form = mapOf("username" to username, "password" to password), authenticated = false).first)
+            val uid = json.getString("uid"); require(jmId(uid))
+            val cookies = current.cookies.toMutableMap().apply { putAll(responseCookies(current.host)) }
+            cookies["AVS"] = json.getString("s")
+            require(cookies.values.all { it.isNotBlank() && it.none { c -> c == ';' || c == '\r' || c == '\n' } })
+            active(); currentCoroutineContext().ensureActive()
+            JmAccount(uid, json.optString("username", username), cookies.entries.joinToString("; ") { "${it.key}=${it.value}" })
+        }
     }
     /** Read the authenticated edit profile, not a public user page or the browser's title. */
     suspend fun verifyWebAccount(): JmAccount {

@@ -15,7 +15,7 @@ import java.io.File
 import java.io.IOException
 
 internal class OnlineReaderRepository(context: Context, private val session: WorldSession,
-    private val sourceId: String, private val mangaId: String, private val offlineEnabled: Boolean = true, private val offlineOnly: Boolean = false) : ReaderRepository {
+    private val sourceId: String, private val mangaId: String, private val offlineEnabled: Boolean = true, private val offlineOnly: Boolean = false, cacheSession: String = java.util.UUID.randomUUID().toString()) : ReaderRepository {
     private val baozi = isBaoziSource(sourceId)
     private val copy = isCopySource(sourceId)
     private val access = if (copy || baozi) null else KomgaAccess(context, session, sourceId)
@@ -26,9 +26,13 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
     private val directory = File(data.cacheDirectory(PrototypeWorld.SFW), "online-reader/$sourceDirectory")
     private val key = SourceMangaKey(SourceWorld.SFW, sourceId, mangaId)
     override val mangaKey get() = key
-    private val files = LinkedHashMap<String, SourceImageFile>(4, .75f, true)
+    private val pageCache = ReaderEncodedCache(data, cacheSession)
+    private val imageOwner = SampleKey(identity.world, sourceId, mangaId)
+    private val fileLocks = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
+    private val boundChapters = mutableSetOf<String>()
+    private val binding = Mutex()
+    private val freshPages = java.util.concurrent.ConcurrentHashMap<String, List<SourcePageResource>>()
     // Encoded files survive paging and chapter changes for this reader entry, not in bitmap RAM.
-    private val fileLock = Mutex()
     private val downloadedPaths = mutableMapOf<String,String>()
     private val downloadFiles = DownloadFiles(File(data.directory(PrototypeWorld.SFW), "downloads"))
     companion object {
@@ -60,9 +64,21 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
             }
         }
         if(offlineOnly) throw IOException("此章节尚未下载完成，请返回目录选择已下载章节")
-        val result = if (baozi) withContext(Dispatchers.IO) { session.baoziSources.client(app, sourceId).source.pages(mangaId, chapterId) } else if (copy) copyClient().pages(mangaId, chapterId) else requireNotNull(access).client().pages(key, chapterId)
+        if (!copy && !baozi) requireNotNull(access).client()
+        else if (copy) copyClient() else session.baoziSources.client(app, sourceId)
+        val saved = pageCache.decode(imageOwner, "pages:$chapterId", ::isActive) { readerPages(it, key, identity.sourceContext(sourceId)) }
+        if (saved != null) return saved
+        return fetchPages(chapterId).also { pageCache.json(imageOwner, "pages:$chapterId", readerPagesJson(it), ::isActive) }
+    }
+    private suspend fun fetchPages(chapterId: String): List<SourcePageResource> {
+        val result = ContentRequests.run(sourceId, ContentPriority.READER) {
+            if (baozi) withContext(Dispatchers.IO) { session.baoziSources.client(app, sourceId).source.pages(mangaId, chapterId) }
+            else if (copy) copyClient().pages(mangaId, chapterId) else requireNotNull(access).client().pages(key, chapterId)
+        }
         active()
         if (result.continuation !is SourceContinuation.End || result.items.isEmpty()) throw IOException("章节没有可阅读的图片")
+        freshPages[chapterId] = result.items
+        synchronized(boundChapters) { boundChapters += chapterId }
         return result.items
     }
     override suspend fun chapters(request: SourcePageRequest): SourceChapterPage {
@@ -107,23 +123,51 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
     }
     private suspend fun path(page: SourcePageResource): String {
         downloadedPaths["${page.chapterId}:${page.id}"]?.let { if(!File(it).isFile) throw IOException("下载副本已移除"); return it }
-        return file(page).path()
+        return file(page)
     }
-    private suspend fun file(page: SourcePageResource): SourceImageFile {
+    private fun imageKey(page: SourcePageResource) = ResourceKey(imageOwner, "${page.chapterId.length}:${page.chapterId}${page.id}")
+    private suspend fun file(page: SourcePageResource): String {
         require(page.manga == key)
-        val id = "${page.chapterId}:${page.id}"
-        files[id]?.let { return it }
-        prepare(directory)
-        val owned = downloadFile(page, directory)
-        files[id] = owned
-        return owned
+        active()
+        val resource = imageKey(page)
+        pageCache.publicFile(resource, ::isActive)?.let { return it.path }
+        return fileLocks.getOrPut(resource.resourceId) { Mutex() }.withLock {
+            pageCache.publicFile(resource, ::isActive)?.let { return@withLock it.path }
+            val current = binding.withLock {
+                if (!synchronized(boundChapters) { page.chapterId in boundChapters }) fetchPages(page.chapterId)
+                freshPages[page.chapterId]?.firstOrNull { it.id == page.id }
+                    ?: throw IOException("章节图片已变化，请重新打开章节")
+            }
+            prepare(directory)
+            val bytes = try { ContentRequests.run(sourceId, ContentPriority.READER) {
+                downloadFile(current, directory).use { owned ->
+                    File(owned.path()).inputStream().use { input ->
+                        com.flux.manga.storage.BoundedResourceInput.read(input, com.flux.manga.storage.BoundedResourceInput.PRIVATE_BYTES) { active() }
+                    }
+                }
+            } } catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) {
+                synchronized(boundChapters) { boundChapters.remove(page.chapterId) }
+                throw failure
+            }
+            try {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("图片格式无法解码")
+                pageCache.write(resource, bytes, ::isActive)
+            } finally { bytes.fill(0) }
+            requireNotNull(pageCache.publicFile(resource, ::isActive)).path
+        }
     }
     override suspend fun dimensions(page: SourcePageResource): Pair<Int, Int> = withContext(Dispatchers.IO) {
-        fileLock.withLock {
+        run {
             active()
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(path(page), bounds)
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("图片格式无法解码")
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                pageCache.remove(imageKey(page))
+                throw IOException("图片格式无法解码")
+            }
             currentCoroutineContext().ensureActive(); active()
             bounds.outWidth to bounds.outHeight
         }
@@ -132,7 +176,7 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
         var decoded: Bitmap? = null
         try {
             return withContext(Dispatchers.IO) {
-                fileLock.withLock {
+                run {
                     active()
                     val id = "${page.chapterId}:${page.id}"
                     try {
@@ -155,7 +199,7 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
                         } finally { decoder.recycle() }
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: Exception) {
-                        files.remove(id)?.close()
+                        pageCache.remove(imageKey(page))
                         throw failure
                     }
                 }
@@ -164,6 +208,6 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
     }
     override suspend fun clearImages() = Unit
     override suspend fun releaseImages() = withContext(NonCancellable + Dispatchers.IO) {
-        fileLock.withLock { files.values.forEach { it.close() }; files.clear() }
+        pageCache.close()
     }
 }

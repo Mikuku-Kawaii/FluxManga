@@ -84,7 +84,8 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
     var draftPolicyName by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmPolicyName by rememberSaveable { mutableStateOf<String?>(null) }
     var catalogPages by rememberSaveable { mutableStateOf(false) }
-    val choice = CleanupChoice(covers && public, searches, visits, privateResources && !public, catalogPages && public)
+    var readerPages by rememberSaveable { mutableStateOf(false) }
+    val choice = CleanupChoice(covers && public, searches, visits, privateResources && !public, catalogPages && public, readerPages && public)
     val editable = state.ready && !state.busy
     ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag("space-storage"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading("存储与清理", "", back) }
@@ -105,6 +106,12 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
                 CleanupOption("页面缓存", state.usage?.catalogPages?.let {
                     "${it.files} 个文件 · ${android.text.format.Formatter.formatFileSize(app, it.bytes)}"
                 } ?: "尚未读取", catalogPages, editable) { catalogPages = it }
+            }
+            if (public) {
+                SettingsDivider()
+                CleanupOption("阅读临时缓存", state.usage?.readerPages?.let {
+                    "${it.files} 个文件 · ${android.text.format.Formatter.formatFileSize(app, it.bytes)} · 保留正在阅读的章节"
+                } ?: "尚未读取", readerPages, editable) { readerPages = it }
             }
             SettingsDivider()
             CleanupOption("搜索记录", state.usage?.let { "${it.searches} 条 · 当前空间" } ?: "尚未读取", searches, editable) { searches = it }
@@ -170,6 +177,7 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
         text = { Text(buildString {
             append(if (public) "表世界：" else "里世界：")
             if (choice.covers) append("\n本地与在线书库封面缓存 ${state.usage?.covers?.files ?: 0} 个文件")
+            if (choice.readerPages) append("\n阅读临时缓存（保留正在阅读的章节）")
             if (choice.catalogPages) append("\n页面缓存 ${state.usage?.catalogPages?.files ?: 0} 个文件")
             if (choice.searches) append("\n搜索记录 ${state.usage?.searches ?: 0} 条")
             if (choice.visits) append("\n最近观看记录 ${state.usage?.visits ?: 0} 条")

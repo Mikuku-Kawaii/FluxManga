@@ -90,11 +90,13 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         val text = state.value.query.trim()
         require(text.isNotBlank()) { "请输入关键词或 JM 编号" }
         val current = client(); val result = current.search(text, page)
-        val books = blacklist.items(current.source, result.books, { it.id }, { it.title })
+        val filtered = blacklist.items(current.source, result.books, { it.id }, { it.title })
+        val books = filtered.items
         if (!active()) throw CancellationException()
         data.remember(identity.world, "online:${current.source}", text, ::active)
         val history = data.worldData(identity.world, ::active) { it.history("online:${current.source}") }
-        state.update { it.copy(books = books, page = page, next = result.next, history = history, message = if (books.isEmpty()) "没有匹配作品" else null) }
+        state.update { it.copy(books = books, page = page, next = result.next, history = history,
+            error = filtered.incomplete, message = filtered.notice ?: if (books.isEmpty()) "没有匹配作品" else null) }
     }
     fun favorites(folder: String = state.value.folder, page: Int = 1): Unit = work({ favorites(folder, page) }) {
         val result = client().favorites(folder, page)
@@ -117,11 +119,12 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
     fun detail(id: String): Unit = work({ detail(id) }, readingDetail = true) {
         val current = client()
         val cache = DetailPageCache(getApplication<Application>(), session, current.source, id)
-        cache.read()?.let { json ->
+        cache.decode(parse = ::jmDetail)?.let { cached ->
             val reading = data.worldData(identity.world, ::active) { dao -> (dao.onlineBook(current.source, id)?.favorite == true) to dao.onlineProgress(current.source, id) }
-            if (active()) state.update { it.copy(detail = jmDetail(json), favorite = reading.first, progress = reading.second) }
+            if (active()) state.update { it.copy(detail = cached, favorite = reading.first, progress = reading.second) }
         }
-        val book = current.detail(id)
+        val fetched = ContentRequests.run(current.source, ContentPriority.DETAIL) { current.detail(id) }
+        val book = if (fetched.chapters.isEmpty()) fetched.copy(chapters = state.value.detail?.takeIf { it.id == id }?.chapters.orEmpty()) else fetched
         store.remember(current.source, book)
         val (favorite, progress) = data.worldData(identity.world, ::active) { dao ->
             dao.putVisit(BrowseVisit("online", current.source, id, book.title, System.currentTimeMillis()))
@@ -170,10 +173,10 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
     }
     fun configure(api: String, image: String): Unit = work({ configure(api, image) }) {
         val old = store.settings()
-        val next = old.copy(api = api, image = image, account = if (old.api == api) old.account else null)
+        val next = old.copy(api = api, image = image)
         store.save(next); client?.close(); client = null
         state.update { it.copy(settings = next, source = next.account?.source ?: JM_SOURCE, books = emptyList(), page = 0, next = null,
-            message = if (old.api != api) "线路已保存，请重新登录；旧书目和进度保留" else "线路已保存") }
+            message = "首选线路已保存，不可用时自动切换；账号、书库和进度保留") }
     }
     fun logout(): Unit = work(::logout) {
         val next = store.settings().copy(account = null)
@@ -278,14 +281,14 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         item { SettingsHeading(navigation.title("JMComic"), "", navigation::back) }
         sourceSettingsOverview(navigation,
             account = if (!state.ready) "账号状态待读取" else state.settings.account?.let { "已保存会话 · ${it.username}" } ?: "未登录 · 可匿名阅读",
-            imports = favorites, importSummary = "全部收藏或按文件夹导入", connectionSummary = "API 与图片线路",
+            imports = favorites, importSummary = "全部收藏或按文件夹导入", connectionSummary = "API 自动选线与图片线路",
             importEnabled = state.ready && !state.busy && state.settings.account != null)
         item { JmFeedback(model, state) }
         if (navigation.section == SourceSettingsSection.CONNECTION) item { SettingsPanel {
-            Text("API 线路 · 与网页地址不同")
+            Text("首选 API 线路 · 不可用时自动切换")
             JM_APIS.forEach { host -> SettingsChoiceRow(if (host == "www.cdngwc.cc") "$host（旧线路）" else host,
                 api == host, { api = host }, enabled = !state.busy) }
-            Text("图片线路")
+            Text("首选图片线路 · 不可用时自动切换")
             JM_IMAGES.forEach { host -> SettingsChoiceRow(host, image == host, { image = host }, enabled = !state.busy) }
             ReferenceButton({ model.configure(api, image) }, enabled = state.ready && !state.busy) { Text("保存线路") }
         } }
@@ -305,7 +308,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                 ReferenceButton(feedbackAttempt({ model.login(username, password); password = "" }), enabled = state.ready && !state.busy && username.isNotBlank() && password.isNotEmpty()) { Text("登录") }
             }
             if (state.settings.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
-            Text("登录信息加密保存，切换 API 线路后需重新登录。", style = MaterialTheme.typography.bodySmall)
+            Text("登录信息加密保存，自动或手动切换 API 线路保留账号；会话失效时才需重新登录。", style = MaterialTheme.typography.bodySmall)
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部收藏或按文件夹导入；已有书目与阅读进度保留。",
             state.ready && state.settings.account != null, state.busy, "import-jm-library", favorites) }
@@ -332,10 +335,11 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         item { JmFeedback(model, state) }
         state.detail?.let { book ->
             item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(id) } }) {
+                DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(id) } }, tags = {
+                    WorkTags(book.tags.map { it to it }) { value, _ -> tag(value) }
+                }) {
                     DetailAuthors(book.author.split(" / ").map { it to it }, searchAuthor)
                     if (book.chapters.size > 1) DetailInfoText("${book.chapters.size} 章", style = MaterialTheme.typography.bodySmall)
-                    WorkTags(book.tags.map { it to it }) { value, _ -> tag(value) }
                 }
                 DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                     read = { (state.resume ?: book.chapters.firstOrNull()?.id)?.let(read) },

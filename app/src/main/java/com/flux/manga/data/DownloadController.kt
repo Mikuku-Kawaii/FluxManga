@@ -187,7 +187,7 @@ internal class DownloadController(private val scope: CoroutineScope, private val
     }
     fun close() { pauseAll(); closed=true; mutable.value=DownloadQueueState() }
 }
-internal fun downloadFailure(error: Exception): String = when(error) {
+internal fun downloadFailure(error: Exception): String = com.flux.manga.data.sourceNetworkFailure(error) ?: when(error) {
     is IOException -> error.message ?: "下载文件保存失败，可重试"
     is com.flux.manga.core.SourceException.AuthenticationRequired -> "账号已失效，请在图源管理重新验证后重试"
     is com.flux.manga.core.SourceException.Timeout -> "请求超时，已完成页面保留，可重试"

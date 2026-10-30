@@ -42,7 +42,7 @@ internal data class EhComment(val id: String, val author: String, val posted: St
     val editable: Boolean = false, val voteUp: Boolean = false, val voteDown: Boolean = false, val vote: Int = 0)
 internal data class EhComments(val title: String, val entries: List<EhComment>, val more: Boolean, val canPost: Boolean = false)
 internal data class EhCommentVote(val id: String, val score: Int, val vote: Int)
-internal fun ehFailure(error: Exception, site: GallerySite = GallerySite.EH) = when (error) {
+internal fun ehFailure(error: Exception, site: GallerySite = GallerySite.EH) = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is IOException -> error.message ?: "${site.label} 请求失败"
     is SourceException.AuthenticationRequired -> "${site.label} 会话已过期或当前权限不足，请检查该站 Cookie"
     is SourceException.RateLimited -> "服务请求限流，请稍后重试"

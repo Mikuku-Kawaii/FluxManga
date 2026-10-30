@@ -99,11 +99,14 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             else -> throw java.io.IOException("列表类型不受支持")
         }
         if (!active()) throw CancellationException()
-        val books = if (kind == "favorites") result.items else blacklist.items(api.source, result.items, { it.id }, { it.title })
+        val filtered = if (kind == "favorites") TagFilteredItems(result.items, null)
+            else blacklist.items(api.source, result.items, { it.id }, { it.title },
+                { (it.tags + it.categories).takeIf { _ -> it.tagsKnown } })
+        val books = filtered.items
         if (kind == "search") data.remember(identity.world, "online:${api.source}", value.trim(), ::active)
         val history = data.worldData(identity.world, ::active) { it.history("online:${api.source}") }
         state.update { it.copy(books = books.distinctBy { row -> row.id }, page = result.page, next = result.next, history = history,
-            message = if (books.isEmpty()) "当前列表没有作品" else null) }
+            error = filtered.incomplete, message = filtered.notice ?: if (books.isEmpty()) "当前列表没有作品" else null) }
     }
     fun clearHistory(): Unit = work(::clearHistory) {
         data.clearHistory(identity.world, "online:${requireNotNull(state.value.source)}", ::active)
@@ -118,9 +121,9 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     fun detail(id: String): Unit = work({ detail(id) }, readingDetail = true) {
         val api = client()
         val cache = DetailPageCache(getApplication<Application>(), session, api.source, id)
-        cache.read()?.let { json ->
+        cache.decode(parse = ::picaDetail)?.let { cached ->
             val reading = data.worldData(identity.world, ::active) { dao -> (dao.onlineBook(api.source, id)?.favorite == true) to dao.onlineProgress(api.source, id) }
-            if (active()) state.update { it.copy(book = picaDetail(json), favorite = reading.first, progress = reading.second) }
+            if (active()) state.update { it.copy(book = cached, favorite = reading.first, progress = reading.second) }
         }
         val book = api.detail(id)
         store.remember(api.source, book)
@@ -135,8 +138,8 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     fun chapters(id: String): Unit = work({ chapters(id) }) {
         val api = client()
         val cache = DetailPageCache(getApplication<Application>(), session, api.source, id)
-        cache.read("chapters")?.let { json -> if (active()) state.update { it.copy(chapters = picaChapters(json)) } }
-        val rows = api.allChapters(id)
+        cache.decode("chapters", ::picaChapters)?.let { cached -> if (active()) state.update { it.copy(chapters = cached) } }
+        val rows = (api.allChapters(id) + state.value.chapters).distinctBy { it.order }.sortedBy { it.order }
         if (active()) state.update { it.copy(chapters = rows, message = if (rows.isEmpty()) "暂无章节" else null) }
         cache.write(picaChaptersJson(rows), "chapters")
     }
@@ -332,12 +335,13 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         }
         item { PicaFeedback(model, state) }
         state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }) {
-                DetailAuthors(listOf(book.author, book.artist).map { it to it }, searchAuthor)
-                DetailInfoText(if (book.finished) "已完结" else "连载中", style = MaterialTheme.typography.bodySmall)
+            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }, tags = {
                 WorkTags(book.categories.map { it to "category:$it" } + book.tags.map { it to "search:$it" }) { value, _ ->
                     list(value.substringBefore(':'), value.substringAfter(':'))
                 }
+            }) {
+                DetailAuthors(listOf(book.author, book.artist).map { it to it }, searchAuthor)
+                DetailInfoText(if (book.finished) "已完结" else "连载中", style = MaterialTheme.typography.bodySmall)
             }
             val target = state.resume ?: state.chapters.firstOrNull()?.order?.toString()
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,

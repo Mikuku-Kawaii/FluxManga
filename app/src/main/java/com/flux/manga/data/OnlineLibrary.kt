@@ -7,8 +7,6 @@ import com.flux.manga.core.*
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.io.IOException
 
@@ -40,7 +38,6 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
     val coverCache = session.pageCovers()
     private fun active() { if (identity.world != PrototypeWorld.SFW || !session.accepts(identity)) throw CancellationException() }
     companion object {
-        private val covers = Semaphore(2)
         private var prepared = false
         @Synchronized private fun prepare(directory: File) {
             if (!directory.isDirectory && !directory.mkdirs()) throw IOException("无法创建封面缓存")
@@ -99,6 +96,14 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
                     session.accepts(identity) && session.state.value.foreground
                 } } finally { bytes.fill(0) }
                 bitmap
+            } catch (failure: IOException) {
+                if (!failure.isDisplayCacheFailure()) { bitmap.recycle(); throw failure }
+                try {
+                    currentCoroutineContext().ensureActive()
+                    if (!session.accepts(identity) || !session.state.value.foreground) throw CancellationException()
+                } catch (cancelled: CancellationException) { bitmap.recycle(); throw cancelled }
+                android.util.Log.w("FluxCache", "Library cover cache write failed; displaying fetched image")
+                bitmap
             } catch (failure: Exception) { bitmap.recycle(); throw failure }
         }
     }
@@ -116,7 +121,7 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
         var decoded: Bitmap? = null
         try {
             return withContext(Dispatchers.IO) {
-                covers.withPermit {
+                ContentRequests.run(sourceId, ContentPriority.COVER) {
                     val directory = File(data.cacheDirectory(PrototypeWorld.SFW), "online-cover")
                     prepare(directory)
                     client.coverFile(SourceMangaKey(SourceWorld.SFW, sourceId, mangaId), directory.path).use { file ->

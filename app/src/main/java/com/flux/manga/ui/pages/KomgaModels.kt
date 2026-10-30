@@ -18,7 +18,7 @@ import java.util.UUID
 
 private class KomgaConfigurationChanged : Exception()
 
-internal fun komgaFailure(error: Exception): String = when (error) {
+internal fun komgaFailure(error: Exception): String = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is KomgaConfigurationChanged -> "图源配置已变更或尚未保存，请返回图源设置重新进入"
     is SourceException.AuthenticationRequired -> "认证失败，请返回图源设置更新认证信息"
     is SourceException.Timeout -> "请求超时，可以重试"
@@ -233,15 +233,18 @@ internal class KomgaContentModel(app: Application, private val session: WorldSes
                     val result = blacklist.apply(client.search(submitted, request))
                     ensureActive(); active()
                     mutableState.value = state.value.copy(cards = (if (append) state.value.cards + result.cards else result.cards)
-                        .distinctBy { it.key }, next = result.continuation, busy = false, loaded = true)
+                        .distinctBy { it.key }, next = if (result.filterIncomplete) SourceContinuation.Next(request) else result.continuation,
+                        appendError = result.notice.takeIf { result.filterIncomplete },
+                        notice = result.notice.takeUnless { result.filterIncomplete }, busy = false, loaded = true)
                 } else {
                     val key = SourceMangaKey(SourceWorld.SFW, sourceId, mangaId)
                     if (!append) {
-                        if (state.value.detail == null) detailCache?.read()?.let { json ->
+                        if (state.value.detail == null) detailCache?.decode { json ->
+                            state.value.copy(detail = sourceDetail(json.getJSONObject("detail"), identity.sourceContext(sourceId)),
+                                chapters = sourceChapters(json, key), next = continuation(json), chapterTotal = chapterTotal(json), loaded = true)
+                        }?.let { cached ->
                             ensureActive(); active()
-                            val cached = sourceDetail(json.getJSONObject("detail"), identity.sourceContext(sourceId))
-                            mutableState.value = state.value.copy(detail = cached, chapters = sourceChapters(json, key),
-                                next = continuation(json), chapterTotal = chapterTotal(json), loaded = true)
+                            mutableState.value = cached
                             updateProgress()
                         }
                         val detail = client.detail(key)
@@ -253,8 +256,8 @@ internal class KomgaContentModel(app: Application, private val session: WorldSes
                     }
                     val result = client.chapters(key, request)
                     ensureActive(); active()
-                    mutableState.value = state.value.copy(chapters = (if (append) state.value.chapters + result.items else result.items)
-                        .distinctBy { it.id }, next = result.continuation, busy = false, loaded = true, chapterTotal = result.total?.toLong())
+                    mutableState.value = state.value.copy(chapters = (result.items + state.value.chapters)
+                        .distinctBy { it.id }.sortedBy { it.ordinal }, next = result.continuation, busy = false, loaded = true, chapterTotal = result.total?.toLong() ?: state.value.chapterTotal)
                     state.value.detail?.let { detail -> detailCache?.write(chaptersJson(state.value.chapters, state.value.next, state.value.chapterTotal)
                         .put("detail", detailJson(detail))) }
                 }

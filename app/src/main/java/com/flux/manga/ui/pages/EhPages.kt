@@ -96,7 +96,9 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     fun browse(favorites: Boolean, cursor: String? = null): Unit = work({ browse(favorites, cursor) }) {
         val api = client(); val query = state.value.query.trim()
         val received = api.browse(favorites, query, state.value.folder, cursor)
-        val result = if (favorites) received else received.copy(books = blacklist.items(api.source, received.books, { it.id }, { it.title }))
+        val filtered = if (favorites) TagFilteredItems(received.books, null)
+            else blacklist.items(api.source, received.books, { it.id }, { it.title })
+        val result = received.copy(books = filtered.items)
         if (!active()) throw CancellationException()
         if (query.isNotBlank()) data.remember(identity.world, "online:${api.source}", query, ::active)
         val history = data.worldData(identity.world, ::active) { it.history("online:${api.source}") }
@@ -104,7 +106,8 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
             val ehIds = dao.onlineBooks().filter { isEhSource(it.sourceId) }.map { it.mangaId }.toSet()
             result.books.count { it.id in ehIds }
         } else 0
-        state.update { it.copy(batch = result, folders = result.folders, history = history, ehOverlap = overlap, message = if (result.books.isEmpty()) "当前列表没有画廊" else null) }
+        state.update { it.copy(batch = result, folders = result.folders, history = history, ehOverlap = overlap,
+            error = filtered.incomplete, message = filtered.notice ?: if (result.books.isEmpty()) "当前列表没有画廊" else null) }
     }
     fun folder(value: String) { if (!state.value.busy) { state.update { it.copy(folder = value, batch = null) }; browse(true) } }
     fun clearHistory(): Unit = work(::clearHistory) {
@@ -119,9 +122,9 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     fun detail(id: String): Unit = work({ detail(id) }, readingDetail = true) {
         val api = client()
         val cache = DetailPageCache(getApplication<Application>(), session, api.source, id)
-        cache.read()?.let { json ->
+        cache.decode(parse = ::ehDetail)?.let { cached ->
             val reading = data.worldData(identity.world, ::active) { dao -> (dao.onlineBook(api.source, id)?.favorite == true) to dao.onlineProgress(api.source, id) }
-            if (active()) state.update { it.copy(book = ehDetail(json), favorite = reading.first, progress = reading.second) }
+            if (active()) state.update { it.copy(book = cached, favorite = reading.first, progress = reading.second) }
         }
         val book = api.detail(id); store.remember(api.source, book)
         val reading = data.worldData(identity.world, ::active) { dao ->
@@ -392,18 +395,19 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
             return@ReferenceRefreshColumn
         }
         item { EhFeedback(model, state) }
-        state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }) {
-                DetailInfoText("${book.category} · ${book.pages} 页")
-                val artists = book.tags.filter { it.startsWith("artist:") }.map { it.substringAfter(':').trim() }.filter(String::isNotBlank)
-                DetailAuthors(artists.map { it to it }, searchAuthor)
-                if (book.uploader.isNotBlank()) DetailInfoText("上传者：${book.uploader}", style = MaterialTheme.typography.bodySmall)
-                if (book.subtitle.isNotBlank()) DetailInfoText(book.subtitle, label = "副标题")
+        state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }, tags = {
                 WorkTags(book.tags.map { text ->
                     (if (translated.enabled) translated.dictionary?.label(text) ?: text else text) to text
                 }) { text, _ ->
                     tag(text.substringBefore(':') + ":\"" + text.substringAfter(':').replace("\"", "") + "\"")
                 }
+            }) {
+                val artists = book.tags.filter { it.startsWith("artist:") }.map { it.substringAfter(':').trim() }.filter(String::isNotBlank)
+                DetailAuthors(artists.map { it to it }, searchAuthor)
+                DetailInfoText("${book.category} · ${book.pages} 页")
+                if (book.uploader.isNotBlank()) DetailInfoText("上传者：${book.uploader}", style = MaterialTheme.typography.bodySmall)
+                if (book.subtitle.isNotBlank()) DetailInfoText(book.subtitle, label = "副标题")
             }
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                 read = read, canRead = !state.busy, hasProgress = state.resume,

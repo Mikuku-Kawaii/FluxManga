@@ -237,6 +237,7 @@ impl KomgaSource {
             page_count: None,
             updated_at: value.metadata.modified.as_str().filter(|v| !v.trim().is_empty()).map(str::to_owned),
             latest_chapter: None,
+            tags: None,
         })
     }
     async fn book(

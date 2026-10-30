@@ -69,7 +69,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                     if (model.submitted != null) BaoziRequestStatus(feed.busy, feed.error, feed.notice, model.feed::refresh, model.feed::cancel)
                     if (feed.loaded && !feed.busy && feed.error == null && feed.cards.isEmpty()) Text("暂无匹配作品")
                 }
-                bookGridItems(if (feed.error != null && !feed.busy) emptyList() else feed.cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card -> DiscoveryGridBook(model.library, card, open) }
+                bookGridItems(feed.cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card -> DiscoveryGridBook(model.library, card, open) }
                 item("more") {
                     key(model, model.submitted) {
                         SourceBrowsePagination(feed, model.feed::more, "baozi-more", scroll, "more")
@@ -81,9 +81,10 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                     return@ReferenceRefreshColumn
                 item("state") { BaoziRequestStatus(detail.busy, detail.error, detail.notice, model::refreshDetail, model::cancelDetail) }
                 detail.book?.let { book ->
-                    item("book") { DetailHero(book.card.title, { OnlineCover(model.library, sourceId, mangaId, fillWidth = true) }) {
-                        WorkMetadata(book.metadata, "$sourceId:$mangaId", searchAuthor)
+                    item("book") { DetailHero(book.card.title, { OnlineCover(model.library, sourceId, mangaId, fillWidth = true) }, tags = {
                         WorkTags(book.tags?.map { it to it }, { it in com.flux.manga.data.BaoziCategories.tags }, compact = true, openInDialog = true) { id, name -> openTag(BaoziEndpoint.SOURCE_ID, id, name) }
+                    }) {
+                        WorkMetadata(book.metadata, "$sourceId:$mangaId", searchAuthor)
                     } }
                     item("library") {
                         DetailActions(detail.favorite, detail.saving, toggleFavorite = model::favorite, download = download,

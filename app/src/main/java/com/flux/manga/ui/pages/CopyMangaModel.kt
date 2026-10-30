@@ -12,7 +12,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-internal fun copyMangaFailure(error: Exception): String = when (error) {
+internal fun copyMangaFailure(error: Exception): String = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is SourceException.LoginRejected -> if (error.reason == "client_restricted")
         "图源暂时限制内容访问（210），提示更新官方 App 并等待限制解除。已登录账号和书库保留，不需要反复登录。"
         else "图源拒绝本次请求（${error.code}）"
@@ -48,7 +48,9 @@ internal class CopyMangaModel(private val app: Application, private val session:
         if (!active()) throw CancellationException("Expired source session")
         copyMangaClient(session, sourceId)
     }
-    val feed = DiscoveryFeedController(viewModelScope, ::active, ::copyMangaFailure) { page ->
+    private val snapshot = CatalogPageCache(app, session, "copy-search:$sourceId", source = sourceId)
+    val feed = DiscoveryFeedController(viewModelScope, ::active, ::copyMangaFailure,
+        restore = { snapshot.feed(submitted) }, save = { snapshot.saveFeed(submitted, it) }) { page ->
         val client = client()
         blacklist.apply(if (submitted.isEmpty()) client.recommendations(page) else client.search(submitted, page))
     }
@@ -60,7 +62,7 @@ internal class CopyMangaModel(private val app: Application, private val session:
     }
     fun recommendations() { submitted = ""; saved["copy-submitted"] = ""; feed.restart() }
     val chapters = CopyChaptersController(viewModelScope, ::active,
-        restore = { group -> detailCache?.read("chapters:$group")?.let { json ->
+        restore = { group -> detailCache?.decode("chapters:$group") { json ->
             CopyChaptersState(groupId = group, items = sourceChapters(json, SourceMangaKey(SourceWorld.SFW, sourceId, requireNotNull(mangaId))),
                 next = continuation(json), loaded = true, total = chapterTotal(json))
         } },
@@ -113,9 +115,8 @@ internal class CopyMangaModel(private val app: Application, private val session:
         mutableDetail.value = detail.value.copy(busy = true, attempted = true, error = null, notice = null, localReady = false)
         work = viewModelScope.launch {
             try {
-                if (detail.value.detail == null) detailCache?.read()?.let { json ->
+                if (detail.value.detail == null) detailCache?.decode { copyDetail(it, identity.sourceContext(sourceId)) }?.let { cached ->
                     ensureActive(); if (!active() || ticket != revision) return@launch
-                    val cached = copyDetail(json, identity.sourceContext(sourceId))
                     mutableDetail.value = detail.value.copy(detail = cached.detail, themes = cached.themes, groups = cached.groups)
                     val group = cached.groups?.firstOrNull { it.id == saved.get<String>("copy-group") } ?: cached.groups?.firstOrNull()
                     chapters.select(group?.id)

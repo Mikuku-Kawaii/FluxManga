@@ -218,11 +218,12 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
 
     // Metadata belongs to the page model, not a recycled lazy-list cell. Covers render independently.
     fun prepareInformation(book: ShelfBook, refreshMetadata: Boolean = false) {
-        if (!active() || !book.online || !book.available || (!refreshMetadata && book.information?.let { it.detailsReady && it.coverReady && it.chaptersKnown } == true) ||
+        if (!active() || !book.online || !book.available || (!refreshMetadata && book.information?.detailsReady == true) ||
             informationWork[book.stableKey]?.isActive == true) return
         informationWork[book.stableKey] = viewModelScope.launch {
             try {
-                val result = informationLoader.load(book.key.sourceId, book.key.mangaId, refreshMetadata = refreshMetadata)
+                val result = informationLoader.load(book.key.sourceId, book.key.mangaId, refreshMetadata = refreshMetadata,
+                    loadCover = false, loadChapters = refreshMetadata)
                 if (active()) {
                     fun ShelfBook.enriched() = if (stableKey != book.stableKey) this else copy(
                         title = result.info.title.takeIf(String::isNotBlank) ?: title,

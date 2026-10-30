@@ -32,14 +32,16 @@ internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceD
     section: (DiscoverySection) -> Unit, open: (String, String) -> Unit, reportScroll: (LazyListState) -> Unit) {
     val recommendations = mixedModel(session, null, DiscoverySection.RECOMMENDATIONS)
     val recommendationState by recommendations.feed.state.collectAsStateWithLifecycle()
-    val recommended = mixedCards(recommendations.feed.sources, recommendationState.results)
+    val scroll = rememberLazyListState()
+    val incomingRecommended = mixedCards(recommendations.feed.sources, recommendationState.results)
         .sortedBy { if (isCopySource(it.key.sourceId)) 0 else 1 }
     val updates = if (state.status != DiscoveryStatus.LOADING) mixedModel(session, state.sourceId, DiscoverySection.UPDATES) else null
     val updateState = updates?.feed?.state?.collectAsStateWithLifecycle()?.value
-    val updated = if (updates != null && updateState != null) mixedCards(updates.feed.sources, updateState.results) else emptyList()
+    val incomingUpdated = if (updates != null && updateState != null) mixedCards(updates.feed.sources, updateState.results) else emptyList()
+    val recommended = stableHomeCards(recommendations, incomingRecommended, scroll.isScrollInProgress)
+    val updated = stableHomeCards(updates, incomingUpdated, scroll.isScrollInProgress)
     val featured = recommended.take(5)
     val remaining = recommended.drop(featured.size).take(9)
-    val scroll = rememberLazyListState()
     SideEffect { reportScroll(scroll) }
     BookResultsLayout { columns ->
         ReferenceRefreshColumn(state = scroll, refreshing = state.refreshing || recommendationState.busy || updateState?.busy == true,
@@ -94,8 +96,12 @@ private fun HomeFeedState(model: MixedDiscoveryModel, cards: List<MangaCard>, so
     CompactFeedFeedback(model.feed, state, model.resultFeeds, sources, showAction = false)
     if (cards.isEmpty()) when {
         state.busy -> HomeCoverPlaceholders(3)
-        state.results.values.any { it.error != null } -> ReadFailure(state.results.values.mapNotNull { it.error }.distinct().joinToString("\n")) {
-            model.resultFeeds.filter { state.results[it.id]?.error != null }.forEach { model.feed.refresh(it.id) }
+        state.results.values.any { it.error != null || it.appendError != null } -> ReadFailure(state.results.values.mapNotNull { it.error ?: it.appendError }.distinct().joinToString("\n")) {
+            model.resultFeeds.forEach { feed ->
+                val result = state.results[feed.id]
+                if (result?.appendError != null) model.feed.more(feed.id)
+                else if (result?.error != null) model.feed.refresh(feed.id)
+            }
         }
         !hasMixedFeedback(state) -> Text(if (model.feed.sources.isEmpty()) "暂无可用图源" else "暂无作品", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -208,4 +214,12 @@ private fun HomeFeaturedTitle(title: String, availableWidth: Dp): Boolean {
         softWrap = true, minLines = if (single) 1 else 2, maxLines = if (single) 1 else 2,
         overflow = TextOverflow.Ellipsis)
     return single
+}
+
+/** Defer list replacement until scrolling settles; live item keys keep the visible anchor. */
+@Composable
+private fun stableHomeCards(owner: Any?, incoming: List<MangaCard>, scrolling: Boolean): List<MangaCard> {
+    var shown by remember(owner) { mutableStateOf(incoming) }
+    LaunchedEffect(owner, incoming, scrolling) { if (!scrolling) shown = incoming }
+    return if (scrolling) shown else incoming
 }

@@ -133,7 +133,7 @@ internal class KomgaAccountController(private val scope: CoroutineScope, private
     fun configurationChanged() { leave(); mutable.value = KomgaAccountState() }
     fun close() { leave(); closed = true; mutable.value = KomgaAccountState() }
 }
-internal fun komgaAccountFailure(error: Exception) = when (error) {
+internal fun komgaAccountFailure(error: Exception) = sourceNetworkFailure(error) ?: when (error) {
     is SourceException.AuthenticationRequired -> "登录已失效，请更新账号信息。"
     is SourceException.HttpStatus -> if (error.status.toInt() == 403) "当前账号无权读取此列表，请检查服务器权限。" else "读取失败（HTTP ${error.status}），请重试。"
     is SourceException.NotFound -> "列表不可用，请选择其他列表。"

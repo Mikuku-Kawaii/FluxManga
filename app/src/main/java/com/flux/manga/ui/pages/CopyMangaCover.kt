@@ -45,5 +45,5 @@ internal fun CopyMangaCover(covers: OnlineSourceCovers, id: String, fillWidth: B
     CoverArtwork(bitmap, active && bitmap == null && !missing && !failed,
         if (missing) "暂无封面" else if (failed) "封面加载失败" else if (active) "正在加载封面" else "封面",
         Modifier.then(if (fillWidth) Modifier else Modifier.widthIn(max = 112.dp)).fillMaxWidth().aspectRatio(.7f),
-        retry = if (failed && active) ({ attempt++ }) else null)
+        retry = if (failed && active) ({ covers.retry(id); attempt++ }) else null)
 }

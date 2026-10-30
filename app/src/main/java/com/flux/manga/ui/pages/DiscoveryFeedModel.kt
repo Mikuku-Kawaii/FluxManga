@@ -17,6 +17,8 @@ internal data class DiscoveryFeedState(
     val busy: Boolean = false, val attempted: Boolean = false, val loaded: Boolean = false,
     val unsupported: Boolean = false, val error: String? = null, val appendError: String? = null,
     val notice: String? = null,
+    val unfilteredCards: List<MangaCard> = emptyList(),
+    val fetchedAt: Long = 0L,
 )
 
 /** Entry-owned state, with an injected read boundary for host tests. No book/history writes. */
@@ -35,7 +37,7 @@ internal class DiscoveryFeedController(
     private var revision = 0L
 
     fun start() { if (!state.value.attempted) fetch(false, useSaved = true) }
-    fun restart() { leave(); mutable.value = DiscoveryFeedState(); refresh() }
+    fun restart() { leave(); mutable.value = DiscoveryFeedState(); fetch(false, useSaved = true) }
     fun refresh() { fetch(false) }
     fun more() { fetch(true) }
     private fun fetch(append: Boolean, useSaved: Boolean = false) {
@@ -48,16 +50,21 @@ internal class DiscoveryFeedController(
                 if (useSaved) restore()?.let { saved ->
                     ensureActive()
                     if (!accepts() || ticket != revision) return@launch
-                    mutable.value = saved.copy(busy = refreshRestored)
-                    if (!refreshRestored) return@launch
+                    val revalidate = refreshRestored && System.currentTimeMillis() - saved.fetchedAt > 5L * 60 * 1000
+                    mutable.value = saved.copy(busy = revalidate)
+                    if (!revalidate) return@launch
                 }
                 val result = load(request)
                 ensureActive()
                 if (!accepts() || ticket != revision) return@launch
                 mutable.value = state.value.copy(
                     cards = (if (append) state.value.cards + result.cards else result.cards).distinctBy { it.key },
-                    next = result.continuation, loaded = true)
-                try { save(state.value) }
+                    unfilteredCards = ((if (append) state.value.unfilteredCards else emptyList()) +
+                        (result.unfilteredCards ?: result.cards)).distinctBy { it.key },
+                    next = if (result.filterIncomplete) SourceContinuation.Next(request) else result.continuation,
+                    appendError = result.notice.takeIf { result.filterIncomplete },
+                    notice = result.notice.takeUnless { result.filterIncomplete }, loaded = true, fetchedAt = System.currentTimeMillis())
+                try { if (!result.filterIncomplete) save(state.value) }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) {
                     if (accepts() && ticket == revision) mutable.value = state.value.copy(notice = "内容已加载，但本地保存失败；下拉刷新可重试")
@@ -95,9 +102,11 @@ internal class DiscoveryFeedModel(app: Application, session: WorldSession, sourc
     private val isCopy = sourceId == CopyMangaEndpoint.SOURCE_ID
     private val access = if (isCopy) null else KomgaAccess(app, session, sourceId)
     val library = OnlineLibrary(app, session)
+    private val snapshot = CatalogPageCache(app, session, "feed:${section.name}:$sourceId", source = sourceId)
     val feed = DiscoveryFeedController(viewModelScope,
         { identity.world == com.flux.manga.ui.navigation.PrototypeWorld.SFW && session.accepts(identity) },
-        if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (isCopy) ::copyMangaFailure else ::komgaFailure) { page ->
+        if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (isCopy) ::copyMangaFailure else ::komgaFailure,
+        restore = { snapshot.feed("") }, save = { snapshot.saveFeed("", it) }, refreshRestored = true) { page ->
         val result = if (sourceId == BaoziEndpoint.SOURCE_ID) {
             withContext(Dispatchers.IO) { session.baoziSources.client(app).source.let {
                 if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page)

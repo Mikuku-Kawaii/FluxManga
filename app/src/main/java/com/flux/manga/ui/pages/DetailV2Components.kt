@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.draw.clip
 
 @Composable
@@ -32,59 +31,42 @@ internal fun DetailHeading(back: () -> Unit, modifier: Modifier = Modifier, back
 
 @Composable
 internal fun DetailHero(title: String, cover: @Composable () -> Unit, titleTag: String? = null,
+    tags: @Composable () -> Unit = {},
     metadata: @Composable () -> Unit = {}) {
     var expanded by rememberSaveable(title) { mutableStateOf(false) }
     var titleOverflow by remember(title) { mutableStateOf(false) }
-    if (expanded) DetailInformationDialog("作品信息", { expanded = false }) {
+    if (expanded) DetailInformationDialog("完整书名", { expanded = false }) {
         Text(title, style = MaterialTheme.typography.titleLarge)
-        CompositionLocalProvider(LocalDetailFullInformation provides true) { metadata() }
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val vertical = maxWidth < 280.dp || LocalDensity.current.fontScale >= 1.5f
-        val coverWidth = (maxWidth * .4f).coerceAtMost(160.dp)
-        val coverHeight = coverWidth / .7f
+        val coverWidth = (maxWidth * .34f).coerceAtMost(126.dp)
+        val coverHeight = coverWidth * 1.414f
         @Composable fun Information(modifier: Modifier = Modifier) {
-            // Place whole information rows only; overflow is available in the dialog, never clipped.
-            Layout(modifier = modifier, content = {
-                Text(title, style = MaterialTheme.typography.headlineSmall,
+            // Keep metadata visible now that there is no aggregate information action.
+            // The information column can grow without changing the cover's aspect ratio.
+            Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                     onTextLayout = { titleOverflow = it.hasVisualOverflow },
                     modifier = Modifier.then(if (titleTag != null) Modifier.testTag(titleTag) else Modifier)
                         .clickable(enabled = titleOverflow, onClickLabel = "查看完整书名") { expanded = true }.semantics { heading() })
                 ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-                    CompositionLocalProvider(LocalDetailTagRows provides 2, LocalDetailHeroTags provides true) {
-                        metadata()
-                    }
+                    metadata()
                 }
-                TextButton({ expanded = true }, contentPadding = PaddingValues(0.dp)) { Text("全部信息 ›", maxLines = 1) }
-            }) { measurables, constraints ->
-                val loose = Constraints(maxWidth = constraints.maxWidth)
-                val children = measurables.map { it.measure(loose) }
-                val rows = children.dropLast(1)
-                val more = children.last()
-                val gap = 4.dp.roundToPx()
-                val naturalHeight = rows.sumOf { it.height } + gap * (rows.size - 1).coerceAtLeast(0)
-                val overflow = constraints.hasBoundedHeight && naturalHeight > constraints.maxHeight
-                val limit = if (overflow) (constraints.maxHeight - more.height - gap).coerceAtLeast(0) else naturalHeight
-                var used = 0
-                val visible = rows.takeWhile { row ->
-                    val next = used + (if (used == 0) 0 else gap) + row.height
-                    (next <= limit).also { if (it) used = next }
-                }
-                val height = constraints.constrainHeight(if (overflow) used + gap + more.height else naturalHeight)
-                layout(constraints.maxWidth, height) {
-                    var y = 0
-                    visible.forEach { row -> row.placeRelative(0, y); y += row.height + gap }
-                    if (overflow) more.placeRelative(0, height - more.height)
+                CompositionLocalProvider(LocalDetailTagRows provides 3, LocalDetailHeroTags provides true) {
+                    tags()
                 }
             }
         }
-        if (vertical) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.width(coverWidth).height(coverHeight).clip(RoundedCornerShape(8.dp))) { cover() }
-            Information()
-        } else Row(Modifier.fillMaxWidth().height(coverHeight), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.width(coverWidth).fillMaxHeight().clip(RoundedCornerShape(8.dp))) { cover() }
-            Information(Modifier.weight(1f).fillMaxHeight())
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+            Layout(content = cover, modifier = Modifier.width(coverWidth).height(coverHeight).clip(RoundedCornerShape(8.dp))) { children, frame ->
+                val imageWidth = maxOf(frame.maxWidth, kotlin.math.ceil(frame.maxHeight * .7f).toInt())
+                val images = children.map { it.measure(Constraints.fixedWidth(imageWidth)) }
+                layout(frame.maxWidth, frame.maxHeight) {
+                    images.forEach { it.placeRelative((frame.maxWidth - it.width) / 2, (frame.maxHeight - it.height) / 2) }
+                }
+            }
+            Information(Modifier.weight(1f))
         }
     }
 }
@@ -149,15 +131,17 @@ internal fun DetailDescription(description: String?, identity: String, title: St
     var overflow by remember(description) { mutableStateOf(false) }
     if (expanded) DetailInformationDialog(title, { expanded = false }) { Text(description) }
     if (compact) {
-        Row(Modifier.fillMaxWidth().referenceContentResize(), verticalAlignment = Alignment.Top) {
+        Row(Modifier.fillMaxWidth().referenceContentResize(), horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             Text("$title：$description", Modifier.weight(1f).clickable(enabled = overflow, onClickLabel = "查看完整$title") { expanded = true }, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
                 onTextLayout = { overflow = it.hasVisualOverflow })
-            if (overflow) IconButton(onClick = { expanded = true },
+            if (overflow) TextButton(onClick = { expanded = true },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                 modifier = Modifier.testTag("detail-description-toggle").semantics {
                     contentDescription = "查看完整$title"
-                }) { ReferenceDisclosureChevron(false) }
+                }) { Text("全部", maxLines = 1) }
         }
         return
     }

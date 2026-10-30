@@ -11,7 +11,7 @@ import com.flux.manga.ui.navigation.PrototypeWorld
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-internal fun baoziFailure(error: Exception): String = when (error) {
+internal fun baoziFailure(error: Exception): String = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is SourceException.AuthenticationRequired -> "请打开网页登录，完成网站验证。"
     is SourceException.InvalidResponse -> "包子页面无法识别，可能是验证页或站点结构已变化，请稍后重试"
     is SourceException.Timeout -> "包子漫画请求超时，可以重试"
@@ -39,7 +39,9 @@ internal class BaoziModel(private val app: Application, private val session: Wor
         session.baoziSources.client(app, sourceId).source
     }
     var submitted by mutableStateOf<String?>(null); private set
-    val feed = DiscoveryFeedController(viewModelScope, ::active, ::baoziFailure) { page ->
+    private val snapshot = CatalogPageCache(app, session, "baozi-search:$sourceId", source = sourceId)
+    val feed = DiscoveryFeedController(viewModelScope, ::active, ::baoziFailure,
+        restore = { snapshot.feed(submitted.orEmpty()) }, save = { snapshot.saveFeed(submitted.orEmpty(), it) }) { page ->
         blacklist.apply(source().search(requireNotNull(submitted), page))
     }
     fun search(query: String): Boolean {
@@ -90,7 +92,7 @@ internal class BaoziModel(private val app: Application, private val session: Wor
         mutable.value = detail.value.copy(saving = true, notice = null)
         viewModelScope.launch {
             try {
-                library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, book.card.key.mangaId), book.card.title, null, null, null), target)
+                library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, book.card.key.mangaId), book.card.title, null, null, null, null), target)
                 ensureActive(); if (active()) mutable.value = detail.value.copy(favorite = target, saving = false)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { if (active()) mutable.value = detail.value.copy(saving = false, notice = "收藏状态未确认，请刷新核对后重试") }
@@ -102,15 +104,19 @@ internal class BaoziModel(private val app: Application, private val session: Wor
         mutable.value = detail.value.copy(attempted = true, busy = true, error = null, notice = null)
         work = viewModelScope.launch {
             try {
-                if (detail.value.book == null) detailCache?.read()?.let { json ->
+                if (detail.value.book == null) detailCache?.decode { baoziDetail(it, MangaKey(identity.world, sourceId, mangaId)) }?.let { cached ->
                     ensureActive(); if (!active() || ticket != revision) return@launch
-                    mutable.value = detail.value.copy(book = baoziDetail(json, MangaKey(identity.world, sourceId, mangaId)))
+                    mutable.value = detail.value.copy(book = cached)
                     updateLocal()
                 }
-                val book = source().detail(mangaId)
+                val fetched = ContentRequests.run(sourceId, ContentPriority.DETAIL) { source().detail(mangaId) }
+                val oldChapters = detail.value.book?.chapters
+                val book = if (fetched.chapterError != null || fetched.chapters == null) fetched.copy(
+                    chapters = ((fetched.chapters.orEmpty()) + oldChapters.orEmpty()).distinctBy { it.id }.takeIf { it.isNotEmpty() })
+                    else fetched
                 ensureActive(); if (active() && ticket == revision) {
                     mutable.value = detail.value.copy(book = book, busy = false, attempted = true)
-                    library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, mangaId), book.card.title, null, null, null))
+                    library.remember(SourceManga(SourceMangaKey(SourceWorld.SFW, sourceId, mangaId), book.card.title, null, null, null, null))
                     updateLocal()
                     detailCache?.write(detailJson(book))
                     detailCache?.information(detailInformation(book))

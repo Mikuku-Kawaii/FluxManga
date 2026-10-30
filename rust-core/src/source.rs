@@ -91,6 +91,9 @@ pub enum SourceError {
     RateLimited { retry_after_seconds: Option<u32> },
     #[error("source transport unavailable")]
     Transport,
+    // Sanitized classification only; no native error text or request address crosses FFI.
+    #[error("source connection failed ({kind})")]
+    Network { kind: String },
     #[error("invalid source response")]
     InvalidResponse,
     #[error("source HTTP status {status}")]
@@ -104,6 +107,8 @@ pub struct SourceManga {
     pub page_count: Option<u32>,
     pub updated_at: Option<String>,
     pub latest_chapter: Option<String>,
+    // None means the list omitted tags; an empty list means it explicitly returned none.
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -240,6 +245,7 @@ impl ContractFixture {
             page_count: None,
             updated_at: None,
             latest_chapter: None,
+            tags: None,
         })
     }
     fn paginate<T: Clone>(

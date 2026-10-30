@@ -11,6 +11,7 @@ import com.flux.manga.storage.BoundedResourceInput
 internal interface PrivateEncodedCache {
     suspend fun read(key: ResourceKey, allowed: () -> Boolean): ByteArray?
     suspend fun write(key: ResourceKey, bytes: ByteArray, allowed: () -> Boolean)
+    suspend fun remove(key: ResourceKey, allowed: () -> Boolean) { }
     fun clearMemory()
 }
 internal fun interface PrivateImageTransport {
@@ -25,7 +26,7 @@ internal class PrivateImagePipeline<E>(
     private val epoch: () -> E,
     private val active: (E) -> Boolean,
 ) {
-    private val lock = Mutex()
+    private val locks = java.util.concurrent.ConcurrentHashMap<ResourceKey, Mutex>()
     companion object { const val MAX_BYTES = BoundedResourceInput.PRIVATE_BYTES }
 
     suspend fun <T> decode(key: ResourceKey, decode: (ByteArray) -> T, release: (T) -> Unit): T {
@@ -38,51 +39,44 @@ internal class PrivateImagePipeline<E>(
             caller.ensureActive()
             if (!active(ticket)) throw CancellationException("Expired private image request")
         }
+        suspend fun cached(): Boolean {
+            val bytes = readDisplayCache { cache.read(key, allowed) } ?: return false
+            try {
+                check()
+                try {
+                    if (bytes.isEmpty() || bytes.size > MAX_BYTES) throw IOException("图片缓存容量无效")
+                    owned = decode(bytes)
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: IOException) {
+                    cache.remove(key, allowed)
+                    android.util.Log.w("FluxCache", "Invalid encoded image removed; fetching again")
+                    return false
+                }
+                check()
+                return true
+            } finally { bytes.fill(0); if (!allowed()) cache.clearMemory() }
+        }
         try {
             return withContext(Dispatchers.IO) {
-                // Cached pages must not wait behind an unrelated speculative network request.
                 check()
-                val cached = cache.read(key, allowed)
-                if (cached != null) {
-                    try {
-                        check()
-                        if (cached.isEmpty() || cached.size > MAX_BYTES) throw IOException("图片缓存容量无效")
-                        owned = decode(cached)
-                        check()
-                        return@withContext requireNotNull(owned)
-                    } finally {
-                        cached.fill(0)
-                        if (!allowed()) cache.clearMemory()
-                    }
-                }
-                lock.withLock {
+                if (cached()) return@withContext requireNotNull(owned)
+                locks.getOrPut(key) { Mutex() }.withLock {
                     check()
-                    var bytes: ByteArray? = null
-                    try {
-                        bytes = cache.read(key, allowed)
-                        check()
-                        if (bytes == null) {
-                            bytes = transport.open(key).use { input ->
-                                BoundedResourceInput.read(input, MAX_BYTES, ::check)
-                            }
+                    if (!cached()) {
+                        val bytes = ContentRequests.run(owner.sourceId, ContentPriority.READER) {
+                            transport.open(key).use { input -> BoundedResourceInput.read(input, MAX_BYTES, ::check) }
+                        }
+                        try {
                             if (bytes.isEmpty()) throw IOException("图片为空，请重试")
                             check()
-                            // Validate/decode before committing a corrupt or unsupported image.
-                            owned = decode(requireNotNull(bytes))
-                            check()
-                            cache.write(key, requireNotNull(bytes), allowed)
-                        } else {
-                            if (bytes.isEmpty() || bytes.size > MAX_BYTES) throw IOException("图片缓存容量无效")
                             owned = decode(bytes)
-                        }
-                        check()
-                        requireNotNull(owned)
-                    } finally {
-                        bytes?.fill(0)
-                        // A paused request may have been inside a cache operation when the
-                        // session cleared memory. Do not let that operation repopulate it.
-                        if (!allowed()) cache.clearMemory()
+                            check()
+                            // Reader/offline writes remain strict; only disposable cover caches are optional.
+                            cache.write(key, bytes, allowed)
+                        } finally { bytes.fill(0); if (!allowed()) cache.clearMemory() }
                     }
+                    check()
+                    requireNotNull(owned)
                 }
             }
         } catch (failure: Throwable) {

@@ -42,8 +42,8 @@ internal class CopyChaptersController(private val scope: CoroutineScope, private
                 val result = load(group, page)
                 ensureActive(); if (!accepts() || ticket != revision) return@launch
                 mutable.value = state.value.copy(busy = false, loaded = true,
-                    items = (if (append) state.value.items + result.items else result.items).distinctBy { it.id }, next = result.continuation,
-                    total = result.total?.toLong())
+                    items = (result.items + state.value.items).distinctBy { it.id }.sortedBy { it.ordinal }, next = result.continuation,
+                    total = result.total?.toLong() ?: state.value.total)
                 save(state.value)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {

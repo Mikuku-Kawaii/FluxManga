@@ -44,3 +44,11 @@ client.go / dto.go. Maps collections[].comics into the existing source-aware
 feed instead of substituting the H24 leaderboard. Keeps account isolation,
 cancellation and errors; no runtime dependency added. No tests/build/live
 service request for this follow-up.
+
+2026-10-30 read-only API fallback and update summary:
+Reused niuhuan/pica-go at 2c208674152c3031862a6dd0b8b99bb45835f950
+(MIT; client.go and dto.go): picaapi.picacomic.com, signed request headers
+and epsCount. The existing website API remains the first route; the known
+upstream API is tried on bounded connection/server failures in the same
+Rust client. No login or write replay, Go runtime or additional dependency.
+Existing MIT/Apache notices and licenses remain applicable.

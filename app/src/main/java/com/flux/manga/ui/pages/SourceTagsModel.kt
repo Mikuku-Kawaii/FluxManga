@@ -100,8 +100,10 @@ internal class SourceTagBooksModel(app: Application, session: WorldSession, sour
     private val blacklist = TagBlacklistFilter(app, session)
     private val access = KomgaAccess(app, session, sourceId)
     val library = OnlineLibrary(app, session)
+    private val snapshot = CatalogPageCache(app, session, "tag-books:$sourceId", source = sourceId)
     val feed = DiscoveryFeedController(viewModelScope, access::isActive,
-        if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (sourceId == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure) { page ->
+        if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (sourceId == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure,
+        restore = { snapshot.feed(tag) }, save = { snapshot.saveFeed(tag, it) }) { page ->
         val result = if (sourceId == BaoziEndpoint.SOURCE_ID) withContext(Dispatchers.IO) {
             val type = BaoziCategories.tags[tag] ?: throw SourceException.InvalidRequest()
             session.baoziSources.client(app).source.search("", page, tag = type)

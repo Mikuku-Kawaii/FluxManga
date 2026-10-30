@@ -95,6 +95,6 @@ internal fun PrivateSourceCover(session: WorldSession, source: String, id: Strin
     }
     CoverArtwork(bitmap?.takeIf { active }, active && bitmap == null && error == null && !missing,
         if (!active) "封面" else if (missing) "暂无封面" else error ?: "正在加载封面",
-        Modifier.fillMaxWidth().aspectRatio(.7f), retry = if (active && error != null) ({ attempt++ }) else null,
+        Modifier.fillMaxWidth().aspectRatio(.7f), retry = if (active && error != null) ({ cache.retry(source, id); attempt++ }) else null,
         description = "《$title》封面")
 }

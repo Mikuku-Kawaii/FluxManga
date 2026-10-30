@@ -27,7 +27,7 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
     suspend fun load(card: MangaCard) {
         val key = card.key
         if (!active() || key in loaded) return
-        val cache = CatalogPageCache(app, session, "home-featured:${key.sourceId.length}:${key.sourceId}${key.mangaId}")
+        val cache = CatalogPageCache(app, session, "home-featured:${key.sourceId.length}:${key.sourceId}${key.mangaId}", includeBlacklist = false, source = key.sourceId)
         errors.remove(key)
         try {
             if (books[key] == null) {
@@ -48,7 +48,7 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
             }
             val value = if (isCopySource(key.sourceId)) {
                 // The detail response already carries group totals; do not download every chapter to count them.
-                val book = copyMangaClient(session, key.sourceId).book(key.mangaId)
+                val book = ContentRequests.run(key.sourceId, ContentPriority.DETAIL) { copyMangaClient(session, key.sourceId).book(key.mangaId) }
                 val groups = book.groups
                 val count = groups?.takeIf { it.isNotEmpty() && it.all { group -> group.chapterCount != null } }
                     ?.sumOf { it.chapterCount!!.toLong() }
@@ -56,7 +56,7 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
             } else {
                 // Covers render independently; display source details before a paginated directory finishes.
                 val result = OnlineBookInformationLoader(app, session).load(key.sourceId, key.mangaId,
-                    refreshMetadata = revision > 0, loadCover = false, onMetadata = { info ->
+                    refreshMetadata = revision > 0, loadCover = false, loadChapters = false, onMetadata = { info ->
                         if (active()) books[key] = info.featured()
                     })
                 if (result.metadataError != null) throw java.io.IOException(result.metadataError)

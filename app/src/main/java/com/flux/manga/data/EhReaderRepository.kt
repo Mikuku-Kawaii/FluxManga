@@ -31,7 +31,7 @@ internal suspend fun ehCover(data: WorldDataStore, session: WorldSession, client
 }
 
 internal class EhReaderRepository(context: Context, private val session: WorldSession, private val source: String,
-    private val manga: String) : PrivateDownloadReader {
+    private val manga: String, cacheSession: String = java.util.UUID.randomUUID().toString()) : PrivateDownloadReader {
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     private val site = GallerySite.forSource(source)
@@ -63,7 +63,7 @@ internal class EhReaderRepository(context: Context, private val session: WorldSe
         active(); require(page.manga == mangaKey && page.context == contextKey && page.chapterId == "gallery" && refs[page.id]?.ordinal == page.ordinal.toInt())
         return ResourceKey(imageOwner, "gallery/${if (original) "original" else "display"}/${page.id}")
     }
-    private val pageCache = ReaderEncodedCache(data)
+    private val pageCache = ReaderEncodedCache(data, cacheSession)
     private val pipeline = PrivateImagePipeline(imageOwner, pageCache, PrivateImageTransport { key ->
         privateImageInput(client().pageImage(requireNotNull(refs[key.resourceId.substringAfterLast('/')]), original))
     }, ::epoch, { ticket -> isActive() && session.state.value.foreground && ticket == epoch() })
@@ -72,8 +72,17 @@ internal class EhReaderRepository(context: Context, private val session: WorldSe
         return SourceChapterPage(contextKey, listOf(SourceChapter(mangaKey, "gallery", detail().title, 1u, null)), SourceContinuation.End, 1u)
     }
     override suspend fun pages(chapterId: String): List<SourcePageResource> {
-        require(chapterId == "gallery"); detail()
-        val pages = client().pages(manga); active(); refs = pages.associateBy { it.ordinal.toString() }
+        require(chapterId == "gallery"); client()
+        val saved = pageCache.decode(imageOwner, "pages:$chapterId", ::isActive) { json ->
+            val rows = json.getJSONArray("images")
+            List(rows.length()) { rows.getJSONObject(it).let { row -> EhPage(row.getInt("ordinal"), row.getString("url")) } }
+        }
+        val pages = saved ?: run { detail(); ContentRequests.run(source, ContentPriority.READER) { client().pages(manga) }.also { rows ->
+            pageCache.json(imageOwner, "pages:$chapterId", org.json.JSONObject().put("images", org.json.JSONArray().also { a ->
+                rows.forEach { a.put(org.json.JSONObject().put("ordinal", it.ordinal).put("url", it.url)) }
+            }), ::isActive)
+        } }
+        active(); refs = pages.associateBy { it.ordinal.toString() }
         return pages.map { SourcePageResource(mangaKey, chapterId, it.ordinal.toString(), it.ordinal.toUInt(), "eh-private-v1", null, null, null, contextKey) }
     }
     override suspend fun completeOfflineCatalog() = chapters(SourcePageRequest.Start).items

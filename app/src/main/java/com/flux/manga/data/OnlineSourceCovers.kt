@@ -7,26 +7,24 @@ import com.flux.manga.session.WorldSession
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 
 /** Lists use the shared memory/disk cache; only the raw transport owns temporary encoded files. */
 internal class OnlineSourceCovers(private val app: Application, private val session: WorldSession, private val sourceId: String = CopyMangaEndpoint.SOURCE_ID) {
     init { require(isCopySource(sourceId) || isBaoziSource(sourceId)) }
     private val baozi get() = isBaoziSource(sourceId)
     private val identity = session.identity.value
-    companion object { private val slots = Semaphore(2) }
     private fun active() { if (!session.accepts(identity)) throw CancellationException("Expired source session") }
     private val library = OnlineLibrary(app, session)
     val coverRevision get() = library.coverCache.revision
     val visibility get() = session.state
+    fun retry(id: String) = library.coverCache.retry(sourceId, id)
     fun cached(id: String): Bitmap? = library.cachedCover(sourceId, id)
     suspend fun load(id: String): Bitmap = library.cover(sourceId, id)
     internal suspend fun loadRemote(id: String): Bitmap {
         var decoded: Bitmap? = null
         try {
             return withContext(Dispatchers.IO) {
-                slots.withPermit {
+                ContentRequests.run(sourceId, ContentPriority.COVER) {
                     ensureActive(); active()
                     val directory = File(app.cacheDir, "sfw/${if (baozi) "baozi-covers" else "copy-covers"}/${identity.processSession}-${identity.generation}/$sourceId")
                     if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Image directory unavailable")

@@ -49,6 +49,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
@@ -72,6 +73,47 @@ class LocalReaderViewModel(app: Application, private val session: WorldSession, 
     private var pending: Job? = null
     private var revision = 0L
     private var storedRevision = 0L
+    private val pixels = DisplayBitmapStore<String>(reader = true)
+    private val previews = DisplayBitmapStore<String>(reader = true, preview = true)
+    private val previewFiles = ReaderEncodedCache(data, savedState.get<String>("reader-cache-session") ?:
+        java.util.UUID.randomUUID().toString().also { savedState["reader-cache-session"] = it })
+    private fun imageKey(page: PageResource, top: Int, bottom: Int, width: Int, whole: Boolean) = "${page.id}:$top:$bottom:$width:$whole"
+    internal fun cached(page: PageResource, top: Int, bottom: Int, width: Int, whole: Boolean) =
+        pixels.get(imageKey(page, top, bottom, width, whole))
+    internal suspend fun preview(page: PageResource, top: Int, bottom: Int, width: Int, whole: Boolean): Bitmap? {
+        val id = imageKey(page, top, bottom, width, whole)
+        previews.get(id)?.let { return it }
+        val bytes = previewFiles.read(ResourceKey(key, "preview:$id")) { session.accepts(identity) } ?: return null
+        return try { withContext(Dispatchers.Default) { android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+            ?.also { currentCoroutineContext().ensureActive(); if (!session.accepts(identity)) throw CancellationException(); previews.put(id, it) } } finally { bytes.fill(0) }
+    }
+    internal suspend fun image(page: PageResource, top: Int, bottom: Int, width: Int, whole: Boolean): Bitmap {
+        cached(page, top, bottom, width, whole)?.let { return it }
+        val id = imageKey(page, top, bottom, width, whole)
+        val image = library.readPage(page, top, bottom, width, whole)
+        currentCoroutineContext().ensureActive()
+        if (!session.accepts(identity)) throw CancellationException()
+        if (!whole && previews.get(id) == null) {
+            val preview = withContext(Dispatchers.Default) {
+                val w = minOf(160, image.width)
+                Bitmap.createScaledBitmap(image, w, (image.height.toLong() * w / image.width).toInt().coerceAtLeast(1), true)
+            }
+            val bytes = withContext(Dispatchers.Default) { java.io.ByteArrayOutputStream().use { output ->
+                check(preview.compress(Bitmap.CompressFormat.WEBP_LOSSY, 85, output)); output.toByteArray()
+            } }
+            try { previewFiles.write(ResourceKey(key, "preview:$id"), bytes) { session.accepts(identity) } }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: IOException) { /* The CBZ remains the local source; preview writes are optional. */ }
+            finally { bytes.fill(0) }
+            currentCoroutineContext().ensureActive()
+            if (!session.accepts(identity)) throw CancellationException()
+            previews.put(id, preview)
+        }
+        currentCoroutineContext().ensureActive()
+        if (!session.accepts(identity)) throw CancellationException()
+        pixels.put(id, image)
+        return image
+    }
     init { load() }
     fun load() {
         viewModelScope.launch {
@@ -149,9 +191,11 @@ class LocalReaderViewModel(app: Application, private val session: WorldSession, 
             }
         }
     }
+    fun releaseDisplay() { pixels.evictAll(); previews.evictAll() }
     override fun onCleared() {
         pending?.cancel()
-        flush().invokeOnCompletion { writer.cancel() }
+        pixels.evictAll(); previews.evictAll()
+        flush().invokeOnCompletion { writer.launch { try { previewFiles.close() } finally { writer.cancel() } } }
     }
 }
 
@@ -191,9 +235,9 @@ fun LocalReaderPage(session: WorldSession, mangaId: String, back: () -> Unit, bo
     BackHandler(onBack = leave)
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner, model) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { tool = null; showBookmarks = false; model.flush() } }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { tool = null; showBookmarks = false; model.releaseDisplay(); model.flush() } }
         owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer); model.flush() }
+        onDispose { owner.lifecycle.removeObserver(observer); model.releaseDisplay(); model.flush() }
     }
     if (state.loading || state.error != null) {
         ReaderLoadingScreen(state.error, state.loading, leave, model::load) {
@@ -263,7 +307,7 @@ private fun PagedReader(detail: MangaDetail, position: ReaderPosition, model: Lo
             Row(Modifier.fillMaxSize()) {
                 spreadIndices(group, count, spread, position.mode == ReadingMode.RTL).forEach { index ->
                     val page = detail.chapter.pages[index]
-                    ReaderImage(model.library, page, 0, page.height, width / unit, true,
+                    ReaderImage(model, page, 0, page.height, width / unit, true,
                         Modifier.weight(1f).fillMaxHeight(), options.doubleTap,
                         group == pager.settledPage && !pager.isScrollInProgress) { zoomedPages = if (it) zoomedPages + index else zoomedPages - index }
                 }
@@ -283,6 +327,19 @@ private fun StripReader(detail: MangaDetail, position: ReaderPosition, model: Lo
     // Pixel offsets from SavedState are invalid after a width change. Rebuild from the
     // ViewModel's stable page + relative image anchor for rotation and font changes.
     val list = remember(width) { LazyListState(initialIndex, initialOffset) }
+    LaunchedEffect(list, width) {
+        snapshotFlow { list.firstVisibleItemIndex to list.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .distinctUntilChanged().collectLatest { (first, last) ->
+                val neighbors = ((first - 2).coerceAtLeast(0) until first).reversed().toList() +
+                    ((last ?: first) + 1..minOf((last ?: first) + 2, tiles.lastIndex)).toList()
+                for (index in neighbors) {
+                    val tile = tiles.getOrNull(index) ?: continue
+                    try { model.image(tile.page, tile.top, tile.bottom, width, false) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: IOException) { }
+                }
+            }
+    }
     // External page commands use fraction zero. Scroll observations keep fractional anchors.
     LaunchedEffect(position.page, position.fraction == 0f) {
         val currentTile = tiles.getOrNull(list.firstVisibleItemIndex)
@@ -309,7 +366,7 @@ private fun StripReader(detail: MangaDetail, position: ReaderPosition, model: Lo
     }
     LazyColumn(state = list, userScrollEnabled = !zoomed, modifier = Modifier.fillMaxSize().testTag("reader-strip")) {
         itemsIndexed(tiles, key = { _, tile -> tile.key }) { _, tile ->
-            ReaderImage(model.library, tile.page, tile.top, tile.bottom, width, false,
+            ReaderImage(model, tile.page, tile.top, tile.bottom, width, false,
                 Modifier.fillMaxWidth().aspectRatio(tile.page.width.toFloat() / (tile.bottom - tile.top)),
                 selected = list.layoutInfo.visibleItemsInfo.any { it.key == tile.key })
         }
@@ -318,19 +375,24 @@ private fun StripReader(detail: MangaDetail, position: ReaderPosition, model: Lo
 }
 
 @Composable
-private fun ReaderImage(library: CbzLibrary, page: PageResource, top: Int, bottom: Int, width: Int, whole: Boolean, modifier: Modifier,
+private fun ReaderImage(model: LocalReaderViewModel, page: PageResource, top: Int, bottom: Int, width: Int, whole: Boolean, modifier: Modifier,
     doubleTap: Boolean = false, selected: Boolean = true, zoomChanged: (Boolean) -> Unit = {}) {
-    var bitmap by remember(page.id, top, bottom, width) { mutableStateOf<Bitmap?>(null) }
+    var bitmap by remember(page.id, top, bottom, width) { mutableStateOf(model.cached(page, top, bottom, width, whole)) }
+    var decoded by remember(page.id, top, bottom, width) { mutableStateOf(bitmap != null) }
     var error by remember(page.id, top) { mutableStateOf<String?>(null) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(page, top, bottom, width, attempt) {
-        bitmap = null; error = null
-        try { bitmap = library.readPage(page, top, bottom, width, whole) }
+        error = null
+        try {
+            if (bitmap == null && !whole) bitmap = try { model.preview(page, top, bottom, width, whole) } catch (_: IOException) { null }
+            bitmap = model.image(page, top, bottom, width, whole)
+            decoded = true
+        }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (e: IOException) { error = e.message ?: "图片加载失败" }
+        catch (e: IOException) { error = e.message ?: "图片加载失败"; bitmap = null; decoded = false }
     }
     // Compose may retain the previous draw frame. Drop references instead of recycling a displayed bitmap.
-    ReadingImageVisibility(selected && bitmap != null)
+    ReadingImageVisibility(selected && decoded && bitmap != null)
     Box(modifier.clipToBounds().testTag("reader-image-${page.ordinal}-$top"), contentAlignment = Alignment.Center) {
         bitmap?.let { image ->
             @Composable fun Pixels() {

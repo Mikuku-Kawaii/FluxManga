@@ -14,9 +14,13 @@ import androidx.compose.ui.unit.dp
 /** Read failures change presentation only; the caller keeps its cached data and form inputs. */
 internal fun LazyListScope.readContentLayout(hasContent: Boolean, busy: Boolean, error: String?,
     refresh: () -> Unit, detail: Boolean = false, cancel: (() -> Unit)? = null): Boolean {
-    if (!busy && error != null) {
+    if (!busy && error != null && !hasContent) {
         item("read-failure") { ReadFailure(error, refresh) }
         return false
+    }
+    if (hasContent && error != null && !busy) item("read-refresh-error") {
+        Column { RequestFeedback("刷新失败，已保留上次内容：$error", persistent = true)
+            TextButton(onClick = feedbackAttempt(refresh)) { Text("重试刷新") } }
     }
     if (!hasContent) {
         item("read-layout") {

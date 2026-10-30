@@ -33,16 +33,18 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
     var expanded by rememberSaveable(tags) { mutableStateOf(false) }
     val dialog = openInDialog || LocalDetailHeroTags.current
     val full = LocalDetailFullInformation.current
+    val dense = (compact || LocalDetailHeroTags.current) && !full
     val dismissInformation = LocalDetailInformationDismiss.current
     val truncated = remember(tags) { mutableStateMapOf<String, Boolean>() }
     val rows = maxRows ?: LocalDetailTagRows.current
     @Composable fun Tag(name: String, id: String, dismiss: Boolean = false) {
-        if (canOpen(id)) OutlinedButton(onClick = { if (dismiss) expanded = false; dismissInformation?.invoke(); open(id, name) },
-            modifier = Modifier.defaultMinSize(minHeight = 32.dp), shape = RoundedCornerShape(6.dp),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)) {
+        if (canOpen(id)) DetailTagButton(dense && !dismiss,
+            onClick = { if (dismiss) expanded = false; dismissInformation?.invoke(); open(id, name) }) {
             Text(name, maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
                 onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
-        } else Text(name, Modifier.padding(8.dp), maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
+        } else Text(name, Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            style = if (dense && !dismiss) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+            maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
             onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
     }
     if (full) {
@@ -53,17 +55,15 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
     }
     Layout(content = {
         tags.forEach { (name, id) -> Tag(name, id) }
-        OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.defaultMinSize(minHeight = 32.dp)
-            .testTag("detail-tags-expand"), shape = RoundedCornerShape(6.dp),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)) {
+        DetailTagButton(dense, onClick = { expanded = !expanded }, modifier = Modifier.testTag("detail-tags-expand")) {
             Text(if (expanded && !dialog) "收起" else "展开", maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }, modifier = Modifier.fillMaxWidth().testTag("detail-tags")) { measurables, constraints ->
         val children = measurables.map { it.measure(constraints.copy(minWidth = 0, minHeight = 0)) }
         val chips = children.dropLast(1)
         val toggle = children.last()
-        val gap = 8.dp.roundToPx()
-        val rowGap = 2.dp.roundToPx()
+        val gap = (if (dense) 4.dp else 8.dp).roundToPx()
+        val rowGap = (if (dense) 4.dp else 2.dp).roundToPx()
         data class Positioned(val item: Placeable, val x: Int, val y: Int, val row: Int)
         fun arrange(items: List<Placeable>): List<Positioned> {
             var x = 0; var y = 0; var row = 0; var height = 0
@@ -82,7 +82,7 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
             else -> {
                 var count = natural.count { it.row < rows }
                 var result = arrange(chips.take(count) + toggle)
-                // Reserve the toggle inside the final allowed row, never append a third row.
+                // Reserve the toggle inside the final allowed row, never add an extra row.
                 while (count > 0 && result.last().row >= rows) {
                     count--; result = arrange(chips.take(count) + toggle)
                 }
@@ -101,4 +101,18 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
                 tags.forEach { (name, id) -> Tag(name, id, dismiss = true) }
             }
         }, confirmButton = { TextButton({ expanded = false }) { Text("关闭") } })
+}
+
+/** Compact inline tags omit Material's extra layout reserve; the full popup keeps regular targets. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DetailTagButton(compact: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+    label: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides if (compact) 0.dp else 48.dp) {
+        OutlinedButton(onClick, modifier.heightIn(min = if (compact) 28.dp else 40.dp).widthIn(min = 1.dp),
+            shape = RoundedCornerShape(6.dp),
+            contentPadding = PaddingValues(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 3.dp else 6.dp)) {
+            ProvideTextStyle(if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge) { label() }
+        }
+    }
 }

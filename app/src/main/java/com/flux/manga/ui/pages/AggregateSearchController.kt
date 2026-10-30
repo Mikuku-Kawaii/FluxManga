@@ -40,6 +40,10 @@ internal class AggregateSearchController(
         val query = input.trim().take(200)
         if ((!allowEmpty && query.isEmpty()) || !accepts() || sources.isEmpty()) return false
         if (query == state.value.query && state.value.busy) return false
+        if (query == state.value.query && feeds.isNotEmpty()) {
+            feeds.values.forEach { it.refresh() }
+            return true
+        }
         ++revision
         feeds.values.forEach { it.leave() }
         observers.forEach { it.cancel() }; observers.clear(); feeds.clear()
@@ -86,7 +90,7 @@ internal class AggregateSearchController(
 
 /** Display-only interleave: source keys and each source's page order stay intact. */
 internal fun mixedCards(sources: List<String>, results: Map<String, DiscoveryFeedState>): List<com.flux.manga.data.MangaCard> {
-    val lists = sources.map { source -> results[source]?.let { if (it.error != null && !it.busy) emptyList() else it.cards }.orEmpty() }
+    val lists = sources.map { source -> results[source]?.let { it.cards }.orEmpty() }
     return buildList {
         repeat(lists.maxOfOrNull { it.size } ?: 0) { index -> lists.forEach { it.getOrNull(index)?.let(::add) } }
     }.distinctBy { it.key }

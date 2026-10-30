@@ -76,7 +76,8 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         mutable.update { it.copy(phase = UpdatePhase.CHECKING, message = null) }
         try {
             withContext(Dispatchers.IO) {
-                val bytes = readUpdateManifest(transport, BuildConfig.UPDATE_MANIFEST_URL)
+                val caller = currentCoroutineContext()
+                val bytes = readUpdateManifest(transport, BuildConfig.UPDATE_MANIFEST_URL) { caller.ensureActive() }
                 accept(bytes)
                 root.mkdirs()
                 val temp = File(root, "manifest.tmp")
@@ -86,7 +87,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
             if (mutable.value.automatic && foreground && unmetered() && mutable.value.phase == UpdatePhase.AVAILABLE && mutable.value.bytes == 0L &&
                 prefs.getLong("paused-version", 0) != mutable.value.artifact?.version) downloadInternal(true)
         } catch (e: CancellationException) { throw e }
-        catch (e: Exception) { mutable.update { it.copy(phase = UpdatePhase.ERROR, message = message(e, "更新检查失败，请重试")) } }
+        catch (e: Exception) { currentCoroutineContext().ensureActive(); mutable.update { it.copy(phase = UpdatePhase.ERROR, message = message(e, "更新检查失败，请重试")) } }
     }
     private fun accept(bytes: ByteArray) {
         val parsed = UpdateProtocol.verify(bytes, BuildConfig.UPDATE_PUBLIC_KEY, now())
@@ -215,6 +216,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         mutable.value.artifact?.let { prefs.edit { putLong("paused-version", it.version) } }
         mutable.update { it.copy(message = "正在暂停并保存下载字节…") }
         operation?.cancel()
+        transport.cancel()
     }
     fun clearDownload() = launchOperation {
         val a = mutable.value.artifact ?: return@launchOperation
@@ -254,9 +256,11 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
     }
     fun launchError() { mutable.update { it.copy(phase = UpdatePhase.READY, message = "无法打开系统安装页面，请检查系统安装功能") } }
     private fun launchOperation(block: suspend () -> Unit) {
-        if (operation?.isActive == true || mutable.value.phase == UpdatePhase.INSTALLING) return
+        if (operation?.isCompleted == false || mutable.value.phase == UpdatePhase.INSTALLING) return
+        transport.begin()
         operation = viewModelScope.launch {
             try { block() } catch (e: CancellationException) {
+                if (mutable.value.phase == UpdatePhase.CHECKING) mutable.update { it.copy(phase = UpdatePhase.IDLE, message = "已停止检查更新") }
                 if (mutable.value.phase == UpdatePhase.VERIFYING) mutable.update { it.copy(phase = UpdatePhase.PAUSED, message = "已暂停校验，可重新检查并继续") }
                 throw e
             }
@@ -315,5 +319,6 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         else -> "$fallback（${e.javaClass.simpleName}）"
     }
     private fun now() = System.currentTimeMillis() / 1000
+    override fun onCleared() { operation?.cancel(); transport.cancel(); super.onCleared() }
     companion object { private val coldCheck = AtomicBoolean(false) }
 }

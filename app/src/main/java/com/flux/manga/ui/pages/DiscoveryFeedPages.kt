@@ -69,7 +69,7 @@ internal fun DiscoveryFeedList(session: WorldSession, sourceId: String, section:
             DiscoveryFeedStatus(model, state, section, sourceId, sources)
         }
         if (state.busy && state.cards.isEmpty()) item("layout") { ReadLayoutPlaceholder() }
-        items(if (state.error != null && !state.busy) emptyList() else state.cards, key = { it.key.mangaId }) { card -> DiscoveryFeedBook(model.library, card, open) }
+        items(state.cards, key = { it.key.mangaId }) { card -> DiscoveryFeedBook(model.library, card, open) }
         item(key = "pagination") {
             key(model) { SourceBrowsePagination(state, model.feed::more, "discovery-more", scroll) }
         }

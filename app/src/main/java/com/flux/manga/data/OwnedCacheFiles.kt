@@ -36,10 +36,12 @@ internal class OwnedCacheFiles(private val directory: File, private val names: R
         }
         return CacheCleared(count, bytes, failed)
     }
-    fun clear(active: () -> Unit, delete: (File) -> Boolean = { it.delete() }): CacheCleared {
+    fun clear(active: () -> Unit, delete: (File) -> Boolean = { it.delete() }): CacheCleared = clearRetaining(active, { false }, delete)
+    fun clearRetaining(active: () -> Unit, retain: (File) -> Boolean, delete: (File) -> Boolean = { it.delete() }): CacheCleared {
         var count = 0; var bytes = 0L; var failed = 0
         for (file in owned()) {
             active()
+            if (retain(file)) continue
             // The owner holds its writer lock from enumeration through deletion.
             val size = file.length()
             if (delete(file)) { count++; bytes += size } else if (file.exists()) failed++

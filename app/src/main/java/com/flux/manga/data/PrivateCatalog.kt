@@ -6,8 +6,6 @@ import com.flux.manga.core.*
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import java.io.IOException
 
 internal data class PrivateCatalogTag(val name: String, val query: String, val category: Boolean = false)
@@ -21,7 +19,6 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
         const val PICA = "picacg-unconfigured"
         const val EX = "exhentai-unconfigured"
         val feeds = listOf(JM_SOURCE, PICA, EH_SOURCE, EX)
-        private val covers = Semaphore(2)
     }
     private fun active() {
         if (identity.world != PrototypeWorld.NSFW || !session.accepts(identity) || !session.state.value.foreground) throw CancellationException()
@@ -53,8 +50,14 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
                         "category" -> client.catalog(query, number)
                         else -> client.search(query, number)
                     }
-                    batch.items.forEach { rememberPicaCover(data, session, account.source, it) }
-                    SourceCardPage(batch.items.map { card(account.source, it.id, it.title, it.author).copy(updatedAt = it.updatedAt.takeIf(String::isNotBlank)) }, next(batch.next))
+                    var cacheFailed = false
+                    for (book in batch.items) {
+                        if (!rememberPicaCover(data, session, account.source, book)) { cacheFailed = true; break }
+                    }
+                    SourceCardPage(batch.items.map { card(account.source, it.id, it.title, it.author).copy(
+                        updatedAt = it.updatedAt.takeIf(String::isNotBlank),
+                        sourceTags = (it.tags + it.categories).takeIf { _ -> it.tagsKnown }) }, next(batch.next),
+                        notice = if (cacheFailed) "作品已加载，部分封面地址未能缓存" else null)
                 }
             }
             else -> {
@@ -78,8 +81,8 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
             val account = PicaStore(app, session).account()?.takeIf { it.source == card.key.sourceId }
                 ?: throw IOException("请登录原账号")
             PicaClient(session, account, this).use { client ->
-                val last = client.allChapters(card.key.mangaId).lastOrNull()
-                last?.updatedAt.orEmpty() to (last?.let { "第${it.order}话" }.orEmpty())
+                val book = client.detail(card.key.mangaId)
+                book.updatedAt to (book.chapterCount?.let { "共${it}话" }.orEmpty())
             }
         } else {
             val settings = JmStore(app, session).settings()
@@ -108,7 +111,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
         }
         ensureActive(); active(); result
     }
-    suspend fun cover(source: String, id: String): Bitmap = covers.withPermit { coroutineScope {
+    suspend fun cover(source: String, id: String): Bitmap = ContentRequests.run(source, ContentPriority.COVER) { coroutineScope {
         active()
         when {
             isJmSource(source) -> {

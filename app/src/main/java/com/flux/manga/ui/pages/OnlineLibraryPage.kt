@@ -108,7 +108,7 @@ internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: Stri
         if (!active) "封面" else if (missing) "暂无封面" else error ?: "正在加载封面",
         Modifier.then(if (fillWidth) Modifier else Modifier.widthIn(max = 112.dp)).fillMaxWidth().aspectRatio(coverRatio)
             .then(if (open != null) Modifier.clickable(role = Role.Button, onClickLabel = "查看漫画详情", onClick = open) else Modifier),
-        retry = if (active && error != null) ({ attempt++ }) else null)
+        retry = if (active && error != null) ({ library.coverCache.retry(sourceId, mangaId); attempt++ }) else null)
 }
 
 @Composable

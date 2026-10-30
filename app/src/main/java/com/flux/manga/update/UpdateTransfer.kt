@@ -13,22 +13,46 @@ internal interface UpdateResponse : Closeable {
     val contentLength: Long
     val body: InputStream
 }
-internal fun interface UpdateTransport { fun open(url: String, offset: Long): UpdateResponse }
+internal fun interface UpdateTransport {
+    fun open(url: String, offset: Long): UpdateResponse
+    fun openChecked(url: String, offset: Long, checkpoint: () -> Unit): UpdateResponse {
+        checkpoint(); return open(url, offset)
+    }
+}
 internal class HttpsUpdateTransport : UpdateTransport {
-    override fun open(url: String, offset: Long): UpdateResponse {
+    private val lock = Any()
+    private var connection: HttpURLConnection? = null
+    private var cancelled = false
+    fun begin() = synchronized(lock) { check(connection == null); cancelled = false }
+    fun cancel() {
+        val current = synchronized(lock) { cancelled = true; connection.also { connection = null } }
+        current?.disconnect()
+    }
+    private fun release(c: HttpURLConnection) {
+        synchronized(lock) { if (connection === c) connection = null }
+        c.disconnect()
+    }
+    override fun open(url: String, offset: Long) = openChecked(url, offset) {}
+    override fun openChecked(url: String, offset: Long, checkpoint: () -> Unit): UpdateResponse {
         var current = httpsUrl(url)
         repeat(6) { hop ->
+            checkpoint()
             val c = URL(current).openConnection() as HttpURLConnection
+            synchronized(lock) {
+                if (cancelled) { c.disconnect(); throw kotlinx.coroutines.CancellationException("Update cancelled") }
+                connection = c
+            }
             try {
                 c.instanceFollowRedirects = false; c.connectTimeout = 15000; c.readTimeout = 15000
                 c.setRequestProperty("Accept-Encoding", "identity")
                 c.setRequestProperty("User-Agent", "FluxManga-Updater/1")
                 if (offset > 0) c.setRequestProperty("Range", "bytes=$offset-")
                 val status = c.responseCode
+                checkpoint()
                 if (status in listOf(301, 302, 303, 307, 308)) {
                     require(hop < 5) { "更新重定向过多" }
                     current = httpsUrl(URL(URL(current), c.getHeaderField("Location") ?: error("更新重定向地址缺失")).toString())
-                    c.disconnect()
+                    release(c)
                 } else {
                     require(c.contentEncoding == null || c.contentEncoding == "identity") { "更新响应编码不支持" }
                     return object : UpdateResponse {
@@ -36,22 +60,24 @@ internal class HttpsUpdateTransport : UpdateTransport {
                         override val contentRange = c.getHeaderField("Content-Range")
                         override val contentLength = c.contentLengthLong
                         override val body: InputStream get() = c.inputStream
-                        override fun close() = c.disconnect()
+                        override fun close() = release(c)
                     }
                 }
-            } catch (e: Exception) { c.disconnect(); throw e }
+            } catch (e: Exception) { release(c); checkpoint(); throw e }
         }
         error("更新重定向失败")
     }
 }
-internal fun readUpdateManifest(transport: UpdateTransport, url: String): ByteArray = transport.open(url, 0).use { r ->
+internal fun readUpdateManifest(transport: UpdateTransport, url: String, checkpoint: () -> Unit = {}): ByteArray = transport.openChecked(url, 0, checkpoint).use { r ->
     require(r.status == 200) { "清单请求失败（${r.status}）" }
     require(r.contentLength <= MAX_MANIFEST) { "更新清单过大" }
     r.body.use { input ->
         val output = java.io.ByteArrayOutputStream()
         val buffer = ByteArray(8192)
         while (true) {
-            val n = input.read(buffer); if (n < 0) break
+            checkpoint()
+            val n = try { input.read(buffer) } catch (failure: Exception) { checkpoint(); throw failure }
+            checkpoint(); if (n < 0) break
             require(output.size() + n <= MAX_MANIFEST) { "更新清单过大" }; output.write(buffer, 0, n)
         }
         output.toByteArray()
@@ -77,7 +103,7 @@ internal class UpdateTransfer(private val transport: UpdateTransport) {
             progress(0)
         }
         checkpoint()
-        transport.open(artifact.url, part.length()).use { r ->
+        transport.openChecked(artifact.url, part.length(), checkpoint).use { r ->
             checkpoint()
             require(r.status == 200 || r.status == 206) { "更新下载请求失败（HTTP ${r.status}）" }
             val offset = resumeOffset(r.status, r.contentRange, part.length(), artifact.size)
@@ -90,7 +116,9 @@ internal class UpdateTransfer(private val transport: UpdateTransport) {
                     r.body.use { input ->
                         val buffer = ByteArray(65536)
                         while (true) {
-                            checkpoint(); val n = input.read(buffer); if (n < 0) break
+                            checkpoint()
+                            val n = try { input.read(buffer) } catch (failure: Exception) { checkpoint(); throw failure }
+                            if (n < 0) break
                             checkpoint(); require(bytes + n <= artifact.size) { "下载超出声明大小" }
                             output.write(buffer, 0, n); bytes += n; progress(bytes)
                         }

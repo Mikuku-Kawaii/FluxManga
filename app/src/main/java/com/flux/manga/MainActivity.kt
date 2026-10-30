@@ -83,6 +83,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        com.flux.manga.data.DisplayBitmapStore.trimMemory(level)
+    }
     private val requestFeedback = com.flux.manga.ui.pages.RequestFeedbackState()
     private val privacy by lazy { com.flux.manga.privacy.PrivacyController(this,
         { worldSession.identity.value.toString() }, { worldSession.state.value.foreground },

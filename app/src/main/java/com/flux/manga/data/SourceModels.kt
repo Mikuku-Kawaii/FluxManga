@@ -19,7 +19,8 @@ internal fun SessionIdentity.sourceContext(sourceId: String, authRef: String? = 
     return SourceContext(SourceWorld.SFW, sourceId, processSession, generation.toULong(), authRef)
 }
 
-internal data class SourceCardPage(val cards: List<MangaCard>, val continuation: SourceContinuation)
+internal data class SourceCardPage(val cards: List<MangaCard>, val continuation: SourceContinuation,
+    val notice: String? = null, val filterIncomplete: Boolean = false, val unfilteredCards: List<MangaCard>? = null)
 
 internal data class SourceTagList(val tags: List<String>, val continuation: SourceContinuation)
 
@@ -49,7 +50,7 @@ internal class SourceModelMapper(
         val key = key(value.key)
         val count = value.pageCount?.also { require(it <= Int.MAX_VALUE.toUInt()) { "Source page count exceeds model range" } }?.toInt()
         return MangaCard(key, value.title, count, available = true,
-            updatedAt = value.updatedAt, latestChapter = value.latestChapter)
+            updatedAt = value.updatedAt, latestChapter = value.latestChapter, sourceTags = value.tags)
     }
 
     fun tags(reply: SourceTagPage): SourceTagList {

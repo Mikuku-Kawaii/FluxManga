@@ -23,11 +23,11 @@ internal fun isPrivateComicSource(source: String) = isJmSource(source) || isPica
 internal data class PicaAccount(val uid: String, val name: String, val token: String) { val source get() = "picacg-user-$uid" }
 internal data class PicaBook(val id: String, val title: String, val cover: String, val author: String = "", val artist: String = "",
     val description: String = "", val tags: List<String> = emptyList(), val categories: List<String> = emptyList(), val finished: Boolean = false,
-    val updatedAt: String = "")
+    val updatedAt: String = "", val tagsKnown: Boolean = false, val chapterCount: Int? = null)
 internal data class PicaChapter(val order: Int, val title: String, val updatedAt: String = "")
 internal data class PicaImage(val id: String, val ordinal: Int, val url: String)
 internal data class PicaPage<T>(val items: List<T>, val page: Int, val next: Int?)
-internal fun picaFailure(error: Exception) = when (error) {
+internal fun picaFailure(error: Exception) = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is SourceException.AuthenticationRequired -> "登录已失效或访问受限，请在图源管理重新登录"
     is SourceException.Timeout -> "PicACG 请求超时，请重试"
     is SourceException.RateLimited -> "PicACG 请求过于频繁，请稍后重试"
@@ -117,7 +117,9 @@ internal class PicaClient(private val session: WorldSession, private val account
     }
     private fun book(row: JSONObject) = PicaBook(row.getString("_id").also { require(picaId(it)) }, row.getString("title"),
         image(row.getJSONObject("thumb")), row.text("author"), row.text("artist"), row.text("description"),
-        row.strings("tags"), row.strings("categories"), row.optBoolean("finished"), row.text("update_at"))
+        row.strings("tags"), row.strings("categories"), row.optBoolean("finished"), row.text("update_at"),
+        tagsKnown = row.optJSONArray("tags") != null && row.optJSONArray("categories") != null,
+        chapterCount = row.optInt("epsCount", -1).takeIf { it >= 0 })
     private fun <T> page(value: JSONObject, number: Int, parse: (JSONObject, Int) -> T): PicaPage<T> {
         val actual = value.getInt("page"); val last = value.getInt("pages")
         require(actual == number && number > 0 && last >= 0)
@@ -207,7 +209,7 @@ internal class PicaClient(private val session: WorldSession, private val account
         // No account headers are sent by picaImage on either route.
         val reply = try { native.picaImage(context, routed) }
         catch (error: SourceException) {
-            val transient = error is SourceException.Timeout || error is SourceException.Transport ||
+            val transient = error is SourceException.Timeout || error is SourceException.Transport || error is SourceException.Network ||
                 (error is SourceException.HttpStatus && error.status.toInt() in 500..599)
             val failedProxy = routed != url && (error is SourceException.NotFound ||
                 error is SourceException.AuthenticationRequired)

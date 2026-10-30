@@ -191,7 +191,7 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
                 }
             }
             if (mangaId == null) {
-                bookGridItems(if (state.error != null && !state.busy) emptyList() else state.cards, columns, { "book:${it.key.sourceId}:${it.key.mangaId}" }) { card ->
+                bookGridItems(state.cards, columns, { "book:${it.key.sourceId}:${it.key.mangaId}" }) { card ->
                     BookResultCard(card.title, { keyboard?.hide(); open(card.key.mangaId) },
                         titleModifier = Modifier.testTag("komga-book-${card.key.mangaId}"), cover = {
                             OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true)
@@ -200,9 +200,10 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
             } else {
                 state.detail?.let { detail ->
                     item(key = "hero") {
-                        DetailHero(detail.manga.title, { OnlineCover(model.library, sourceId, detail.manga.key.mangaId, fillWidth = true) }) {
-                            WorkMetadata(detail.metadata, "$sourceId:$mangaId", searchAuthor)
+                        DetailHero(detail.manga.title, { OnlineCover(model.library, sourceId, detail.manga.key.mangaId, fillWidth = true) }, tags = {
                             KomgaDetailTags(detail.manga.key.sourceId, detail.manga.key.mangaId, detail.tags, compact = true, open = openTag)
+                        }) {
+                            WorkMetadata(detail.metadata, "$sourceId:$mangaId", searchAuthor)
                         }
                     }
                     item(key = "actions") {

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 internal class PicaReaderRepository(context: Context, private val session: WorldSession, private val source: String,
-    private val manga: String) : PrivateDownloadReader {
+    private val manga: String, cacheSession: String = java.util.UUID.randomUUID().toString()) : PrivateDownloadReader {
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     private val store = PicaStore(context, session)
@@ -23,6 +23,8 @@ internal class PicaReaderRepository(context: Context, private val session: World
     private var directory: List<PicaChapter>? = null
     private val images = ConcurrentHashMap<String, PicaImage>()
     private val revision = AtomicLong()
+    private val refreshPages = Mutex()
+    private val pageRevisions = ConcurrentHashMap<String, Long>()
     override val mangaKey = SourceMangaKey(SourceWorld.NSFW, source, manga)
     private val contextKey = SourceContext(SourceWorld.NSFW, source, identity.processSession, identity.generation.toULong(), source)
     private val imageOwner = SampleKey(identity.world, source, manga)
@@ -45,10 +47,37 @@ internal class PicaReaderRepository(context: Context, private val session: World
         require(page.manga == mangaKey && page.context == contextKey && images["${page.chapterId}/${page.id}"]?.ordinal == page.ordinal.toInt())
         return ResourceKey(imageOwner, "${page.chapterId}/${page.id}")
     }
-    private val pageCache = ReaderEncodedCache(data)
+    private val pageCache = ReaderEncodedCache(data, cacheSession)
     private val pipeline = PrivateImagePipeline(imageOwner, pageCache, PrivateImageTransport { key ->
-        privateImageInput(client().image(requireNotNull(images[key.resourceId]).url))
+        privateImageInput(fetchImage(key))
     }, ::epoch, { ticket -> isActive() && session.state.value.foreground && ticket == epoch() })
+    private suspend fun fetchImage(key: ResourceKey): ByteArray {
+        val chapter = key.resourceId.substringBefore('/')
+        val version = pageRevisions[chapter] ?: 0L
+        val failed = requireNotNull(images[key.resourceId])
+        try { return client().image(failed.url) }
+        catch (failure: Exception) {
+            if (!failure.isExpiredPicaImage()) throw failure
+            refreshPages.withLock {
+                // Concurrent failed images share the same address refresh.
+                if ((pageRevisions[chapter] ?: 0L) == version && images[key.resourceId] == failed) {
+                    val rows = client().pages(manga, chapter.toInt())
+                    active()
+                    if (rows.none { "$chapter/${it.id}" == key.resourceId })
+                        throw IOException("章节图片已变化，请重新打开章节")
+                    rows.forEach { images["$chapter/${it.id}"] = it }
+                    pageRevisions[chapter] = version + 1L
+                    savePages(chapter, rows)
+                }
+            }
+            return client().image(requireNotNull(images[key.resourceId]).url)
+        }
+    }
+    private suspend fun savePages(chapter: String, rows: List<PicaImage>) {
+        pageCache.json(imageOwner, "pages:$chapter", org.json.JSONObject().put("images", org.json.JSONArray().also { a ->
+            rows.forEach { a.put(org.json.JSONObject().put("id", it.id).put("ordinal", it.ordinal).put("url", it.url)) }
+        }), ::isActive)
+    }
     override suspend fun chapters(request: SourcePageRequest): SourceChapterPage {
         val number = when (request) { SourcePageRequest.Start -> 1; is SourcePageRequest.Page -> request.number.toInt(); else -> throw IOException("章节分页无效") }
         require(number > 0)
@@ -58,8 +87,19 @@ internal class PicaReaderRepository(context: Context, private val session: World
     }
     override suspend fun pages(chapterId: String): List<SourcePageResource> {
         val order = chapterId.toIntOrNull() ?: throw IOException("章节标识无效")
-        require(directory().any { it.order == order }) { "章节不属于当前作品" }
-        val list = client().pages(manga, order); active()
+        client()
+        val saved = pageCache.decode(imageOwner, "pages:$chapterId", ::isActive) { json ->
+            val rows = json.getJSONArray("images")
+            List(rows.length()) { rows.getJSONObject(it).let { row ->
+                PicaImage(row.getString("id"), row.getInt("ordinal"), row.getString("url")) } }
+        }
+        val list = saved ?: run {
+            require(directory().any { it.order == order }) { "章节不属于当前作品" }
+            ContentRequests.run(source, ContentPriority.READER) { client().pages(manga, order) }.also { rows ->
+                savePages(chapterId, rows)
+            }
+        }
+        active()
         return list.map { image ->
             images["$chapterId/${image.id}"] = image
             SourcePageResource(mangaKey, chapterId, image.id, image.ordinal.toUInt(), "picacg-private-v1", null, null, null, contextKey)
@@ -69,7 +109,7 @@ internal class PicaReaderRepository(context: Context, private val session: World
     override suspend fun offlineIds() = emptySet<String>()
     override suspend fun downloadPage(page: SourcePageResource): PrivateDownloadPayload {
         val key = request(page)
-        return PrivateDownloadPayload(client().image(requireNotNull(images[key.resourceId]).url))
+        return PrivateDownloadPayload(fetchImage(key))
     }
     override suspend fun progress() = data.worldData(identity.world, ::isActive) { it.onlineProgress(source, manga) }
     override suspend fun chapterProgress(chapter: String) = data.worldData(identity.world, ::isActive) { it.chapterReading(source, manga, chapter) }
@@ -97,5 +137,5 @@ internal class PicaReaderRepository(context: Context, private val session: World
     }, { it.recycle() })
     override suspend fun clearImages() { revision.incrementAndGet(); data.clearMemory() }
     override suspend fun releaseImages() { clearImages(); pageCache.close() }
-    override fun close() { client?.close(); owner.cancel(); images.clear(); data.clearMemory() }
+    override fun close() { client?.close(); owner.cancel(); images.clear(); pageRevisions.clear(); data.clearMemory() }
 }

@@ -52,7 +52,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
     }).filter(selection::enabled)
     val resultFeeds = sources.mapIndexed { index, id -> ResultFeed(id, if (section == null) tagQueries[index].target.sourceId else id) }
     // A bounded last-result slot per feed; query/target identity is checked inside its envelope.
-    private val snapshots = sources.associateWith { CatalogPageCache(app, session, "mixed:${section?.name ?: "tag"}:$it") }
+    private val snapshots = sources.associateWith { CatalogPageCache(app, session, "mixed:${section?.name ?: "tag"}:$it", source = resultFeeds.first { feed -> feed.id == it }.sourceId) }
     private val snapshotQuery = if (section != null) "" else tagQueries.joinToString("|", prefix = "mixed-tags-v2:") {
         val target = it.target
         "${target.sourceId.length}:${target.sourceId}${target.id.length}:${target.id}:${target.category}:${it.keyword}"
@@ -66,7 +66,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
         val tagQuery = if (section == null) tagQueries[feedId.removePrefix("tag:").toInt()] else null
         val target = tagQuery?.target
         val source = target?.sourceId ?: feedId
-        val result = withContext(Dispatchers.IO) {
+        val result = ContentRequests.run(source, if (section == null) ContentPriority.DETAIL else ContentPriority.REFRESH) { withContext(Dispatchers.IO) {
             if (privateCatalog != null) privateCatalog.load(source, target?.id.orEmpty(), page, when {
                 target != null -> if (target.category) "category" else "search"
                 section == DiscoverySection.RECOMMENDATIONS -> "recommendations"
@@ -96,7 +96,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                 }
                 else -> requireNotNull(komga).client().updates(page)
             }
-        }
+        } }
         if (section == DiscoverySection.UPDATES) withContext(Dispatchers.Main.immediate) {
             if (session.accepts(identity)) result.cards.map { it.key.sourceId }.distinct().forEach {
                 updateVersions[it] = (updateVersions[it] ?: 0) + 1
@@ -110,7 +110,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
         if ((!isBaoziSource(source) && !isPicaSource(source) && !isJmSource(source)) || updateLoaded[card.key] == version) return
         updateRequests.withPermit {
             if (!session.accepts(identity) || !session.state.value.foreground) return@withPermit
-            val cache = CatalogPageCache(app, session, "home-update:${card.key.sourceId}:${card.key.mangaId}")
+            val cache = CatalogPageCache(app, session, "home-update:${card.key.sourceId}:${card.key.mangaId}", includeBlacklist = false, source = card.key.sourceId)
             try {
                 if (updateInfo[card.key] == null) cache.read()?.let {
                     updateInfo[card.key] = HomeUpdateInfo(it.optString("date"), it.optString("chapter"))
@@ -118,13 +118,13 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* A missing cache must not block the source read. */ }
             try {
-                val value = if (isBaoziSource(source)) {
+                val value = ContentRequests.run(source, ContentPriority.REFRESH) { if (isBaoziSource(source)) {
                     val book = session.baoziSources.client(app, source).source.detail(card.key.mangaId)
                     HomeUpdateInfo(book.metadata.updatedAt.orEmpty(), book.chapters?.lastOrNull()?.title.orEmpty())
                 } else {
                     val (date, chapter) = requireNotNull(privateCatalog).update(card)
                     HomeUpdateInfo(date, chapter)
-                }
+                } }
                 currentCoroutineContext().ensureActive()
                 if (!session.accepts(identity) || !session.state.value.foreground || (updateVersions[card.key.sourceId] ?: 0) != version) return@withPermit
                 updateInfo[card.key] = value

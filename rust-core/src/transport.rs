@@ -46,6 +46,7 @@ pub struct SourceHttpActivity {
 }
 
 // Only documented source operations can construct a POST. Login is never retried.
+#[derive(Clone)]
 pub(crate) struct RequestBody {
     pub bytes: Vec<u8>,
     pub content_type: &'static str,
@@ -80,6 +81,7 @@ struct State {
     preserve_forbidden: AtomicBool,
     jm_cookies: std::sync::Mutex<Vec<String>>,
     gallery_login_cookies: std::sync::Mutex<Vec<String>>,
+    route_hint: std::sync::Mutex<Option<String>>,
 }
 struct Count(Arc<AtomicU64>);
 impl Count {
@@ -106,12 +108,37 @@ pub struct SourceHttpSession {
     runtime: Option<Runtime>,
 }
 
+fn jm_api_host(host: Option<&str>) -> bool {
+    matches!(host, Some("www.cdnhjk.net" | "www.cdnutc.cc" | "www.cdnutc.me" |
+        "www.cdngwc.cc" | "www.cdngwc.net" | "www.cdngwc.club"))
+}
+
 fn transport_error(error: reqwest::Error) -> SourceError {
     // Do not carry reqwest errors: they can contain query strings / server URLs.
     if error.is_timeout() {
         SourceError::Timeout
     } else {
-        SourceError::Transport
+        let mut cause: Option<&(dyn std::error::Error + 'static)> = Some(&error);
+        while let Some(value) = cause {
+            if let Some(io) = value.downcast_ref::<std::io::Error>() {
+                let kind = match io.kind() {
+                    std::io::ErrorKind::ConnectionReset | std::io::ErrorKind::ConnectionAborted => Some("reset"),
+                    std::io::ErrorKind::ConnectionRefused => Some("refused"),
+                    _ => None,
+                };
+                if let Some(kind) = kind { return SourceError::Network { kind: kind.into() }; }
+            }
+            // Inspect locally; never expose this string (it may contain a hostname).
+            let text = value.to_string().to_ascii_lowercase();
+            let kind = if ["dns error", "failed to lookup address", "name or service not known", "no address associated"].iter().any(|v| text.contains(v)) {
+                Some("dns")
+            } else if ["invalid peer certificate", "invalid certificate", "tls handshake", "received fatal alert", "certificate verify failed"].iter().any(|v| text.contains(v)) {
+                Some("tls")
+            } else { None };
+            if let Some(kind) = kind { return SourceError::Network { kind: kind.into() }; }
+            cause = value.source();
+        }
+        if error.is_connect() { SourceError::Network { kind: "connect".into() } } else { SourceError::Transport }
     }
 }
 
@@ -444,7 +471,15 @@ impl SourceHttpSession {
         let image = self.state.base.host_str().is_some_and(|s| s.starts_with("cdn-"));
         let account_profile = endpoint.strip_prefix("/useredit/").is_some_and(|id|
             !id.is_empty() && id.len() <= 15 && !id.starts_with('0') && id.bytes().all(|b| b.is_ascii_digit()));
-        if url.origin() != self.state.base.origin() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() ||
+        // API failover reuses this pool/runtime, but only across the reviewed JM API hosts.
+        // Images remain pinned to their configured CDN; no API cookies can reach a CDN.
+        let allowed_origin = if image {
+            url.origin() == self.state.base.origin()
+        } else {
+            jm_api_host(self.state.base.host_str()) && jm_api_host(url.host_str()) &&
+                url.scheme() == "https" && url.port_or_known_default() == Some(443)
+        };
+        if !allowed_origin || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() ||
             (image && (!endpoint.starts_with("/media/") || !cookie.is_empty() || form.is_some())) ||
             (!image && !account_profile && !matches!(endpoint, "/setting" | "/login" | "/search" | "/promote" | "/categories" | "/categories/filter" | "/album" | "/chapter" | "/chapter_view_template" | "/favorite")) ||
             (form.is_some() && (endpoint != "/login" || form.as_ref().is_some_and(|s| s.len() > 16384))) {
@@ -825,6 +860,7 @@ impl SourceHttpSession {
                 preserve_forbidden: AtomicBool::new(false),
                 jm_cookies: std::sync::Mutex::new(Vec::new()),
                 gallery_login_cookies: std::sync::Mutex::new(Vec::new()),
+                route_hint: std::sync::Mutex::new(None),
             }),
             runtime: Some(runtime),
         })
@@ -989,7 +1025,7 @@ impl SourceHttpSession {
             tokio::select! {
                 biased;
                 _ = closed.changed() => Err(SourceError::SessionMismatch),
-                result = tokio::time::timeout(Duration::from_millis(state.config.timeout_ms.into()), state.get(url, body, directory, anonymous, headers)) => result.unwrap_or(Err(SourceError::Timeout)),
+                result = tokio::time::timeout(Duration::from_millis(state.config.timeout_ms.into()), state.routed_get(url, body, directory, anonymous, headers)) => result.unwrap_or(Err(SourceError::Timeout)),
             }
         }));
         (&mut task.0).await.map_err(|_| SourceError::Transport)?
@@ -997,6 +1033,72 @@ impl SourceHttpSession {
 }
 
 impl State {
+    async fn routed_get(&self, url: Url, body: Option<RequestBody>, directory: Option<String>,
+        anonymous: bool, headers: header::HeaderMap) -> Result<Output, SourceError> {
+        let host = url.host_str().unwrap_or_default();
+        let jm_image = self.context.source_id.starts_with("jmcomic-") && self.base.origin() == url.origin() &&
+            host.starts_with("cdn-") && url.path().starts_with("/media/") && body.is_none() && !headers.contains_key(header::COOKIE);
+        let candidates: &[&str] = if jm_image {
+            &["cdn-msp.jmapiproxy1.cc", "cdn-msp.jmapiproxy2.cc", "cdn-msp2.jmapiproxy2.cc",
+                "cdn-msp3.jmapiproxy2.cc", "cdn-msp.jmapinodeudzn.net", "cdn-msp3.jmapinodeudzn.net"]
+        } else if self.context.source_id.starts_with("copymanga-") && self.context.auth_ref.is_none() &&
+            self.base.as_str() == "https://mapi.hotmangasg.com/" && url.origin() == self.base.origin() && body.is_none() && directory.is_none() {
+            &["mapi.hotmangasg.com", "mapi.elfgjfghkk.club"]
+        } else if self.context.source_id.starts_with("picacg-") && self.base.as_str() == "https://picaapi.go2778.com/" &&
+            url.origin() == self.base.origin() && headers.contains_key("signature") &&
+            (body.is_none() || url.path() == "/comics/advanced-search") {
+            // The only POST in this branch is the documented read-only search operation.
+            &["picaapi.go2778.com", "picaapi.picacomic.com"]
+        } else { &[] };
+        if candidates.is_empty() { return self.get(url, body, directory, anonymous, headers, None).await; }
+        let hint = self.route_hint.lock().map_err(|_| SourceError::Transport)?.clone();
+        let mut hosts = Vec::new();
+        for value in hint.as_deref().into_iter().chain(std::iter::once(host)).chain(candidates.iter().copied()) {
+            if candidates.contains(&value) && !hosts.contains(&value) { hosts.push(value); }
+        }
+        let mut failure = SourceError::Transport;
+        for host in hosts {
+            let mut target = url.clone();
+            target.set_host(Some(host)).map_err(|_| SourceError::InvalidRequest)?;
+            let mut route_headers = headers.clone();
+            if host == "picaapi.picacomic.com" {
+                // Fixed pica-go protocol profile. Host is not part of the signed path;
+                // the original per-request nonce, signature and account token stay intact.
+                for (name, value) in [("api-key", "C69BAF41DA5ABD1FFEDC6D2FEA56B"),
+                    ("app-channel", "2"), ("app-version", "2.2.1.2.3.3"),
+                    ("app-uuid", "defaultUuid"), ("app-build-version", "44")] {
+                    route_headers.insert(header::HeaderName::from_static(name), header::HeaderValue::from_static(value));
+                }
+                route_headers.remove(header::ORIGIN);
+                route_headers.remove(header::REFERER);
+            }
+            let result = tokio::time::timeout(Duration::from_millis(if jm_image { 10_000 } else { u64::from(self.config.timeout_ms) / 2 }),
+                self.get(target, body.clone(), directory.clone(), anonymous, route_headers, Some(Duration::from_secs(4)))).await.unwrap_or(Err(SourceError::Timeout));
+            match result {
+                Ok(reply) => {
+                    if jm_image && matches!(&reply, Output::Bytes(bytes) if !bytes.content_type.as_deref().is_some_and(|v| v.starts_with("image/"))) {
+                        let mut hint = self.route_hint.lock().map_err(|_| SourceError::Transport)?;
+                        if hint.as_deref() == Some(host) { *hint = None; }
+                        failure = SourceError::InvalidResponse;
+                        continue;
+                    }
+                    *self.route_hint.lock().map_err(|_| SourceError::Transport)? = Some(host.into());
+                    return Ok(reply);
+                }
+                Err(error) => {
+                    let retry = matches!(&error, SourceError::Timeout | SourceError::Transport | SourceError::Network { .. } |
+                        SourceError::HttpStatus { status: 408 | 500..=599 }) ||
+                        (jm_image && matches!(&error, SourceError::NotFound | SourceError::AuthenticationRequired));
+                    if !retry { return Err(error); }
+                    let mut hint = self.route_hint.lock().map_err(|_| SourceError::Transport)?;
+                    if hint.as_deref() == Some(host) { *hint = None; }
+                    failure = error;
+                }
+            }
+        }
+        Err(failure)
+    }
+
     async fn get(
         &self,
         url: Url,
@@ -1004,6 +1106,7 @@ impl State {
         directory: Option<String>,
         anonymous: bool,
         headers: header::HeaderMap,
+        header_timeout: Option<Duration>,
     ) -> Result<Output, SourceError> {
         let _permit = self
             .permits
@@ -1057,7 +1160,9 @@ impl State {
                 request = request.header(header::USER_AGENT, "COPY/3.0.9")
                     .header("x-auth-timestamp", timestamp).header("x-auth-signature", signature);
             }
-            let mut response = request.send().await.map_err(transport_error)?;
+            let mut response = if let Some(limit) = header_timeout {
+                tokio::time::timeout(limit, request.send()).await.map_err(|_| SourceError::Timeout)?.map_err(transport_error)?
+            } else { request.send().await.map_err(transport_error)? };
             // PicACG's image CDN moves static files with 301/302. Follow only this
             // anonymous image operation; API requests and credentials never redirect.
             if self.context.source_id.starts_with("picacg-") && pica_image_url(&url) && body.is_none() {
