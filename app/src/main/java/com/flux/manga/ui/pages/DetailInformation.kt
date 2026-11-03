@@ -30,7 +30,7 @@ internal fun DetailInformationDialog(title: String, close: () -> Unit, content: 
 @Composable
 internal fun DetailInfoText(text: String, label: String = "作品信息", modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
-    color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+    color: Color = ReadingSurfaceStyle.muted) {
     var overflow by remember(text) { mutableStateOf(false) }
     var expanded by remember(text) { mutableStateOf(false) }
     val full = LocalDetailFullInformation.current

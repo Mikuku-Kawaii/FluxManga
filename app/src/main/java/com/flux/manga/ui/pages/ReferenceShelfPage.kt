@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -64,6 +66,7 @@ internal fun ReferenceShelfPage(
     }
     val filterName by model.filter.collectAsStateWithLifecycle()
     val filter = ShelfFilter.entries.firstOrNull { it.name == filterName } ?: ShelfFilter.ALL
+    val resultSlide = shelfResultSlide(filter)
     val identity by session.identity.collectAsStateWithLifecycle()
     val world = identity.world
     val public = world == PrototypeWorld.SFW
@@ -99,7 +102,7 @@ internal fun ReferenceShelfPage(
     SideEffect { reportScroll { shownScroll.firstVisibleItemIndex; shownScroll.firstVisibleItemScrollOffset; Unit } }
     val fontScale = LocalDensity.current.fontScale
     val collectionHeader: @Composable () -> Unit = {
-        Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
+        Column(Modifier.fillMaxWidth().then(if (isRoot) Modifier else Modifier.background(ReadingSurfaceStyle.pageTop)),
             verticalArrangement = Arrangement.spacedBy(0.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
               // Anchor the heading near the filter row while keeping toolbar touch targets intact.
@@ -111,9 +114,9 @@ internal fun ReferenceShelfPage(
                     state.loading && state.books.isEmpty() -> "读取中…"
                     else -> "${books.size} 部${if (state.errors.isNotEmpty()) " · 待确认" else ""}"
                 },
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
                 if (selecting) Text("已选 ${selectedKeys.size} 部",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
               }
                 ShelfTextButton("批量", { selecting = true; selectedKeys = emptyList() }, enabled = canEdit && !selecting,
                     modifier = Modifier.testTag("shelf-batch-toggle"))
@@ -209,7 +212,8 @@ internal fun ReferenceShelfPage(
                   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     DiscoverySectionHeading("继续阅读", "shelf-history", "阅读记录") { list(ShelfSection.HISTORY) }
                     if (latest != null) ContinueCard(latest, model, open, read)
-                    else if (state.loading) Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
+                    else if (state.loading) Surface(modifier = Modifier.readingCardShadow(MaterialTheme.shapes.large),
+                        shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
                         Box(Modifier.fillMaxWidth().heightIn(min = 150.dp), contentAlignment = Alignment.Center) { Text("正在读取阅读记录…") }
                     }
                     else if (!state.loading) ReferenceEmptyState(if (state.errors.isEmpty()) "还没有可继续的阅读记录" else "暂时没有可确认的续读记录") {
@@ -223,7 +227,7 @@ internal fun ReferenceShelfPage(
             stickyHeader(key = "collection-heading") { collectionHeader() }
             if (state.loading && state.books.isEmpty()) item(key = "read-layout", span = { GridItemSpan(maxLineSpan) }) { ReadLayoutPlaceholder() }
             if (books.isEmpty() && !state.loading) item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
-                Column(Modifier.testTag("shelf-empty").semantics { liveRegion = LiveRegionMode.Polite }) {
+                Column(resultSlide.testTag("shelf-empty").semantics { liveRegion = LiveRegionMode.Polite }) {
                     Text(when {
                         state.errors.isNotEmpty() -> "部分书目暂不可用，请重试"
                         searchMode && state.books.isEmpty() -> "还没有可搜索的本机书目"
@@ -245,12 +249,14 @@ internal fun ReferenceShelfPage(
                 books.groupBy { readingDay(it) } else mapOf("" to books)
             groups.forEach { (day, rows) ->
                 if (day.isNotEmpty()) item(key = "day:$day", span = { GridItemSpan(maxLineSpan) }) {
-                    Text(day, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+                    Text(day, style = MaterialTheme.typography.titleMedium, modifier = resultSlide.semantics { heading() })
                 }
                 items(rows, key = { it.stableKey }, contentType = { state.layout }) { book ->
+                  Box(resultSlide) {
                     ShelfTile(book, model, state.layout == ShelfLayout.LIST, open,
                         selecting, book.stableKey in selectedKeys, canEdit,
                         toggle = { toggle(book) }, startSelection = { if (canEdit) { selecting = true; selectedKeys = listOf(book.stableKey) } })
+                  }
                 }
             }
 
@@ -309,11 +315,17 @@ internal fun ReferenceShelfPage(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ShelfReadingFilters(filter: ShelfFilter, select: (ShelfFilter) -> Unit, enabled: Boolean = true) {
-    FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().testTag("shelf-reading-filters"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val positions = remember { mutableStateMapOf<ShelfFilter, androidx.compose.ui.geometry.Rect>() }
+    Box(Modifier.fillMaxWidth().testTag("shelf-reading-filters")) {
+      positions[filter]?.let { ShelfFilterIndicator(it, Modifier.matchParentSize()) }
+      FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+          modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ShelfFilter.entries.forEach { value ->
-            ShelfTextButton(value.label, { select(value) }, enabled = enabled, selected = filter == value,
-                modifier = Modifier.testTag("shelf-filter-${value.name}"))
+            ShelfTextButton(value.label, { select(value) }, enabled = enabled, selected = filter == value, drawSelection = false,
+                modifier = Modifier.testTag("shelf-filter-${value.name}")
+                    .onGloballyPositioned { positions[value] = it.boundsInParent() })
         }
+      }
     }
 }
 
@@ -350,7 +362,7 @@ private fun ShelfTile(book: ShelfBook, model: ShelfViewModel, row: Boolean, open
             Text(shelfReadingLabel(
                 if (book.hasProgress && !book.validProgress) "阅读位置待核对" else book.status.label,
                 book.information, book.chapterId, book.online),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
             if (!book.available) Text(if (book.online) "来源已失效" else "副本缺失", style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -377,7 +389,7 @@ private fun ShelfTile(book: ShelfBook, model: ShelfViewModel, row: Boolean, open
 
 @Composable
 private fun ShelfCover(book: ShelfBook, model: ShelfViewModel, modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop) {
+    contentScale: ContentScale = ContentScale.Crop, integrated: Boolean = false) {
     val visibility by model.session.state.collectAsState()
     val private = book.key.world == PrototypeWorld.NSFW
     val epoch = if (private) visibility.visibilityEpoch else 0L
@@ -405,7 +417,7 @@ private fun ShelfCover(book: ShelfBook, model: ShelfViewModel, modifier: Modifie
     CoverArtwork(bitmap?.takeIf { !private || active }, active && book.available && bitmap == null && !failed && !missing,
         when { !book.available -> "封面不可用"; !active -> "封面"; missing -> "暂无封面"; failed -> "封面加载失败"; else -> "正在加载封面" },
         modifier, retry = if (active && failed) ({ model.session.pageCovers().retry(book.key.sourceId, book.key.mangaId); attempt++ }) else null,
-        description = "《${book.title}》封面", contentScale = contentScale)
+        description = "《${book.title}》封面", contentScale = contentScale, integrated = integrated)
 }
 
 @Composable
@@ -416,26 +428,33 @@ private fun ContinueCard(book: ShelfBook, model: ShelfViewModel, open: (ShelfBoo
         Column(modifier.padding(top = 8.dp, bottom = 8.dp, end = 12.dp)
             .verticalScroll(rememberScrollState()).heightIn(min = cardHeight - 16.dp),
             verticalArrangement = Arrangement.SpaceBetween) {
-            Text(book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable(onClickLabel = "查看详情") { open(book) },
-                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            ShelfUpdateLabel(book.information, book.chapterId, book.online)
-            DetailInfoText(listOfNotNull(shelfReadingLabel(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
-                book.information, book.chapterId, book.online), book.ratio?.let { "${(it * 100).toInt()}%" }).joinToString(" · "),
-                label = "阅读位置", style = MaterialTheme.typography.bodySmall)
-            ReferenceButton(onClick = { read(book) }, modifier = Modifier.testTag("shelf-continue")) {
-                ReferenceIcon(ReferenceSymbol.PLAY)
-                Spacer(Modifier.width(8.dp))
-                Text("继续阅读")
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(onClickLabel = "查看详情") { open(book) },
+                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    ShelfUpdateLabel(book.information, book.chapterId, book.online)
+                    DetailInfoText(listOfNotNull(shelfReadingLabel(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
+                        book.information, book.chapterId, book.online), book.ratio?.let { "${(it * 100).toInt()}%" }).joinToString(" · "),
+                        label = "阅读位置", style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
+                }
+            }
+            Column(Modifier.padding(top = 8.dp)) {
+                ReferenceButton(onClick = { read(book) }, modifier = Modifier.testTag("shelf-continue")) {
+                    ReferenceIcon(ReferenceSymbol.PLAY)
+                    Spacer(Modifier.width(8.dp))
+                    Text("继续阅读")
+                }
             }
         }
     }
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+    Surface(modifier = Modifier.readingCardShadow(), shape = ReadingSurfaceStyle.cardShape,
+        color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
-            Row(Modifier.fillMaxWidth().height(cardHeight), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().height(cardHeight), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ShelfCover(book, model, Modifier.width(coverWidth).fillMaxHeight()
-                    .clickable(onClickLabel = "查看详情") { open(book) }, ContentScale.Crop)
+                    .clickable(onClickLabel = "查看详情") { open(book) }, ContentScale.Crop, integrated = true)
                 Info(Modifier.weight(1f).fillMaxHeight())
             }
         }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -234,7 +235,7 @@ fun SampleReaderPage(route: MangaReader, session: WorldSession, back: () -> Unit
         ScenarioControls("reader", model)
         PageResult("reader", state, model::retry) { chapter ->
             Text("${chapter.manga.title} · 固定章节 1", modifier = Modifier.testTag("reader-content"))
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth().readingCardShadow(CardDefaults.shape)) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("占位页 $page / ${chapter.pages}", modifier = Modifier.testTag("reader-page"))
                     Text("这里仅显示编号占位。真实 CBZ 导入、图片解码和阅读进度持久化将在 M2 实现。")

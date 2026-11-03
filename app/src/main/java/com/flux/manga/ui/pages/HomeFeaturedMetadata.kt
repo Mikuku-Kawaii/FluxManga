@@ -24,23 +24,35 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
     fun refresh() { loaded.clear(); revision++ }
     fun retry(key: MangaKey) { loaded.remove(key); revision++ }
     private fun active() = session.accepts(identity) && session.state.value.foreground
+
+    /** Cache-only startup warming, shared by both worlds and never allowed to replace newer data. */
+    suspend fun restore(key: MangaKey) {
+        if (!active() || books[key] != null || key in loaded) return
+        val ticket = revision
+        val cache = CatalogPageCache(app, session, "home-featured:${key.sourceId.length}:${key.sourceId}${key.mangaId}",
+            includeBlacklist = false, source = key.sourceId)
+        val value = readDisplayCache {
+            cache.read()?.let { cached ->
+                val tags = cached.getJSONArray("tags")
+                FeaturedBookInfo(OnlineBookInformation(cached.getString("title"), cached.getString("author"),
+                    cached.getString("summary"), List(tags.length()) { tags.getString(it) }, cached.getString("status")),
+                    if (cached.isNull("chapters")) null else cached.getLong("chapters"))
+            }
+        } ?: return
+        currentCoroutineContext().ensureActive()
+        if (!active() || revision != ticket || books[key] != null) return
+        books[key] = value
+        if (ticket == 0) loaded += key
+    }
+
     suspend fun load(card: MangaCard) {
         val key = card.key
         if (!active() || key in loaded) return
         val cache = CatalogPageCache(app, session, "home-featured:${key.sourceId.length}:${key.sourceId}${key.mangaId}", includeBlacklist = false, source = key.sourceId)
         errors.remove(key)
         try {
-            if (books[key] == null) {
-                val cached = try { cache.read() } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { null }
-                if (cached != null) {
-                    val tags = cached.getJSONArray("tags")
-                    books[key] = FeaturedBookInfo(OnlineBookInformation(cached.getString("title"), cached.getString("author"),
-                        cached.getString("summary"), List(tags.length()) { tags.getString(it) }, cached.getString("status")),
-                        if (cached.isNull("chapters")) null else cached.getLong("chapters"))
-                    if (revision == 0) { loaded += key; return }
-                }
-            }
+            restore(key)
+            if (!active() || key in loaded) return
             if (books[key] == null) {
                 OnlineBookInformationStore(WorldDataStore(app), session).read(key.sourceId, key.mangaId)?.let { info ->
                     if (active()) books[key] = info.featured()

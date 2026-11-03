@@ -77,7 +77,7 @@ internal fun onlineShelfModel(session: WorldSession): OnlineShelfModel {
 
 @Composable
 internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: String, open: (() -> Unit)? = null, fillWidth: Boolean = false,
-    coverRatio: Float = .7f) {
+    coverRatio: Float = .7f, integrated: Boolean = false) {
     val visibility by library.visibility.collectAsState()
     val coverEpoch = if (library.privateWorld) visibility.visibilityEpoch else 0L
     val revision by library.coverCache.revision.collectAsState()
@@ -108,7 +108,8 @@ internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: Stri
         if (!active) "封面" else if (missing) "暂无封面" else error ?: "正在加载封面",
         Modifier.then(if (fillWidth) Modifier else Modifier.widthIn(max = 112.dp)).fillMaxWidth().aspectRatio(coverRatio)
             .then(if (open != null) Modifier.clickable(role = Role.Button, onClickLabel = "查看漫画详情", onClick = open) else Modifier),
-        retry = if (active && error != null) ({ library.coverCache.retry(sourceId, mangaId); attempt++ }) else null)
+        retry = if (active && error != null) ({ library.coverCache.retry(sourceId, mangaId); attempt++ }) else null,
+        integrated = integrated)
 }
 
 @Composable
@@ -146,7 +147,8 @@ private fun OnlineShelfBook(item: OnlineShelfItem, library: OnlineLibrary,
             Text(shelfReadingLabel(item.progress?.let { progress ->
                 listOfNotNull("上次读到第 ${progress.ordinal} 页",
                     ReadingMode.entries.firstOrNull { it.name == progress.mode }?.label).joinToString(" · ")
-            } ?: "未读", item.information, item.progress?.chapterId))
+            } ?: "未读", item.information, item.progress?.chapterId),
+                style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
             if (!item.available) {
                 Text("此来源配置已失效；书目和进度保留")
                 TextButton(onClick = settings) { Text("图源设置") }

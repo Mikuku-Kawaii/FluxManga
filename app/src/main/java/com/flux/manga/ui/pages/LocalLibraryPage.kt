@@ -405,7 +405,9 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
         } else state.detail?.let { detail ->
             item {
                 DetailHero(detail.card.title, cover = {
-                    Surface(Modifier.fillMaxWidth().aspectRatio(.7f).clip(RoundedCornerShape(8.dp)), color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Surface(Modifier.fillMaxWidth().aspectRatio(.7f).readingCardShadow(ReadingSurfaceStyle.coverShape), shape = ReadingSurfaceStyle.coverShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ReadingSurfaceStyle.coverOutline)) {
                         Box(contentAlignment = Alignment.Center) {
                             state.cover?.let { Image(it.asImageBitmap(), "《${detail.card.title}》封面", contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize().testTag("local-cover")) } ?: Text(if (detail.card.available) "封面暂不可用" else "副本缺失")

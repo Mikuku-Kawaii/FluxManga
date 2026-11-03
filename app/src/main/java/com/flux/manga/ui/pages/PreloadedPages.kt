@@ -58,6 +58,12 @@ internal class PreloadedPages(private val app: Application, private val session:
         if (running && model !in coverWarmers) coverWarmers[model] = viewModelScope.launch {
             model.feed.state.map { mixedCards(model.feed.sources, it.results).take(3).map { it.key } }
                 .distinctUntilChanged().collectLatest { keys -> coroutineScope {
+                    if (section == DiscoverySection.RECOMMENDATIONS) keys.firstOrNull()?.let { key -> launch {
+                        try { model.featured.restore(key) }
+                        catch (cancelled: CancellationException) { throw cancelled }
+                        // Visible metadata loading retains the normal error/retry path.
+                        catch (_: Exception) { }
+                    } }
                     keys.forEach { key -> launch {
                         try { withContext(com.flux.manga.data.ContentPriorityContext(com.flux.manga.data.ContentPriority.PRELOAD)) {
                             model.library.cover(key.sourceId, key.mangaId)

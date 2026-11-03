@@ -1,19 +1,12 @@
 package com.flux.manga.ui.pages
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
@@ -45,8 +38,10 @@ internal fun DiscoverySectionHeading(title: String, tag: String, actionLabel: St
         Row(verticalAlignment = Alignment.CenterVertically) {
             actions?.invoke()
             TextButton(onClick = all, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                Text(actionLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
-                SettingsChevron()
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(actionLabel, color = ReadingSurfaceStyle.muted, style = MaterialTheme.typography.labelLarge)
+                    SettingsChevron()
+                }
             }
         }
     }
@@ -90,16 +85,11 @@ internal fun <T> DiscoveryPreviewGrid(items: List<T>, identity: (T) -> String, m
 
 @Composable
 internal fun TopicCard(name: String, open: () -> Unit) {
-    val base = MaterialTheme.colorScheme.primaryContainer
-    Surface(shape = MaterialTheme.shapes.medium, color = base,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(role = Role.Button,
+    Surface(shape = ReadingSurfaceStyle.cardShape, color = ReadingSurfaceStyle.card,
+        border = ReadingSurfaceStyle.border,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).readingCardShadow().clickable(role = Role.Button,
             onClickLabel = "查看「$name」下的作品", onClick = open)) {
         Box(contentAlignment = Alignment.CenterStart) {
-            Image(painterResource(topicArtwork(name).resource), contentDescription = null,
-                modifier = Modifier.matchParentSize(), contentScale = ContentScale.FillHeight, alignment = Alignment.CenterEnd,
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary.copy(alpha = .22f)))
-            Box(Modifier.matchParentSize().background(Brush.horizontalGradient(
-                0f to base, .28f to base.copy(alpha = .95f), .74f to base.copy(alpha = .15f), 1f to base.copy(alpha = 0f))))
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium,

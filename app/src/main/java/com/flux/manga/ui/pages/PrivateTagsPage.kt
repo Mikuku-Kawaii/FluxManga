@@ -203,7 +203,7 @@ internal fun PrivateTagsPage(session: WorldSession, bottom: Dp, settings: () -> 
                         TextButton(onClick = { openTag(name, targets(name)) },
                             modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp),
                             contentPadding = PaddingValues(8.dp), shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            colors = ButtonDefaults.textButtonColors(containerColor = ReadingSurfaceStyle.card,
                                 contentColor = MaterialTheme.colorScheme.onSurface)) { Text(name) }
                     }
                     repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }

@@ -11,9 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
@@ -61,14 +62,14 @@ internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceD
                 DiscoverySectionHeading("图源推荐", "open-recommendations-status", actions = {
                     CompactFeedAction(recommendations.feed, recommendationState, recommendations.resultFeeds, sources)
                 }) { section(DiscoverySection.RECOMMENDATIONS) }
-                HomeFeedState(recommendations, recommended, sources)
+                HomeFeedState(recommendations, recommended, sources, featured = true, columns = columns)
                 if (featured.isNotEmpty()) HomeFeaturedPager(session, recommendations, featured, open)
             } }
             item("updates-heading") { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 DiscoverySectionHeading("最近更新", "open-source-updates-status", actions = {
                     if (updates != null && updateState != null) CompactFeedAction(updates.feed, updateState, updates.resultFeeds, sources)
                 }) { section(DiscoverySection.UPDATES) }
-                if (updates != null) HomeFeedState(updates, updated, sources)
+                if (updates != null) HomeFeedState(updates, updated, sources, columns = columns)
                 else HomeCoverPlaceholders(columns)
                 if (state.status == DiscoveryStatus.FAILED) TextButton(configuration::refresh) { Text("重试图源配置") }
             } }
@@ -91,11 +92,14 @@ internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceD
 }
 
 @Composable
-private fun HomeFeedState(model: MixedDiscoveryModel, cards: List<MangaCard>, sources: () -> Unit) {
+private fun HomeFeedState(model: MixedDiscoveryModel, cards: List<MangaCard>, sources: () -> Unit,
+    featured: Boolean = false, columns: Int = 3) {
     val state by model.feed.state.collectAsStateWithLifecycle()
+    val pending = model.feed.sources.isNotEmpty() &&
+        (state.results.isEmpty() || state.results.values.any { !it.attempted })
     CompactFeedFeedback(model.feed, state, model.resultFeeds, sources, showAction = false)
     if (cards.isEmpty()) when {
-        state.busy -> HomeCoverPlaceholders(3)
+        state.busy || pending -> if (featured) HomeFeaturedPlaceholder() else HomeCoverPlaceholders(columns)
         state.results.values.any { it.error != null || it.appendError != null } -> ReadFailure(state.results.values.mapNotNull { it.error ?: it.appendError }.distinct().joinToString("\n")) {
             model.resultFeeds.forEach { feed ->
                 val result = state.results[feed.id]
@@ -103,14 +107,38 @@ private fun HomeFeedState(model: MixedDiscoveryModel, cards: List<MangaCard>, so
                 else if (result?.error != null) model.feed.refresh(feed.id)
             }
         }
-        !hasMixedFeedback(state) -> Text(if (model.feed.sources.isEmpty()) "暂无可用图源" else "暂无作品", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        !hasMixedFeedback(state) -> Text(if (model.feed.sources.isEmpty()) "暂无可用图源" else "暂无作品", color = ReadingSurfaceStyle.muted)
+    }
+}
+
+/** Both worlds keep the final recommendation-card geometry while restoring or fetching data. */
+@Composable
+private fun HomeFeaturedPlaceholder() {
+    val height = featuredCardHeight()
+    Surface(modifier = Modifier.readingCardShadow().semantics(mergeDescendants = true) { contentDescription = "正在加载推荐" }, shape = ReadingSurfaceStyle.cardShape,
+        color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val coverWidth = featuredCoverWidth(maxWidth, height)
+            Row(Modifier.fillMaxWidth().height(height), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Spacer(Modifier.width(coverWidth).fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceVariant))
+                Column(Modifier.weight(1f).padding(top = 8.dp, bottom = 8.dp, end = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ReadPlaceholder(Modifier.fillMaxWidth().height(24.dp))
+                    ReadPlaceholder(Modifier.fillMaxWidth(.6f).height(16.dp))
+                    ReadPlaceholder(Modifier.fillMaxWidth(.75f).height(20.dp))
+                    ReadPlaceholder(Modifier.fillMaxWidth(.5f).height(16.dp))
+                    ReadPlaceholder(Modifier.fillMaxWidth().height(36.dp))
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun HomeCoverPlaceholders(columns: Int) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        repeat(columns) { Surface(Modifier.weight(1f).aspectRatio(.7f), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {} }
+        repeat(columns) { Surface(Modifier.weight(1f).aspectRatio(.7f).readingCardShadow(ReadingSurfaceStyle.coverShape), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {} }
     }
 }
 
@@ -150,18 +178,18 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
     val error = metadata.errors[card.key]
     val cardHeight = featuredCardHeight()
     Surface(onClick = { open(card.key.sourceId, card.key.mangaId) },
-        shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
-        BoxWithConstraints(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = .08f), MaterialTheme.colorScheme.surface)))) {
+        modifier = Modifier.readingCardShadow(), shape = ReadingSurfaceStyle.cardShape,
+        color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
             // Bound the preview, even when cached metadata arrives later. Full text lives in detail.
             val contentHeight = cardHeight - 16.dp
             val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
-            val informationWidth = (maxWidth - coverWidth - 20.dp).coerceAtLeast(1.dp)
-            Row(Modifier.fillMaxWidth().height(contentHeight + 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+            val informationWidth = (maxWidth - coverWidth - 24.dp).coerceAtLeast(1.dp)
+            Row(Modifier.fillMaxWidth().height(contentHeight + 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(coverWidth)) {
                     OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true,
-                        coverRatio = coverWidth / (contentHeight + 16.dp))
+                        coverRatio = coverWidth / (contentHeight + 16.dp), integrated = true)
                     if (error != null) TextButton({ metadata.retry(card.key) }, Modifier.align(Alignment.BottomCenter)
                         .fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .94f)),
                         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {
@@ -170,23 +198,22 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
                 }
                 Column(Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 8.dp, end = 12.dp)
                     .verticalScroll(rememberScrollState()).heightIn(min = contentHeight),
-                    verticalArrangement = Arrangement.SpaceBetween) {
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val singleTitle = HomeFeaturedTitle(card.title, informationWidth)
-                    val author = information?.author?.takeIf(String::isNotBlank) ?: card.author
-                    if (author.isNotBlank()) Text(author, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    information?.tags?.takeIf { it.isNotEmpty() }?.let { tags ->
-                        Text(tags.joinToString(" / "), style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        val author = information?.author?.takeIf(String::isNotBlank) ?: card.author
+                        if (author.isNotBlank()) Text(author, style = MaterialTheme.typography.bodySmall,
+                            color = ReadingSurfaceStyle.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        information?.tags?.takeIf { it.isNotEmpty() }?.let { tags -> ReadingTagBadges(tags) }
+                        val chapterLabel = listOfNotNull(loaded?.chapters?.let { "共 $it 话" },
+                            information?.status?.takeIf(String::isNotBlank)).joinToString(" · ")
+                        if (chapterLabel.isNotBlank()) Text(chapterLabel, style = MaterialTheme.typography.bodySmall,
+                            color = ReadingSurfaceStyle.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    val chapterLabel = listOfNotNull(loaded?.chapters?.let { "共 $it 话" },
-                        information?.status?.takeIf(String::isNotBlank)).joinToString(" · ")
-                    if (chapterLabel.isNotBlank()) Text(chapterLabel, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     information?.summary?.replace(Regex("\\s+"), " ")?.trim()?.takeIf(String::isNotBlank)?.let { summary ->
                         Text(summary, style = MaterialTheme.typography.bodySmall,
-                            minLines = if (singleTitle) 3 else 2, maxLines = if (singleTitle) 3 else 2,
-                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            maxLines = if (singleTitle) 3 else 2,
+                            overflow = TextOverflow.Ellipsis, color = ReadingSurfaceStyle.muted)
                     }
                 }
             }

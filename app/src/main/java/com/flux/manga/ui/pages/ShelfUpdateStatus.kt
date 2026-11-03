@@ -39,5 +39,5 @@ internal fun shelfReadingLabel(label: String, info: OnlineBookInformation?, chap
 internal fun ShelfUpdateLabel(info: OnlineBookInformation?, chapter: String?, online: Boolean = true) {
     val status = shelfUpdateStatus(info, chapter, online)
     Text(status.label, style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
+        fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, color = ReadingSurfaceStyle.muted)
 }

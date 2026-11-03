@@ -1,7 +1,6 @@
 package com.flux.manga.ui.navigation
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Scaffold
@@ -40,6 +39,7 @@ import com.flux.manga.ui.glass.*
 import com.flux.manga.ui.pages.SampleDetailPage
 import com.flux.manga.ui.pages.SampleReaderPage
 import com.flux.manga.ui.pages.SampleRootPage
+import com.flux.manga.ui.pages.readingPageBackground
 import com.flux.manga.ui.probe.FfiProbePage
 
 @Composable
@@ -67,7 +67,6 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
     val preloaded = com.flux.manga.ui.pages.preloadedPages(session)
     com.flux.manga.ui.pages.BaoziSessionRecovery(session) { preloaded.baoziRecovered() }
     val currentRoute = navigation.currentStack.last()
-    val routeMotion = rememberNavigationMotion(currentRoute, navigation.selectedTab)
     var previousRoute by remember(identity) { mutableStateOf<NavKey?>(null) }
     LaunchedEffect(currentRoute, preloaded) {
         // Account/configuration pages can change the meaning of an unchanged source ID.
@@ -114,6 +113,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
     val bottomClearance = if (showDock) dockHeight + 28.dp else 12.dp
     val palette = if (navigation.world == PrototypeWorld.SFW) GlassTokens.Light else GlassTokens.Dark
     var settingsOpen by remember { mutableStateOf(false) }
+    var swipingTab by remember(identity) { mutableStateOf<MainTab?>(null) }
     var dockBounds by remember { mutableStateOf<Rect?>(null) }
     val scrolls = remember { mutableStateMapOf<MainTab, () -> Unit>() }
     val observeScroll: () -> Unit = { scrolls[navigation.selectedTab]?.invoke(); Unit }
@@ -394,7 +394,15 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
                     android.animation.ValueAnimator.areAnimatorsEnabled() && sessionState.foreground &&
                     sessionState.phase == com.flux.manga.session.SwitchPhase.Stable && lifecycle.isAtLeast(Lifecycle.State.RESUMED)
                 CompositionLocalProvider(com.flux.manga.ui.pages.LocalReferenceMotionEnabled provides pageMotion) {
-                NavDisplay(entries = entriesByTab.getValue(navigation.selectedTab), onBack = {
+                PrimaryTabPager(navigation,
+                    swipeEnabled = navigation.isPrimaryRoot && !imeVisible && !settingsOpen && !motion.pending &&
+                        sessionState.foreground && sessionState.phase == com.flux.manga.session.SwitchPhase.Stable &&
+                        lifecycle.isAtLeast(Lifecycle.State.RESUMED), motionEnabled = pageMotion,
+                    onSwipeSelection = { swipingTab = it }) { tab, active ->
+                val pageEntries = entriesByTab.getValue(tab).let { if (active) it else it.take(1) }
+                val routeMotion = rememberNavigationMotion(
+                    if (active) navigation.stacks.getValue(tab).last() else TabRoot(tab), tab)
+                NavDisplay(entries = pageEntries, onBack = {
                     if (imeVisible) { keyboard?.hide(); focus.clearFocus() } else navigation.back()
                 },
                     transitionSpec = { com.flux.manga.ui.pages.referencePageTransition(pageMotion,
@@ -405,19 +413,22 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
                         kind = if (fullscreenReader) com.flux.manga.ui.pages.ReferenceTransitionKind.Reader
                             else com.flux.manga.ui.pages.ReferenceTransitionKind.Page) },
                     modifier = when {
-                        fullscreenReader -> Modifier.fillMaxSize().imePadding()
+                        // Keep the outgoing detail's paper during a reader transition.
+                        // Reader/loading canvases still paint their own opaque reading background.
+                        fullscreenReader -> Modifier.fillMaxSize().readingPageBackground().imePadding()
                         glassLab -> Modifier.fillMaxSize().padding(bottom = if (showDock)
                             bottomClearance + WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding() else 0.dp)
-                        isRoot -> Modifier.fillMaxSize().background(palette.background)
+                        isRoot -> Modifier.fillMaxSize().readingPageBackground()
                             .padding(padding).consumeWindowInsets(padding).imePadding()
                         // Root lists reserve their own scrollable clearance. Child pages reserve it here.
-                        else -> Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()
+                        else -> Modifier.fillMaxSize().readingPageBackground().padding(padding).consumeWindowInsets(padding).imePadding()
                             .padding(bottom = if (showDock) bottomClearance else 0.dp)
                     }.traceMeasure("Navigation").semantics { isTraversalGroup = true; traversalIndex = 1f })
                 }
+                }
             },
             overlay = { backgroundGraphicsLayer, filtered, origin, host ->
-                if (showDock && !motion.pending) key(identity) { LiquidBottomBar(navigation.world, navigation.selectedTab,
+                if (showDock && !motion.pending) key(identity) { LiquidBottomBar(navigation.world, swipingTab ?: navigation.selectedTab,
                     onSelect = { keyboard?.hide(); focus.clearFocus(); navigation.select(it) },
                     onSwitch = { switchWorld(false, null) }, motion = motion,
                     longPressToEnter = privacy?.longPress == true, switchEnabled = privacy?.busy != true,

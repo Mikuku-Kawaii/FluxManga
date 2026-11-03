@@ -104,10 +104,11 @@ internal fun HomeUpdateMetadata(model: MixedDiscoveryModel, card: MangaCard) {
     val source = card.key.sourceId
     val dateSuffix = if (isCopySource(source) || isBaoziSource(source) || isPrivateComicSource(source)) "更新" else "资料更新"
     Text(updateDate(card.updatedAt ?: extra?.date, dateSuffix), style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant)
+        fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, color = ReadingSurfaceStyle.muted)
     val chapter = card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter?.takeIf(String::isNotBlank)
     // Missing chapter labels (including hidden single-chapter works) are not a failure state.
     if (chapter != null) Text(if (chapter.startsWith("更新")) chapter else "更新至 $chapter",
-        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+        color = ReadingSurfaceStyle.muted,
         maxLines = 2, overflow = TextOverflow.Ellipsis)
 }

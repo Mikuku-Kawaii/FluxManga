@@ -78,7 +78,7 @@ internal fun ReadLayoutPlaceholder(detail: Boolean = false) {
 }
 
 @Composable
-private fun ReadPlaceholder(modifier: Modifier) {
+internal fun ReadPlaceholder(modifier: Modifier) {
     Spacer(modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = .07f), RoundedCornerShape(8.dp)))
 }
 

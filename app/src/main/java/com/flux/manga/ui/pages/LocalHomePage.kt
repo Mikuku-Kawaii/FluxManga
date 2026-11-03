@@ -78,7 +78,7 @@ fun LocalHomePage(tab: MainTab, session: WorldSession, openLibrary: () -> Unit, 
 @Composable
 internal fun HomeBook(card: MangaCard, model: LocalLibraryViewModel, revision: Int, section: String,
                      open: (String) -> Unit, read: (String) -> Unit) {
-    Card(Modifier.fillMaxWidth().testTag("home-$section-${card.key.mangaId}")) {
+    Card(Modifier.fillMaxWidth().readingCardShadow(CardDefaults.shape).testTag("home-$section-${card.key.mangaId}")) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             LocalCover(card, model, revision)
             Text(card.title, style = MaterialTheme.typography.titleMedium)

@@ -59,7 +59,8 @@ internal fun DetailHero(title: String, cover: @Composable () -> Unit, titleTag: 
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-            Layout(content = cover, modifier = Modifier.width(coverWidth).height(coverHeight).clip(RoundedCornerShape(8.dp))) { children, frame ->
+            Layout(content = cover, modifier = Modifier.width(coverWidth).height(coverHeight)
+                .readingCardShadow(ReadingSurfaceStyle.coverShape).clip(ReadingSurfaceStyle.coverShape)) { children, frame ->
                 val imageWidth = maxOf(frame.maxWidth, kotlin.math.ceil(frame.maxHeight * .7f).toInt())
                 val images = children.map { it.measure(Constraints.fixedWidth(imageWidth)) }
                 layout(frame.maxWidth, frame.maxHeight) {
@@ -245,7 +246,7 @@ private fun DetailChapterGridRow(entries: List<DetailCatalogEntry>, columns: Int
             val read = entry.id in completed
             val last = entry.id == lastId
             val label = if (read) "已读" else readingLabels[entry.id] ?: entry.description
-            Surface(Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp).clip(shape)
+            Surface(Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp).readingCardShadow(shape).clip(shape)
                 .combinedClickable(enabled = enabled, role = Role.Button,
                     onClick = { open(entry.id) }, onClickLabel = "阅读${entry.title}",
                     onLongClick = actions?.let { action -> { action(entry) } }, onLongClickLabel = "章节信息与阅读标记")

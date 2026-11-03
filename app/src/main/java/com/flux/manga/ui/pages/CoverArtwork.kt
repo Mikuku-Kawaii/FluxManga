@@ -3,11 +3,11 @@ package com.flux.manga.ui.pages
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -28,8 +28,12 @@ import kotlinx.coroutines.isActive
 @Composable
 internal fun CoverArtwork(bitmap: Bitmap?, loading: Boolean, message: String, modifier: Modifier,
     retry: (() -> Unit)? = null, description: String? = null, contentScale: ContentScale = ContentScale.Crop,
-    imageModifier: Modifier = Modifier, retryModifier: Modifier = Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+    imageModifier: Modifier = Modifier, retryModifier: Modifier = Modifier, integrated: Boolean = false) {
+    // Integrated covers inherit clipping, outline and elevation from their containing card.
+    Surface(if (integrated) modifier else modifier.readingCardShadow(ReadingSurfaceStyle.coverShape),
+        shape = if (integrated) RectangleShape else ReadingSurfaceStyle.coverShape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = if (integrated) null else androidx.compose.foundation.BorderStroke(1.dp, ReadingSurfaceStyle.coverOutline)) {
         BoxWithConstraints(contentAlignment = Alignment.Center) {
             if (bitmap != null) Image(bitmap.asImageBitmap(), description,
                 modifier = Modifier.fillMaxSize().then(imageModifier), contentScale = contentScale)

@@ -68,8 +68,9 @@ internal fun SettingsGroup(title: String? = null, content: @Composable ColumnSco
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (title != null) Text(title, Modifier.padding(horizontal = 4.dp).semantics { heading() },
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface) {
+        Surface(Modifier.fillMaxWidth().readingCardShadow(), shape = ReadingSurfaceStyle.cardShape,
+            color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border,
+            contentColor = MaterialTheme.colorScheme.onSurface) {
             Column(content = content)
         }
     }

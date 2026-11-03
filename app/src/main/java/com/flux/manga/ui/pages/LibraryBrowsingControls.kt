@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
@@ -24,7 +23,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.flux.manga.data.LocalSearchField
 
-internal val ReferenceSearchShape = RoundedCornerShape(20.dp)
+internal val ReferenceSearchShape = ReadingSurfaceStyle.cardShape
 
 /** One quiet search surface for local filtering and explicit online submissions. */
 @Composable
@@ -40,12 +39,12 @@ internal fun ReferenceSearchField(value: String, change: (String) -> Unit, place
     val focused by interaction.collectIsFocusedAsState()
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = LocalFocusManager.current
-    val border = referenceStateColor(if (focused && enabled) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent)
+    val border = referenceStateColor(if (focused && enabled) MaterialTheme.colorScheme.primary else ReadingSurfaceStyle.searchOutline)
     // Keep typed text and its action accessible instead of shrinking the input beside a large label.
     BoxWithConstraints(Modifier.fillMaxWidth()) {
     val stacked = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.3f
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-    if (stacked) Text(placeholder, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (stacked) Text(placeholder, style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
     BasicTextField(value, change, modifier.fillMaxWidth()
         .semantics { contentDescription = placeholder }, enabled = enabled,
         singleLine = true,
@@ -56,8 +55,8 @@ internal fun ReferenceSearchField(value: String, change: (String) -> Unit, place
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions ?: KeyboardActions(onSearch = { keyboard?.hide(); focus.clearFocus() }),
         decorationBox = { input ->
-            Surface(shape = ReferenceSearchShape, color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.border(1.dp, border, ReferenceSearchShape)) {
+            Surface(shape = ReferenceSearchShape, color = ReadingSurfaceStyle.card,
+                modifier = Modifier.readingCardShadow(ReferenceSearchShape).border(1.dp, border, ReferenceSearchShape)) {
                 // The text grows with font scale; actions keep their full 48dp touch area.
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 12.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -65,7 +64,7 @@ internal fun ReferenceSearchField(value: String, change: (String) -> Unit, place
                     if (!stacked) DiscoverySearchGlyph()
                     Box(Modifier.weight(1f).padding(vertical = 8.dp, horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
                         if (!stacked && value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                            color = ReadingSurfaceStyle.muted, maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         input()
                     }
@@ -121,12 +120,14 @@ internal fun ReferenceSubmitSearchField(
 /** Home opens the search page without pretending to be an editable text field. */
 @Composable
 internal fun ReferenceSearchEntry(label: String, open: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(shape = ReferenceSearchShape, color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.fillMaxWidth().clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = open)) {
+    Surface(shape = ReferenceSearchShape, color = ReadingSurfaceStyle.card,
+        border = androidx.compose.foundation.BorderStroke(1.dp, ReadingSurfaceStyle.searchOutline),
+        modifier = modifier.fillMaxWidth().readingCardShadow(ReferenceSearchShape)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = open)) {
         Row(Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DiscoverySearchGlyph()
-            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = ReadingSurfaceStyle.muted)
         }
     }
 }

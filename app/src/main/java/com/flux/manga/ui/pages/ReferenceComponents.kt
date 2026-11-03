@@ -60,8 +60,9 @@ internal fun ReferenceHeading(title: String, subtitle: String, back: () -> Unit,
 
 @Composable
 internal fun ReferencePanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface) {
+    Surface(modifier.fillMaxWidth().readingCardShadow(), shape = ReadingSurfaceStyle.cardShape,
+        color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border,
+        contentColor = MaterialTheme.colorScheme.onSurface) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
     }
 }
@@ -230,7 +231,7 @@ internal fun ReferenceEditor(onDismissRequest: () -> Unit, title: @Composable ()
     dismissButton: @Composable (() -> Unit)? = null) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Surface(Modifier.fillMaxSize().readingPageBackground(), color = androidx.compose.ui.graphics.Color.Transparent) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ReferenceActionRow(text = { modifier ->
@@ -261,7 +262,8 @@ internal fun ReferenceDialogConfirm(label: String, onClick: () -> Unit, modifier
 @Composable
 internal fun ReaderToolPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val scroll = rememberScrollState()
-    Surface(modifier.padding(horizontal = 16.dp, vertical = 6.dp).referenceToolEntrance(), shape = RoundedCornerShape(24.dp),
+    Surface(modifier.padding(horizontal = 16.dp, vertical = 6.dp).referenceToolEntrance()
+        .readingCardShadow(RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         contentColor = MaterialTheme.colorScheme.onSurface) {
