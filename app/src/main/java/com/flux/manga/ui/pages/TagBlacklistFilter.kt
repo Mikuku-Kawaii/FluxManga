@@ -7,7 +7,7 @@ import kotlinx.coroutines.*
 
 internal data class TagFilteredItems<T>(val items: List<T>, val notice: String?, val incomplete: Boolean = false)
 
-/** Discovery only. Filter known tags locally; unknown metadata never blocks a feed or hides a book. */
+/** Discovery only. Titles match locally; unknown tags never hide a book on their own. */
 internal class TagBlacklistFilter(private val app: Application, private val session: WorldSession) {
     private val identity = session.identity.value
     private val data = WorldDataStore(app)
@@ -24,8 +24,15 @@ internal class TagBlacklistFilter(private val app: Application, private val sess
 
     suspend fun apply(page: SourceCardPage): SourceCardPage = withContext(Dispatchers.IO) {
         val blocked = store.read().map(::normalizedBlockedTag).toSet()
-        if (blocked.isEmpty() || page.cards.isEmpty()) return@withContext page
-        val unknown = page.cards.filter { it.sourceTags == null }.map { it.key }
+        val titleRules = store.readTitles()
+        val keywords = if (titleRules.enabled) titleRules.keywords.map(::normalizedBlockedTag).filter(String::isNotEmpty) else emptyList()
+        if ((blocked.isEmpty() && keywords.isEmpty()) || page.cards.isEmpty()) return@withContext page
+        val candidates = if (keywords.isEmpty()) page.cards else page.cards.filterNot { card ->
+            val title = normalizedBlockedTag(card.title)
+            keywords.any { title.contains(it) }
+        }
+        if (blocked.isEmpty()) return@withContext page.copy(cards = candidates, unfilteredCards = page.cards)
+        val unknown = candidates.filter { it.sourceTags == null }.map { it.key }
         val saved = if (unknown.isEmpty()) emptyMap() else try { information.readTags(unknown) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { emptyMap() }
@@ -33,7 +40,7 @@ internal class TagBlacklistFilter(private val app: Application, private val sess
         val cacheOwner = if (unknown.any { it !in saved }) try { catalogConfiguration(data, session, includeBlacklist = false) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { null } else null
-        val cards = page.cards.mapNotNull { card ->
+        val cards = candidates.mapNotNull { card ->
             currentCoroutineContext().ensureActive()
             if (!session.accepts(identity) || !session.state.value.foreground) throw CancellationException()
             val tags = card.sourceTags ?: saved[card.key] ?: if (cacheOwner == null) null else try {

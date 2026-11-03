@@ -258,7 +258,7 @@ internal fun SourceManagementPage(
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("heading") { SettingsHeading("图源管理", if (available) "表世界图源" else "里世界图源", back) }
         if (session != null) item("tag-blacklist") { SettingsGroup {
-            SettingsRow("标签黑名单", "隐藏含指定标签的发现结果", "source-tag-blacklist", SettingsSymbol.PRIVACY,
+            SettingsRow("标签黑名单", "按标签或标题关键词屏蔽作品", "source-tag-blacklist", SettingsSymbol.PRIVACY,
                 { showBlacklist = true })
         } }
         error?.let { message -> item("save-error") { RequestFeedback(message) } }

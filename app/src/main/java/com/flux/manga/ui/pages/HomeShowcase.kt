@@ -196,11 +196,11 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
             val contentHeight = cardHeight - 16.dp
             val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
             val informationWidth = (maxWidth - coverWidth - 24.dp).coerceAtLeast(1.dp)
-            Row(Modifier.fillMaxWidth().height(contentHeight + 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Row(Modifier.fillMaxWidth().height(cardHeight), horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(coverWidth)) {
+                Box(Modifier.width(coverWidth).fillMaxHeight()) {
                     OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true,
-                        coverRatio = coverWidth / (contentHeight + 16.dp), integrated = true)
+                        integrated = true)
                     if (error != null) TextButton({ metadata.retry(card.key) }, Modifier.align(Alignment.BottomCenter)
                         .fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .94f)),
                         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {

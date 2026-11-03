@@ -84,7 +84,7 @@ internal suspend fun catalogConfiguration(data: WorldDataStore, session: WorldSe
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(data.sourceSelection(identity.world).fingerprint().toByteArray())
         if (includeBlacklist) digest.update("known-tags-only-v2".toByteArray())
-        (slots + if (includeBlacklist) listOf(TagBlacklist.SLOT) else emptyList()).forEach { slot ->
+        (slots + if (includeBlacklist) listOf(TagBlacklist.SLOT, TagBlacklist.TITLE_SLOT) else emptyList()).forEach { slot ->
             digest.update(slot.toByteArray())
             val bytes = rows.read(slot)
             try { digest.update((bytes?.size ?: -1).toString().toByteArray()); if (bytes != null) digest.update(bytes) }

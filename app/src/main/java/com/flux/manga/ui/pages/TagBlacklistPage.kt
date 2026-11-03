@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import com.flux.manga.data.TagBlacklist
+import com.flux.manga.data.TitleBlacklistRules
 import com.flux.manga.data.normalizedBlockedTag
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
@@ -28,6 +29,8 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
     val scope = rememberCoroutineScope()
     var tags by remember(identity) { mutableStateOf<List<String>>(emptyList()) }
     var input by remember(identity) { mutableStateOf("") }
+    var titleRules by remember(identity) { mutableStateOf(TitleBlacklistRules()) }
+    var titleInput by remember(identity) { mutableStateOf("") }
     var ready by remember(identity) { mutableStateOf(false) }
     var busy by remember(identity) { mutableStateOf(false) }
     var error by remember(identity) { mutableStateOf<String?>(null) }
@@ -36,7 +39,11 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
     fun active() = session.accepts(identity) && session.state.value.foreground
     LaunchedEffect(store, reload) {
         error = null
-        try { tags = store.read(); ready = true }
+        try {
+            val savedTags = store.read()
+            val savedTitles = store.readTitles()
+            if (active()) { tags = savedTags; titleRules = savedTitles; ready = true }
+        }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { error = "黑名单读取失败，请重试" }
     }
@@ -56,14 +63,33 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
             finally { busy = false }
         }
     }
+    fun saveTitles(values: TitleBlacklistRules, clearInput: Boolean = false) {
+        if (!ready || busy || !active()) return
+        busy = true; error = null
+        scope.launch {
+            try {
+                val saved = store.saveTitles(values)
+                if (active()) {
+                    titleRules = saved
+                    if (clearInput) titleInput = ""
+                    preloadedPages(app, session).sourceSelectionChanged()
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (active()) error = "标题屏蔽设置保存失败，请重试" }
+            finally { busy = false }
+        }
+    }
     val duplicate = tags.any { normalizedBlockedTag(it) == normalizedBlockedTag(input) }
     val canAdd = ready && !busy && input.isNotBlank() && !duplicate
     val add = { if (canAdd) save(tags + input.trim(), clearInput = true) }
+    val duplicateTitle = titleRules.keywords.any { normalizedBlockedTag(it) == normalizedBlockedTag(titleInput) }
+    val canAddTitle = ready && !busy && titleInput.isNotBlank() && !duplicateTitle
+    val addTitle = { if (canAddTitle) saveTitles(titleRules.copy(keywords = titleRules.keywords + titleInput.trim()), clearInput = true) }
     var suggestionLimit by remember(identity, input) { mutableIntStateOf(12) }
     val suggestions = blacklistSuggestions(session, input, tags, blacklistPresets, suggestionLimit)
     if (showHelp) ReferenceDialog(onDismissRequest = { showHelp = false },
-        title = { Text("标签匹配规则") },
-        text = { Text("只屏蔽已知标签命中黑名单的作品；标签暂未读取的正常显示，已有书库与阅读进度保留。\n\n按完整标签匹配，不区分大小写与全半角，不做近义词扩展；可填写命名空间，如 female:标签。联想来自当前空间已读取的图源标签、书库资料和本地词库。") },
+        title = { Text("匹配规则") },
+        text = { Text("标签按完整标签匹配；标签暂未读取的正常显示。可填写命名空间，如 female:标签。联想来自当前空间已读取的图源标签、书库资料和本地词库。\n\n开启标题关键词屏蔽后，标题包含任一关键词就隐藏，即使标签尚未读取也会生效。两种规则均不区分大小写与全半角，不做近义词或正则匹配。关闭标题开关不会删除关键词，也不影响标签规则。\n\n仅影响当前空间的推荐、更新、搜索与标签结果，已有书库与阅读进度保留。") },
         confirmButton = { TextButton({ showHelp = false }) { Text("知道了") } })
     LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -123,17 +149,34 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
                 }
             }
         } }
+        item("title-keywords") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsSwitchRow("标题关键词屏蔽", "标题包含任一关键词时隐藏；关闭后保留关键词", titleRules.enabled,
+                { saveTitles(titleRules.copy(enabled = it)) }, enabled = ready && !busy)
+            ReferenceSubmitSearchField(titleInput, { titleInput = it }, "输入标题关键词", submit = addTitle,
+                inputEnabled = ready && !busy, submitEnabled = canAddTitle, actionLabel = "添加")
+            if (duplicateTitle && titleInput.isNotBlank()) Text("该关键词已添加", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (ready && titleRules.keywords.isEmpty()) Text("尚未添加标题关键词", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                titleRules.keywords.forEach { keyword -> key(normalizedBlockedTag(keyword)) {
+                    BlacklistTagButton(keyword, selected = true, removable = true, enabled = !busy && ready, kind = "关键词") {
+                        saveTitles(titleRules.copy(keywords = titleRules.keywords.filterNot { it == keyword }))
+                    }
+                } }
+            }
+        } }
     }
 }
 
 /** Both groups share the tag page's shape, touch height and typography. */
 @Composable
-private fun BlacklistTagButton(label: String, selected: Boolean, removable: Boolean, enabled: Boolean, click: () -> Unit) {
+private fun BlacklistTagButton(label: String, selected: Boolean, removable: Boolean, enabled: Boolean, kind: String = "标签", click: () -> Unit) {
     val background = referenceStateColor(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)
     val foreground = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
     TextButton(click, enabled = enabled,
         modifier = Modifier.heightIn(min = referenceActionHeight()).semantics {
-            contentDescription = if (removable) "移除标签 $label" else label
+            contentDescription = if (removable) "移除$kind $label" else label
             if (!removable) this.selected = selected
         }, shape = RoundedCornerShape(16.dp),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),

@@ -173,7 +173,7 @@ internal fun DetailCatalog(entries: List<DetailCatalogEntry>, lastId: String?, o
     // Public works keep their sole chapter reachable; private works retain the compact rule.
     if ((entries.isEmpty() || (entries.size == 1 && !showSingle)) && !hasMore && !busy && appendError == null) return
     var reverse by rememberSaveable { mutableStateOf(false) }
-    var visibleCount by rememberSaveable { mutableIntStateOf(12) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val sorted = remember(entries, reverse) { orderedCatalog(entries, reverse) }
     val count = totalCount ?: entries.size.toLong().takeIf { !hasMore && entries.isNotEmpty() }
     val countLabel = count?.let { "目录 $it 项" } ?: "总数待确认"
@@ -182,26 +182,31 @@ internal fun DetailCatalog(entries: List<DetailCatalogEntry>, lastId: String?, o
         if (appendError != null) RequestFeedback(appendError, busy = busy, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (busy) RequestLoading()
     }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        ReferenceActionRow(text = { modifier ->
-            DetailCatalogHeading(title, countLabel, modifier)
-        }, actions = {
-            if (entries.size > 1) TextButton(onClick = { reverse = !reverse }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text(if (reverse) "倒序" else "正序") }
-        })
-        DetailChapterGrid(sorted.take(visibleCount), lastId, enabled, completed, readingLabels, chapterActions, open)
-        val hasHidden = sorted.size > visibleCount
-        if (hasHidden || (hasMore && more != null)) TextButton(onClick = feedbackAttempt({
-            if (hasHidden) visibleCount += 24
-            else {
-                // Reserve the next visible batch before the asynchronous page arrives.
-                visibleCount = sorted.size + 24
-                more?.invoke()
+    // An explicit expansion also drains the source's remaining pages, one request at a time.
+    // A failed page stops here until the user retries; already loaded chapters stay visible.
+    LaunchedEffect(expanded, entries.size, hasMore, busy, appendError) {
+        if (expanded && hasMore && !busy && appendError == null) more?.invoke()
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val collapsedCount = chapterGridColumns(maxWidth, LocalDensity.current.fontScale) * 6
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ReferenceActionRow(text = { modifier ->
+                DetailCatalogHeading(title, countLabel, modifier)
+            }, actions = {
+                if (entries.size > 1) TextButton(onClick = { reverse = !reverse }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text(if (reverse) "倒序" else "正序") }
+            })
+            DetailChapterGrid(if (expanded) sorted else sorted.take(collapsedCount), lastId, enabled, completed, readingLabels, chapterActions, open)
+            val hasHidden = !expanded && sorted.size > collapsedCount
+            if (hasHidden || (hasMore && more != null)) TextButton(onClick = feedbackAttempt({
+                if (!expanded) expanded = true
+                // The effect starts ordinary continuation; a retained error needs an explicit retry.
+                if (!busy && appendError != null) more?.invoke()
+            }), enabled = !expanded || !busy,
+                modifier = Modifier.fillMaxWidth().testTag("detail-more-chapters")) {
+                Text(if (expanded && appendError != null) "重试后续章节" else if (expanded && busy) "正在加载全部章节…" else "展开全部")
             }
-        }), enabled = hasHidden || !busy,
-            modifier = Modifier.fillMaxWidth().testTag("detail-more-chapters")) {
-            Text(if (!hasHidden && appendError != null) "重试后续章节" else if (!hasHidden && busy) "正在加载…" else "更多")
+            Feedback()
         }
-        Feedback()
     }
 }
 
