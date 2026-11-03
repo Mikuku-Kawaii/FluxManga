@@ -62,7 +62,8 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
         sourceIds = resultFeeds.associate { it.id to it.sourceId },
         restore = { source, _ -> snapshots.getValue(source).feed(snapshotQuery) },
         save = { source, _, state -> snapshots.getValue(source).saveFeed(snapshotQuery, state) },
-        refreshRestored = section != null) { feedId, _, page ->
+        refreshRestored = section != null,
+        alwaysRefreshRestored = section == DiscoverySection.RECOMMENDATIONS) { feedId, _, page ->
         val tagQuery = if (section == null) tagQueries[feedId.removePrefix("tag:").toInt()] else null
         val target = tagQuery?.target
         val source = target?.sourceId ?: feedId
@@ -97,6 +98,9 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                 else -> requireNotNull(komga).client().updates(page)
             }
         } }
+        if (section == DiscoverySection.RECOMMENDATIONS && page == SourcePageRequest.Start) withContext(Dispatchers.Main.immediate) {
+            if (session.accepts(identity)) featured.refresh(source)
+        }
         if (section == DiscoverySection.UPDATES) withContext(Dispatchers.Main.immediate) {
             if (session.accepts(identity)) result.cards.map { it.key.sourceId }.distinct().forEach {
                 updateVersions[it] = (updateVersions[it] ?: 0) + 1

@@ -110,9 +110,7 @@ internal class PreloadedPages(private val app: Application, private val session:
         if (running || !session.accepts(identity) || !session.state.value.foreground) return
         running = true
         // Returning to the foreground keeps yesterday's cards visible while each source updates.
-        feeds.values.forEach { model -> model.feed.state.value.results.filterValues {
-            it.loaded && System.currentTimeMillis() - it.fetchedAt > 5L * 60 * 1000
-        }.keys.forEach(model.feed::refresh) }
+        feeds.values.forEach { it.start() }
         if (configurationFingerprint == null && configurationCheck?.isActive != true) configurationCheck = viewModelScope.launch {
             try { configurationFingerprint = catalogConfiguration(com.flux.manga.data.WorldDataStore(app), session) }
             catch (cancelled: CancellationException) { throw cancelled }

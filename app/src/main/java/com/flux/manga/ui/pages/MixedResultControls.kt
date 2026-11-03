@@ -14,7 +14,7 @@ import com.flux.manga.core.SourceContinuation
 
 @Composable
 internal fun CompactFeedFeedback(controller: AggregateSearchController, state: AggregateSearchState, feeds: List<ResultFeed>, sources: () -> Unit,
-    showAction: Boolean = true) {
+    showAction: Boolean = true, loadingLabel: String = "正在加载…", retainedLabel: String? = null) {
     val issues = feeds.filter { state.results[it.id]?.let { r -> r.error != null || r.appendError != null || r.notice != null || r.unsupported } == true }
     if (issues.isNotEmpty()) {
         val failed = issues.filter { state.results[it.id]?.let { r -> r.error != null || r.appendError != null } == true }.distinctBy { it.sourceId }.size
@@ -24,6 +24,7 @@ internal fun CompactFeedFeedback(controller: AggregateSearchController, state: A
             "$failed 个图源加载失败".takeIf { failed > 0 },
             "$interrupted 个图源有加载提示".takeIf { interrupted > 0 },
             "$unsupported 个图源不支持此查询".takeIf { unsupported > 0 },
+            retainedLabel?.takeIf { issues.any { feed -> state.results[feed.id]?.let { it.error != null && it.cards.isNotEmpty() } == true } },
         ).joinToString(" · ")
         @Composable fun Summary(modifier: Modifier = Modifier) {
             Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -41,7 +42,7 @@ internal fun CompactFeedFeedback(controller: AggregateSearchController, state: A
     }
     if (state.busy) {
         ReferenceActionRow(text = { modifier ->
-            Text("正在加载…", modifier, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(loadingLabel, modifier, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }, actions = { TextButton({ controller.cancel() }) { Text("停止加载") } })
     }
 }

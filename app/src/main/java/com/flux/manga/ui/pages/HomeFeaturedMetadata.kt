@@ -21,7 +21,10 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
     val errors = mutableStateMapOf<MangaKey, String>()
     private val loaded = mutableSetOf<MangaKey>()
     var revision by mutableIntStateOf(0); private set
-    fun refresh() { loaded.clear(); revision++ }
+    fun refresh(source: String? = null) {
+        if (source == null) loaded.clear() else loaded.removeAll { it.sourceId == source }
+        revision++
+    }
     fun retry(key: MangaKey) { loaded.remove(key); revision++ }
     private fun active() = session.accepts(identity) && session.state.value.foreground
 

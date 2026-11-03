@@ -1,6 +1,8 @@
 package com.flux.manga.ui.pages
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
@@ -15,6 +17,47 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flux.manga.update.*
+
+/** Show one offer per version during this launch, away from reading and private-world unlock. */
+@Composable
+internal fun AppUpdatePrompt(model: AppUpdateModel, enabled: () -> Boolean, openUpdates: () -> Unit) {
+    val state by model.state.collectAsStateWithLifecycle()
+    var dismissedVersion by rememberSaveable { mutableStateOf(0L) }
+    val target = state.artifact ?: return
+    if (!enabled() || !state.checked || target.version == dismissedVersion || state.phase !in setOf(
+            UpdatePhase.AVAILABLE, UpdatePhase.DOWNLOADING, UpdatePhase.PAUSED, UpdatePhase.VERIFYING,
+            UpdatePhase.APPLYING, UpdatePhase.READY, UpdatePhase.ERROR)) return
+    val downloadable = state.phase == UpdatePhase.AVAILABLE || state.phase == UpdatePhase.PAUSED
+    ReferenceDialog(onDismissRequest = { dismissedVersion = target.version },
+        title = { Text("发现新版本 ${target.name}") },
+        text = {
+            Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("当前版本 ${model.currentVersion}")
+                Text(when (state.phase) {
+                    UpdatePhase.READY -> "更新包已下载并校验，可以前往安装。"
+                    UpdatePhase.DOWNLOADING -> "正在下载更新，可查看进度或暂停。"
+                    UpdatePhase.VERIFYING, UpdatePhase.APPLYING -> "正在准备更新包，可查看进度。"
+                    UpdatePhase.ERROR -> "更新未完成，可前往更新页面查看原因并重试。"
+                    else -> "${if (state.patch != null) "增量包" else "完整包"} ${sizeLabel(state.transferSize)}，使用当前网络下载。"
+                })
+                if (target.notes.isNotBlank()) Text(target.notes)
+                Text("安装由系统确认，保留现有账号、书库和阅读进度。", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            ReferenceDialogConfirm(when {
+                state.phase == UpdatePhase.READY -> "前往安装"
+                downloadable -> if (state.bytes > 0) "继续下载" else "下载更新"
+                else -> "查看更新"
+            }, onClick = {
+                dismissedVersion = target.version
+                if (downloadable) model.download()
+                openUpdates()
+            })
+        },
+        dismissButton = { TextButton(onClick = { dismissedVersion = target.version }) { Text("稍后") } })
+}
 
 @Composable
 internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () -> Unit, permission: () -> Unit) {

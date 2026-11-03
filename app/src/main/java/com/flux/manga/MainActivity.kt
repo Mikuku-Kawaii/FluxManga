@@ -272,25 +272,6 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = com.flux.manga.ui.glass.WorldColors.scheme(identity.world),
                 typography = com.flux.manga.ui.ReferenceTypography,
                 shapes = com.flux.manga.ui.ReferenceShapes) {
-                val updateState by appUpdates.state.collectAsState()
-                val updateNotice = remember { androidx.compose.material3.SnackbarHostState() }
-                var noticedVersion by rememberSaveable { mutableStateOf(0L) }
-                val updateRootVisible = ::navigation.isInitialized && navigation.isPrimaryRoot &&
-                    sessionState.foreground && sessionState.phase == SwitchPhase.Stable
-                LaunchedEffect(updateState.artifact?.version, updateState.phase, updateRootVisible) {
-                    val target = updateState.artifact
-                    if (updateRootVisible && target != null && target.version != noticedVersion &&
-                        updateState.phase in setOf(com.flux.manga.update.UpdatePhase.AVAILABLE, com.flux.manga.update.UpdatePhase.READY)) {
-                        noticedVersion = target.version
-                        val result = updateNotice.showSnackbar("发现新版本 ${target.name}", actionLabel = "查看", withDismissAction = true,
-                            duration = androidx.compose.material3.SnackbarDuration.Long)
-                        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed &&
-                            navigation.isPrimaryRoot && worldSession.state.value.foreground &&
-                            worldSession.state.value.phase == SwitchPhase.Stable) {
-                            navigation.openSettings(); navigation.openAppUpdates()
-                        }
-                    }
-                }
                 Box(Modifier.fillMaxSize()) {
                 var transitionSampleBounds by remember(identity) {
                     mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
@@ -378,9 +359,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 })
-                if (updateRootVisible) androidx.compose.material3.SnackbarHost(updateNotice,
-                    Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                        .padding(horizontal = 16.dp, vertical = 8.dp))
+                com.flux.manga.ui.pages.AppUpdatePrompt(appUpdates, enabled = {
+                    ::navigation.isInitialized && navigation.isPrimaryRoot && sessionState.foreground &&
+                        sessionState.phase == SwitchPhase.Stable && !locked
+                }) {
+                    navigation.openSettings(); navigation.openAppUpdates()
+                }
                 }
                 LaunchedEffect(privacy.busy, privacy.message, locked) {
                     if (!privacy.busy && !locked) privacy.message?.let {

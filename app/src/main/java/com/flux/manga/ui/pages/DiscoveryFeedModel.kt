@@ -11,6 +11,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+private const val FEED_FRESHNESS_MS = 5L * 60 * 1000
+
 internal data class DiscoveryFeedState(
     val cards: List<MangaCard> = emptyList(),
     val next: SourceContinuation = SourceContinuation.End,
@@ -29,16 +31,31 @@ internal class DiscoveryFeedController(
     private val restore: suspend () -> DiscoveryFeedState? = { null },
     private val save: suspend (DiscoveryFeedState) -> Unit = {},
     private val refreshRestored: Boolean = false,
+    private val alwaysRefreshRestored: Boolean = false,
     private val load: suspend (SourcePageRequest) -> SourceCardPage,
 ) {
     private val mutable = MutableStateFlow(DiscoveryFeedState())
     val state = mutable.asStateFlow()
     private var work: Job? = null
     private var revision = 0L
+    private var lastAttemptAt = 0L
 
     fun start() { if (!state.value.attempted) fetch(false, useSaved = true) }
+    fun resume() {
+        val current = state.value
+        if (refreshRestored && current.loaded &&
+            System.currentTimeMillis() - maxOf(current.fetchedAt, lastAttemptAt) > FEED_FRESHNESS_MS) refresh()
+        else start()
+    }
     fun restart() { leave(); mutable.value = DiscoveryFeedState(); fetch(false, useSaved = true) }
     fun refresh() { fetch(false) }
+    /** Explicit pull refresh replaces an unfinished read, retaining the last successful cards. */
+    fun refreshNow(): Job? {
+        if (!accepts() || state.value.unsupported) return null
+        leave()
+        fetch(false)
+        return work
+    }
     fun more() { fetch(true) }
     private fun fetch(append: Boolean, useSaved: Boolean = false) {
         if (!accepts() || state.value.busy || state.value.unsupported) return
@@ -50,10 +67,12 @@ internal class DiscoveryFeedController(
                 if (useSaved) restore()?.let { saved ->
                     ensureActive()
                     if (!accepts() || ticket != revision) return@launch
-                    val revalidate = refreshRestored && System.currentTimeMillis() - saved.fetchedAt > 5L * 60 * 1000
+                    val revalidate = alwaysRefreshRestored ||
+                        (refreshRestored && System.currentTimeMillis() - saved.fetchedAt > FEED_FRESHNESS_MS)
                     mutable.value = saved.copy(busy = revalidate)
                     if (!revalidate) return@launch
                 }
+                lastAttemptAt = System.currentTimeMillis()
                 val result = load(request)
                 ensureActive()
                 if (!accepts() || ticket != revision) return@launch
@@ -71,7 +90,11 @@ internal class DiscoveryFeedController(
                 }
                 ensureActive()
                 if (accepts() && ticket == revision) mutable.value = state.value.copy(busy = false)
-            } catch (cancelled: CancellationException) { throw cancelled }
+            } catch (cancelled: CancellationException) {
+                if (accepts() && ticket == revision) mutable.value = state.value.copy(
+                    notice = if (state.value.loaded) "刷新已中断，保留上次内容；请下拉刷新重试" else "加载已中断，请下拉刷新重试")
+                throw cancelled
+            }
             catch (error: Exception) {
                 ensureActive()
                 if (!accepts() || ticket != revision) return@launch
@@ -80,6 +103,9 @@ internal class DiscoveryFeedController(
                     append -> state.value.copy(busy = false, appendError = failureMessage(error))
                     else -> state.value.copy(busy = false, error = failureMessage(error))
                 }
+            } finally {
+                // A source may cancel itself without going through stop(); never leave busy latched.
+                if (accepts() && ticket == revision) mutable.value = state.value.copy(busy = false)
             }
         }
     }

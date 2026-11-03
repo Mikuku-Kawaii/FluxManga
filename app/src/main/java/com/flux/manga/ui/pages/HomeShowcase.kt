@@ -26,6 +26,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flux.manga.data.*
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.DiscoverySection
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceDiscoveryModel, state: DiscoveryState,
@@ -35,7 +37,6 @@ internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceD
     val recommendationState by recommendations.feed.state.collectAsStateWithLifecycle()
     val scroll = rememberLazyListState()
     val incomingRecommended = mixedCards(recommendations.feed.sources, recommendationState.results)
-        .sortedBy { if (isCopySource(it.key.sourceId)) 0 else 1 }
     val updates = if (state.status != DiscoveryStatus.LOADING) mixedModel(session, state.sourceId, DiscoverySection.UPDATES) else null
     val updateState = updates?.feed?.state?.collectAsStateWithLifecycle()?.value
     val incomingUpdated = if (updates != null && updateState != null) mixedCards(updates.feed.sources, updateState.results) else emptyList()
@@ -43,13 +44,21 @@ internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceD
     val updated = stableHomeCards(updates, incomingUpdated, scroll.isScrollInProgress)
     val featured = recommended.take(5)
     val remaining = recommended.drop(featured.size).take(9)
+    val refreshScope = rememberCoroutineScope()
+    var refreshing by remember(recommendations) { mutableStateOf(false) }
     SideEffect { reportScroll(scroll) }
     BookResultsLayout { columns ->
-        ReferenceRefreshColumn(state = scroll, refreshing = state.refreshing || recommendationState.busy || updateState?.busy == true,
+        ReferenceRefreshColumn(state = scroll, refreshing = refreshing,
             refresh = {
-                recommendations.featured.refresh()
-                configuration.refresh()
-                listOfNotNull(recommendations, updates).forEach { model -> model.feed.sources.forEach { model.feed.refresh(it) } }
+                refreshing = true
+                refreshScope.launch {
+                    try {
+                        configuration.refresh()
+                        listOfNotNull(recommendations, updates).flatMap { model ->
+                            model.feed.sources.mapNotNull { model.feed.refreshNow(it) }
+                        }.joinAll()
+                    } finally { refreshing = false }
+                }
             }, modifier = Modifier.fillMaxSize().testTag("discovery-home"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 0.dp, bottom = bottom),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -97,7 +106,9 @@ private fun HomeFeedState(model: MixedDiscoveryModel, cards: List<MangaCard>, so
     val state by model.feed.state.collectAsStateWithLifecycle()
     val pending = model.feed.sources.isNotEmpty() &&
         (state.results.isEmpty() || state.results.values.any { !it.attempted })
-    CompactFeedFeedback(model.feed, state, model.resultFeeds, sources, showAction = false)
+    CompactFeedFeedback(model.feed, state, model.resultFeeds, sources, showAction = false,
+        loadingLabel = if (featured && cards.isNotEmpty()) "正在联网刷新推荐…" else "正在加载…",
+        retainedLabel = if (featured) "已保留上次推荐" else null)
     if (cards.isEmpty()) when {
         state.busy || pending -> if (featured) HomeFeaturedPlaceholder() else HomeCoverPlaceholders(columns)
         state.results.values.any { it.error != null || it.appendError != null } -> ReadFailure(state.results.values.mapNotNull { it.error ?: it.appendError }.distinct().joinToString("\n")) {

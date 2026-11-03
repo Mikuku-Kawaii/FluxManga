@@ -22,7 +22,7 @@ import java.util.zip.ZipFile
 internal enum class UpdatePhase { UNCONFIGURED, IDLE, CHECKING, CURRENT, INCOMPATIBLE, AVAILABLE, DOWNLOADING, PAUSED, VERIFYING, APPLYING, READY, INSTALLING, ERROR }
 internal data class AppUpdateState(val phase: UpdatePhase = UpdatePhase.IDLE, val artifact: UpdateArtifact? = null,
     val bytes: Long = 0, val message: String? = null, val automatic: Boolean = false, val installationMessage: String? = null,
-    val patch: UpdatePatch? = null, val assembledBytes: Long = 0) {
+    val patch: UpdatePatch? = null, val assembledBytes: Long = 0, val checked: Boolean = false) {
     val transferSize get() = patch?.payload?.size ?: artifact?.size ?: 0L
     val busy get() = phase in setOf(UpdatePhase.CHECKING, UpdatePhase.DOWNLOADING, UpdatePhase.VERIFYING, UpdatePhase.APPLYING, UpdatePhase.INSTALLING)
 }
@@ -73,7 +73,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
     fun check() = launchOperation { checkInternal() }
     private suspend fun checkInternal() {
         if (!configured) return
-        mutable.update { it.copy(phase = UpdatePhase.CHECKING, message = null) }
+        mutable.update { it.copy(phase = UpdatePhase.CHECKING, message = null, checked = false) }
         try {
             withContext(Dispatchers.IO) {
                 val caller = currentCoroutineContext()
@@ -84,6 +84,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
                 temp.outputStream().use { it.write(bytes); it.fd.sync() }
                 java.nio.file.Files.move(temp.toPath(), envelopeFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
             }
+            mutable.update { it.copy(checked = true) }
             if (mutable.value.automatic && foreground && unmetered() && mutable.value.phase == UpdatePhase.AVAILABLE && mutable.value.bytes == 0L &&
                 prefs.getLong("paused-version", 0) != mutable.value.artifact?.version) downloadInternal(true)
         } catch (e: CancellationException) { throw e }

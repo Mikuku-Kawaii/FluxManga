@@ -28,6 +28,7 @@ internal class AggregateSearchController(
     private val restore: suspend (String, String) -> DiscoveryFeedState? = { _, _ -> null },
     private val save: suspend (String, String, DiscoveryFeedState) -> Unit = { _, _, _ -> },
     private val refreshRestored: Boolean = false,
+    private val alwaysRefreshRestored: Boolean = false,
     private val load: suspend (String, String, SourcePageRequest) -> SourceCardPage,
 ) {
     private val mutable = MutableStateFlow(AggregateSearchState())
@@ -62,7 +63,8 @@ internal class AggregateSearchController(
                         id == com.flux.manga.data.BaoziEndpoint.SOURCE_ID -> baoziFailure(error)
                         else -> komgaFailure(error)
                     }
-                }, restore = { restore(source, query) }, save = { save(source, query, it) }, refreshRestored = refreshRestored) { page ->
+                }, restore = { restore(source, query) }, save = { save(source, query, it) },
+                refreshRestored = refreshRestored, alwaysRefreshRestored = alwaysRefreshRestored) { page ->
                 load(source, query, page)
             }
             feeds[source] = feed
@@ -78,6 +80,7 @@ internal class AggregateSearchController(
 
     fun more(source: String) { if (accepts()) feeds[source]?.more() }
     fun refresh(source: String) { if (accepts()) feeds[source]?.refresh() }
+    fun refreshNow(source: String): Job? = if (accepts()) feeds[source]?.refreshNow() else null
     fun cancel(source: String? = null) {
         if (source == null) feeds.values.forEach { it.cancel() } else feeds[source]?.cancel()
     }
@@ -85,7 +88,7 @@ internal class AggregateSearchController(
     fun leave() { cancel() }
     // App-background suspension differs from explicit user cancellation: unfinished first pages resume.
     fun pause() { feeds.values.forEach { it.leave() } }
-    fun resume() { feeds.values.forEach { it.start() } }
+    fun resume() { feeds.values.forEach { it.resume() } }
 }
 
 /** Display-only interleave: source keys and each source's page order stay intact. */
