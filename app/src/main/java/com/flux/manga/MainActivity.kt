@@ -264,11 +264,12 @@ class MainActivity : ComponentActivity() {
             var highlight by rememberSaveable { mutableStateOf(true) }
             var refraction by rememberSaveable { mutableStateOf(true) }
             var saturation by rememberSaveable { mutableStateOf(true) }
+            var frostedLens by remember { mutableStateOf(displayPreferences.getBoolean("dock-frosted-lens", false)) }
             var enhancementFailure by remember { mutableStateOf<String?>(null) }
             var samplePages by rememberSaveable { mutableStateOf(false) }
             com.flux.manga.ui.pages.PreloadSessionPages(worldSession,
                 enabled = sessionState.foreground && sessionState.phase == SwitchPhase.Stable && !locked && !samplePages)
-            val effects = DockEffects(sampling, blur, tint, lowEffects, reduceMotion, fusion, highlight, refraction, saturation)
+            val effects = DockEffects(sampling, blur, tint, lowEffects, reduceMotion, fusion, highlight, refraction, saturation, frostedLens)
             MaterialTheme(colorScheme = com.flux.manga.ui.glass.WorldColors.scheme(identity.world),
                 typography = com.flux.manga.ui.ReferenceTypography,
                 shapes = com.flux.manga.ui.ReferenceShapes) {
@@ -282,7 +283,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(), sourceKey = identity,
                     enabled = liquidMotion.pending && effects.backdropEnabled && sessionState.foreground && !locked &&
                         sessionState.phase != SwitchPhase.Preparing,
-                    blur = effects.blurEnabled, saturation = effects.saturationEnabled,
+                    blur = effects.blurEnabled, saturation = effects.saturationEnabled, frostedLens = effects.frostedLens,
                     motionPadding = with(androidx.compose.ui.platform.LocalDensity.current) { 64.dp.toPx() },
                     sampleBounds = transitionSampleBounds, background = MaterialTheme.colorScheme.background,
                     observeContentChanges = { liquidMotion.momentumProgress(); liquidMotion.revealProgress(); Unit },
@@ -321,9 +322,9 @@ class MainActivity : ComponentActivity() {
                                     { consumed -> if (pendingCbzUris == consumed) pendingCbzUris = emptyList() }, appUpdates, ::installUpdate, ::authorizeUpdate, enhancementFailure, { enhancementFailure = it }, feedbackState = requestFeedback) {
                                     sampling = it.sampling; blur = it.blur; tint = it.tint
                                     fusion = it.fusion; highlight = it.highlight; refraction = it.refraction; saturation = it.saturation
-                                    lowEffects = it.lowEffects; reduceMotion = it.reduceMotion
+                                    lowEffects = it.lowEffects; reduceMotion = it.reduceMotion; frostedLens = it.frostedLens
                                     displayPreferences.edit().putBoolean("low-effects", lowEffects)
-                                        .putBoolean("reduce-motion", reduceMotion).apply()
+                                        .putBoolean("reduce-motion", reduceMotion).putBoolean("dock-frosted-lens", frostedLens).apply()
                                 }
                             }
                         }

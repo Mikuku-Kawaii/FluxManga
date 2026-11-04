@@ -385,7 +385,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         GlassBackdropHost(
             modifier = Modifier.fillMaxSize().testTag("navigation-host"), sourceKey = identity,
             enabled = showDock && !motion.pending && effects.backdropEnabled && sessionState.foreground && lifecycle.isAtLeast(Lifecycle.State.RESUMED),
-            blur = effects.blurEnabled, saturation = effects.saturationEnabled,
+            blur = effects.blurEnabled, saturation = effects.saturationEnabled, frostedLens = effects.frostedLens,
             motionPadding = with(density) { 64.dp.toPx() },
             sampleBounds = dockBounds, background = palette.background,
             observeContentChanges = observeScroll,

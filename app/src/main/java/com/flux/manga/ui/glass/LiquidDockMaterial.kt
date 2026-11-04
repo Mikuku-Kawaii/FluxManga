@@ -84,8 +84,7 @@ private fun SdfDockMaterial(
         val extent = IntSize(ceil(size.width - origin.x * 2).toInt(), ceil(size.height - origin.y - origin.x).toInt())
         val radius = GlassTokens.FusionRadiusDp.dp.toPx()
         val stroke = GlassTokens.ContourWidthDp.dp.toPx()
-        val edge = GlassTokens.RefractionEdgeDp.dp.toPx()
-        val amount = GlassTokens.RefractionAmountDp.dp.toPx()
+        val edge = if (effects.frostedLens) 8.dp.toPx() else GlassTokens.RefractionEdgeDp.dp.toPx()
         var lastGeometry: DockMaterialFrame? = null
         var cachedEffect: androidx.compose.ui.graphics.RenderEffect? = null
         onDrawBehind {
@@ -101,10 +100,11 @@ private fun SdfDockMaterial(
             shader.setFloatUniform("mergeRadius", if (effects.fusionEnabled) radius * geometry.fusionScale else 0f)
             shader.setFloatUniform("strokeWidth", stroke)
             shader.setFloatUniform("edgeWidth", edge)
-            shader.setFloatUniform("refractionAmount", if (sampling && effects.refractionEnabled(33)) amount else 0f)
-            shader.setFloatUniform("lensMagnification", 0f)
+            shader.setFloatUniform("refractionAmount", if (sampling && effects.refractionEnabled(33))
+                { if (effects.frostedLens) 2.dp.toPx() else GlassTokens.RefractionAmountDp.dp.toPx() } else 0f)
+            shader.setFloatUniform("lensMagnification", if (effects.frostedLens) .02f else 0f)
             shader.setFloatUniform("innerWidth", 2.dp.toPx())
-            shader.setFloatUniform("highlight", if (effects.highlightEnabled(33)) 1f else 0f)
+            shader.setFloatUniform("highlight", if (effects.highlightEnabled(33)) { if (effects.frostedLens) .40f else 1f } else 0f)
             shader.setFloatUniform("sampled", if (sampling) 1f else 0f)
             shader.setColorUniform("fillColor", palette.fill.toArgb())
             shader.setColorUniform("tintColor", palette.tint.copy(alpha = if (effects.tint) palette.tintAlpha else 0f).toArgb())
@@ -142,14 +142,15 @@ private fun ThresholdDockMaterial(
         val extent = IntSize(ceil(size.width - origin.x * 2).toInt(), ceil(size.height - origin.y - origin.x).toInt())
         val radius = GlassTokens.ThresholdBlurDp.dp.toPx()
         val stroke = GlassTokens.ContourWidthDp.dp.toPx()
-        val rim = if (effects.highlight) opticalRimBrush(androidx.compose.ui.geometry.Size(extent.width.toFloat(), extent.height.toFloat()))
+        val rimSize = androidx.compose.ui.geometry.Size(extent.width.toFloat(), extent.height.toFloat())
+        val rim = if (effects.highlight) { if (effects.frostedLens) opticalRimBrush(rimSize) else classicOpticalRimBrush(rimSize) }
             else Brush.linearGradient(listOf(palette.outline, palette.outline))
         var lastRadius = -1f
         var threshold: androidx.compose.ui.graphics.RenderEffect? = null
         var ring: androidx.compose.ui.graphics.RenderEffect? = null
         var innerRing: androidx.compose.ui.graphics.RenderEffect? = null
-        val thickness = Brush.verticalGradient(0f to Color.White.copy(alpha = .40f),
-            .15f to Color.Transparent, .85f to Color.Transparent, 1f to Color.Black.copy(alpha = .18f),
+        val thickness = Brush.verticalGradient(0f to Color.White.copy(alpha = if (effects.frostedLens) .12f else .40f),
+            .15f to Color.Transparent, .85f to Color.Transparent, 1f to Color.Black.copy(alpha = if (effects.frostedLens) .06f else .18f),
             startY = -origin.y, endY = size.height - origin.y)
         onDrawBehind {
             val geometry = frame()

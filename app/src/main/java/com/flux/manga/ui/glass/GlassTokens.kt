@@ -22,6 +22,7 @@ object GlassTokens {
     const val MaterialPaddingDp = 18f
     const val Saturation = 1.35f
     const val Brightness = 1.05f
+    const val FrostedSaturation = .55f
     val Light = GlassPalette(
         WorldColors.LightBackground, WorldColors.LightInk, WorldColors.LightMuted,
         WorldColors.LightBackground.copy(alpha = .10f), WorldColors.Blue, .025f,

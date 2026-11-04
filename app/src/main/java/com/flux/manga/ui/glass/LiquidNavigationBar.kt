@@ -72,6 +72,7 @@ fun LiquidNavigationBar(
     enabled: Boolean = true,
     reduceMotion: Boolean = false,
     lowEffects: Boolean = false,
+    frostedLens: Boolean = false,
     windowInsets: WindowInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal),
     contentPadding: PaddingValues = PaddingValues(horizontal = LiquidNavLayoutTokens.FloatingMargin,
         vertical = LiquidNavLayoutTokens.FloatingGap),
@@ -117,15 +118,15 @@ fun LiquidNavigationBar(
             Box(content = surfaceSlot)
         }
         CompositionLocalProvider(LocalLiquidNavPressure provides { pressures.getOrNull(selectedIndex)?.value ?: 0f }) {
-            LiquidNavPillIndicator(tokens = tokens, lowEffects = lowEffects,
-                modifier = Modifier.graphicsLayer {
+            LiquidNavPillIndicator(tokens = tokens, lowEffects = lowEffects, frostedLens = frostedLens,
+                modifier = Modifier.padding(if (frostedLens) 3.dp else 0.dp).graphicsLayer {
                     clip = false
                     // Subscribing to position invalidates the layer at each spring frame.
                     motion.position.value
                     val strain = if (motionEnabled) motion.strain else 0f
                     val compression = if (motionEnabled) pressScales.getOrNull(selectedIndex)?.value ?: 1f else 1f
-                    scaleX = (1f + LiquidNavMotionSpec.MaximumStretch * strain) * compression
-                    scaleY = (1f - LiquidNavMotionSpec.MaximumSquash * strain) * compression
+                    scaleX = (1f + (if (frostedLens) .10f else LiquidNavMotionSpec.MaximumStretch) * strain) * compression
+                    scaleY = (1f - (if (frostedLens) .035f else LiquidNavMotionSpec.MaximumSquash) * strain) * compression
                 }, content = indicatorSlot)
         }
         items.forEachIndexed { index, item -> key(item.key) {
@@ -133,7 +134,7 @@ fun LiquidNavigationBar(
             val ink by animateColorAsState(if (!enabled || !item.enabled) tokens.contentSubtle
                 else if (selected) tokens.contentPrimaryActive else tokens.contentSecondaryMuted,
                 if (motionEnabled) spring(stiffness = 550f) else snap(), label = "nav-ink")
-            val iconScale by animateFloatAsState(if (selected && motionEnabled) LiquidNavMotionSpec.SelectedIconScale else 1f,
+            val iconScale by animateFloatAsState(if (selected && motionEnabled && !frostedLens) LiquidNavMotionSpec.SelectedIconScale else 1f,
                 if (motionEnabled) spring(dampingRatio = .72f, stiffness = 380f) else snap(), label = "nav-icon")
             Box(Modifier.clip(LiquidNavLayoutTokens.Shape)
                 .selectable(selected = selected, enabled = enabled && item.enabled, role = Role.Tab,
@@ -149,7 +150,7 @@ fun LiquidNavigationBar(
                 CompositionLocalProvider(LocalContentColor provides ink) {
                     ProvideTextStyle(LiquidNavLayoutTokens.LabelStyle) {
                         BoxWithConstraints(Modifier.fillMaxWidth().heightIn(min = LiquidNavLayoutTokens.MinimumItemHeight)
-                            .lensContentShadow(selected && !lowEffects)
+                            .lensContentShadow(selected && !lowEffects && !frostedLens)
                             .drawWithContent { scale(if (motionEnabled) pressScales[index].value else 1f) {
                                 this@drawWithContent.drawContent()
                             } },

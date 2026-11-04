@@ -6,6 +6,7 @@ data class DockEffects(
     val lowEffects: Boolean = false, val reduceMotion: Boolean = false,
     val fusion: Boolean = false, val highlight: Boolean = true,
     val refraction: Boolean = true, val saturation: Boolean = true,
+    val frostedLens: Boolean = false,
 ) {
     val backdropEnabled get() = sampling && !lowEffects
     val blurEnabled get() = blur && backdropEnabled

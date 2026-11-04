@@ -51,6 +51,7 @@ fun GlassBackdropHost(
     background: Color,
     enabled: Boolean = true,
     saturation: Boolean = false,
+    frostedLens: Boolean = false,
     motionPadding: Float = 0f,
     content: @Composable BoxScope.() -> Unit,
     overlay: @Composable BoxScope.(GraphicsLayer?, GraphicsLayer?, Offset, LayoutCoordinates?) -> Unit,
@@ -61,18 +62,21 @@ fun GlassBackdropHost(
     }
     val backgroundGraphicsLayer = key(sourceKey, enabled) { if (enabled) rememberGraphicsLayer() else null }
     val filtered = key(sourceKey, enabled, blur, saturation) { if (enabled && (blur || saturation)) rememberGraphicsLayer() else null }
-    val radius = with(LocalDensity.current) { GlassTokens.BlurRadiusDp.dp.toPx() }
+    val radius = with(LocalDensity.current) {
+        (if (frostedLens) 4f else GlassTokens.BlurRadiusDp).dp.toPx()
+    }
     val padding = ceil((if (blur) radius * 3 else 0f) + with(LocalDensity.current) {
         (GlassTokens.MaterialPaddingDp + GlassTokens.RefractionAmountDp).dp.toPx()
     }).toInt()
-    val effect = remember(radius, blur, saturation) {
+    val effect = remember(radius, blur, saturation, frostedLens) {
         val blurred = if (blur) android.graphics.RenderEffect.createBlurEffect(radius, radius,
             android.graphics.Shader.TileMode.CLAMP) else null
         if (saturation) {
             val filter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply {
-                setSaturation(GlassTokens.Saturation)
+                setSaturation(if (frostedLens) GlassTokens.FrostedSaturation else GlassTokens.Saturation)
                 postConcat(android.graphics.ColorMatrix().apply {
-                    setScale(GlassTokens.Brightness, GlassTokens.Brightness, GlassTokens.Brightness, 1f)
+                    val brightness = if (frostedLens) 1f else GlassTokens.Brightness
+                    setScale(brightness, brightness, brightness, 1f)
                 })
             })
             (if (blurred != null) android.graphics.RenderEffect.createColorFilterEffect(filter, blurred)

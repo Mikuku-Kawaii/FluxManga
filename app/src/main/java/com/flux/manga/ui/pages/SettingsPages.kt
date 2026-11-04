@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -134,6 +136,22 @@ internal fun AppearanceSettingsPage(effects: DockEffects, change: (DockEffects) 
 internal fun DockEffectControls(effects: DockEffects, change: (DockEffects) -> Unit, failure: String? = null) {
     val api = android.os.Build.VERSION.SDK_INT
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("底栏样式", style = MaterialTheme.typography.titleSmall)
+        Column(Modifier.selectableGroup()) {
+            listOf(false to "经典液态玻璃", true to "通透玻璃").forEach { (frosted, label) ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    .selectable(selected = effects.frostedLens == frosted, role = Role.RadioButton,
+                        onClick = { change(effects.copy(frostedLens = frosted)) })
+                    .testTag(if (frosted) "dock-style-frosted" else "dock-style-classic")
+                    .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = effects.frostedLens == frosted, onClick = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        Text("默认使用经典液态玻璃；选择后立即生效并保存，表里世界共用。",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (failure != null) RequestFeedback(failure, color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testTag("dock-enhancement-failure").semantics { liveRegion = LiveRegionMode.Polite })
         @Composable fun Option(option: DockEffectOption) {
@@ -146,7 +164,7 @@ internal fun DockEffectControls(effects: DockEffects, change: (DockEffects) -> U
         basic.forEach { Option(it) }
         SettingsDisclosure("玻璃效果细节", "采样、模糊与边缘光效") {
             DockEffectOption.entries.filterNot { it in basic }.forEach { Option(it) }
-            Text("低效果与减少动画长期保存，其余选项仅本次生效。", style = MaterialTheme.typography.bodySmall)
+            Text("底栏样式、低效果与减少动画长期保存，其余选项仅本次生效。", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

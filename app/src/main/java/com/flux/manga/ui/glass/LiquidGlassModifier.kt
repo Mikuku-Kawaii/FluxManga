@@ -45,6 +45,8 @@ fun Modifier.liquidGlass(
     paintSurface: Boolean = true,
     onEnhancementFailure: (String) -> Unit = {},
 ): Modifier {
+    // A selected clear-style item adds only color and contour over the shared glass.
+    if (active && effects.frostedLens) return this
     var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var samplePosition by remember { mutableStateOf(Offset.Zero) }
     val layer = rememberGraphicsLayer()
@@ -60,20 +62,22 @@ fun Modifier.liquidGlass(
         val pad = GlassTokens.MaterialPaddingDp.dp.toPx()
         val extent = IntSize(ceil(size.width + pad * 2).toInt(), ceil(size.height + pad * 2).toInt())
         val base = if (active) tokens.activePillSurface else tokens.glassSurfaceBase
-        val clear = base.copy(alpha = 0f)
         val tint = Brush.linearGradient(listOf(base, base.copy(alpha = base.alpha * .72f), base),
             Offset.Zero, Offset(size.width, size.height))
         val bright = tokens.glassSpecularRimBright
-        val edge = opticalRimBrush(size)
-        val inner = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .18f)),
+        val edge = if (effects.frostedLens) opticalRimBrush(size) else classicOpticalRimBrush(size)
+        val inner = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = if (effects.frostedLens) .06f else .18f)),
             startY = size.height - 2.dp.toPx(), endY = size.height)
-        val topLight = Brush.verticalGradient(listOf(Color.White.copy(alpha = .40f), Color.Transparent),
+        val topLight = Brush.verticalGradient(listOf(Color.White.copy(alpha = if (effects.frostedLens) .12f else .40f), Color.Transparent),
             startY = 0f, endY = 1.dp.toPx())
-        val lensEffect = if (Build.VERSION.SDK_INT >= 33 && shader != null) {
+        val refractionEffect = if (Build.VERSION.SDK_INT >= 33 && shader != null) {
             navRefractionEffect(shader, extent, pad, size, radius,
-                GlassTokens.RefractionEdgeDp.dp.toPx(), GlassTokens.RefractionAmountDp.dp.toPx() * (if (active) 1.7f else 1f),
-                if (active) .08f else 0f, 2.dp.toPx())
+                if (effects.frostedLens) 8.dp.toPx() else GlassTokens.RefractionEdgeDp.dp.toPx(),
+                if (effects.frostedLens) 2.dp.toPx() else GlassTokens.RefractionAmountDp.dp.toPx() * (if (active) 1.7f else 1f),
+                if (effects.frostedLens) .02f else if (active) .08f else 0f,
+                if (effects.frostedLens) 1.dp.toPx() else 2.dp.toPx())
         } else null
+        val lensEffect = refractionEffect?.asComposeRenderEffect()
         // Stable, sparse grain: cached positions, no random generator or timer per frame.
         val grain = if (lowEffects) emptyList() else List(48) { index ->
             Offset(((index * 37 % 101) / 101f) * size.width, ((index * 61 % 103) / 103f) * size.height)
@@ -98,7 +102,7 @@ fun Modifier.liquidGlass(
                                     else translate(pad - position.x, pad - position.y) { drawLayer(source!!) }
                                 }
                                 translate(-pad, -pad) { drawLayer(layer) }
-                            } else scale(if (active && Build.VERSION.SDK_INT < 33) 1.06f else 1f) {
+                            } else scale(if (active && Build.VERSION.SDK_INT < 33) { if (effects.frostedLens) 1.02f else 1.06f } else 1f) {
                                 // API 31: magnified replay + host RenderEffect, without UV distortion.
                                 if (filtered != null) translate(filteredOrigin.x - position.x,
                                     filteredOrigin.y - position.y) { drawLayer(filtered) }
@@ -108,7 +112,7 @@ fun Modifier.liquidGlass(
                         } else if (!active) {
                             drawRect(base.copy(alpha = if (lowEffects) 1f else base.alpha))
                         }
-                        if (!active && effects.tint && !lowEffects) drawRect(tokens.activeAmbientGlow.copy(alpha = .025f))
+                        if (!active && effects.tint && !lowEffects) drawRect(tokens.activeAmbientGlow.copy(alpha = if (effects.frostedLens) .004f else .025f))
                     }
                     // The selected indicator owns its one continuous tint and one crisp rim.
                     // Do not stack the outer glass's fill, grain or press ring beneath it.
@@ -142,7 +146,7 @@ private fun rememberNavRefraction(onFailure: (String) -> Unit): RuntimeShader? {
 
 @RequiresApi(33)
 private fun navRefractionEffect(shader: RuntimeShader, extent: IntSize, pad: Float,
-    size: Size, radius: Float, edge: Float, amount: Float, magnification: Float, innerWidth: Float): androidx.compose.ui.graphics.RenderEffect {
+    size: Size, radius: Float, edge: Float, amount: Float, magnification: Float, innerWidth: Float): RenderEffect {
     shader.setFloatUniform("resolution", extent.width.toFloat(), extent.height.toFloat())
     shader.setFloatUniform("circle", 0f, 0f, 0f, 0f)
     shader.setFloatUniform("bud", 0f, 0f, 0f, 0f)
@@ -161,5 +165,5 @@ private fun navRefractionEffect(shader: RuntimeShader, extent: IntSize, pad: Flo
     shader.setColorUniform("outlineColor", android.graphics.Color.TRANSPARENT)
     shader.setColorUniform("rimBright", android.graphics.Color.TRANSPARENT)
     shader.setColorUniform("rimDim", android.graphics.Color.TRANSPARENT)
-    return RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+    return RenderEffect.createRuntimeShaderEffect(shader, "content")
 }

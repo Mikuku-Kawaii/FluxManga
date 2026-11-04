@@ -24,13 +24,13 @@ data class LiquidThemePalette(
 ) {
     companion object {
         fun forWorld(world: PrototypeWorld) = at(if (world == PrototypeWorld.SFW) 0f else 1f)
-        fun at(fraction: Float): LiquidThemePalette {
+        fun at(fraction: Float, frostedLens: Boolean = false): LiquidThemePalette {
             val p = fraction.coerceIn(0f, 1f)
             val glass = GlassTokens.paletteAt(p)
-            val nav = LiquidGlassTokens.at(p)
+            val nav = LiquidGlassTokens.at(p, frostedLens)
             return LiquidThemePalette(glass.background, lerp(WorldColors.LightSurface, WorldColors.DarkSurface, p),
                 nav.activeAmbientGlow, nav.glassSurfaceBase, nav.glassSpecularRimBright, nav.glassSpecularRimDim,
-                nav.activePillSurface, glass.fill, nav.activePillBorderGlow, nav.contentPrimaryActive,
+                nav.activePillSurface, nav.glassSurfaceBase, nav.activePillBorderGlow, nav.contentPrimaryActive,
                 nav.contentSecondaryMuted, nav.contentSubtle, nav.surfaceInverse, nav.accentWarningBadge)
         }
     }

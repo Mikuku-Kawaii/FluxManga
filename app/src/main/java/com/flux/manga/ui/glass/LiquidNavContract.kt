@@ -34,16 +34,19 @@ data class LiquidGlassTokens(
         fun forWorld(world: PrototypeWorld) = at(if (world == PrototypeWorld.SFW) 0f else 1f)
 
         /** Uses the existing world transition's progress; no second theme animation. */
-        fun at(fraction: Float): LiquidGlassTokens {
+        fun at(fraction: Float, frostedLens: Boolean = false): LiquidGlassTokens {
             val progress = fraction.coerceIn(0f, 1f)
             val palette = GlassTokens.paletteAt(progress)
-            val active = lerp(WorldColors.Blue, WorldColors.Copper, progress)
+            val active = if (frostedLens) lerp(Color(0xFF285DA8), Color(0xFFDCA477), progress)
+                else lerp(WorldColors.Blue, WorldColors.Copper, progress)
             return LiquidGlassTokens(
-                glassSurfaceBase = palette.fill,
+                glassSurfaceBase = if (frostedLens) lerp(WorldColors.LightSurface.copy(alpha = .20f),
+                    WorldColors.DarkSurface.copy(alpha = .28f), progress) else palette.fill,
                 glassSpecularRimBright = lerp(WorldColors.LightBackground, WorldColors.DarkInk, progress).copy(alpha = .70f - .24f * progress),
                 glassSpecularRimDim = palette.outline.copy(alpha = .38f),
-                activePillSurface = palette.selected.copy(alpha = .32f + .16f * progress),
-                activePillBorderGlow = active.copy(alpha = .34f),
+                activePillSurface = if (frostedLens) lerp(WorldColors.LightSurface.copy(alpha = .20f),
+                    WorldColors.DarkSurface.copy(alpha = .28f), progress) else palette.selected.copy(alpha = .32f + .16f * progress),
+                activePillBorderGlow = active.copy(alpha = if (frostedLens) .22f else .34f),
                 activeAmbientGlow = palette.tint.copy(alpha = .12f),
                 contentPrimaryActive = active,
                 contentSecondaryMuted = palette.muted,

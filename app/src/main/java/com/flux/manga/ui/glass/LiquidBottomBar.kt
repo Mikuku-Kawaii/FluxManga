@@ -85,6 +85,7 @@ fun GlassSurface(
     observeContentChanges: () -> Unit,
     deformation: () -> Offset = { Offset(1f, 1f) },
     opaque: Boolean = false,
+    frostedLens: Boolean = false,
     highlighted: Boolean = false,
     materialVisible: Boolean = true,
     outline: ((Size, Path) -> Path)? = null,
@@ -98,10 +99,10 @@ fun GlassSurface(
     }.drawWithCache {
         val shape = Path()
         val stroke = Stroke(1.dp.toPx())
-        val highlight = opticalRimBrush(size)
-        val bottomShade = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .18f)),
+        val highlight = if (frostedLens) opticalRimBrush(size) else classicOpticalRimBrush(size)
+        val bottomShade = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = if (frostedLens) .06f else .18f)),
             startY = size.height - 2.dp.toPx(), endY = size.height)
-        val topLight = Brush.verticalGradient(listOf(Color.White.copy(alpha = .4f), Color.Transparent),
+        val topLight = Brush.verticalGradient(listOf(Color.White.copy(alpha = if (frostedLens) .12f else .4f), Color.Transparent),
             startY = 0f, endY = 1.dp.toPx())
         onDrawWithContent { com.flux.manga.traceWork("FluxDockDraw") {
             if (!materialVisible) { drawContent(); return@traceWork }
@@ -160,9 +161,10 @@ fun LiquidBottomBar(
     val materialEffects = if (momentumMaterial) effects.copy(fusion = true, highlight = true) else effects
     val unified = materialEffects.unifiedMaterial(android.os.Build.VERSION.SDK_INT) && enhancementFailure == null
     val themeProgress = if (motion?.pending == true) motion.themeProgress() else if (world == PrototypeWorld.SFW) 0f else 1f
-    val palette = GlassTokens.paletteAt(themeProgress)
-    val theme = LiquidThemePalette.at(themeProgress)
-    val navTokens = LiquidGlassTokens.at(themeProgress)
+    val theme = LiquidThemePalette.at(themeProgress, effects.frostedLens)
+    val navTokens = LiquidGlassTokens.at(themeProgress, effects.frostedLens)
+    val originalPalette = GlassTokens.paletteAt(themeProgress)
+    val palette = if (effects.frostedLens) originalPalette.copy(fill = navTokens.glassSurfaceBase, tintAlpha = .004f) else originalPalette
     val items = MainTab.primary.map { LiquidNavItem(it.name, tabTitle(it)) }
     val reduceMotion = effects.reduceMotion || effects.lowEffects || !ValueAnimator.areAnimatorsEnabled()
     LiquidMetaballBar(world, motion,
@@ -173,7 +175,7 @@ fun LiquidBottomBar(
         detachedPodContent = { pod, placement ->
             GlassSurface(placement.testTag("dock-circle"), palette.copy(fill = theme.detachedPodSurface),
                 source, filtered, filteredOrigin, host, effects.tint, observeContentChanges,
-                opaque = effects.lowEffects, highlighted = true, materialVisible = !unified,
+                opaque = effects.lowEffects, frostedLens = effects.frostedLens, highlighted = true, materialVisible = !unified,
                 outline = { size, path -> path.apply {
                     reset(); addRoundRect(RoundRect(0f, 0f, size.width, size.height,
                         CornerRadius(size.height * LiquidMomentumSpec.PodCornerFraction)))
@@ -204,7 +206,7 @@ fun LiquidBottomBar(
             LiquidNavigationBar(items = items, selectedKey = selected.name,
                 onItemSelected = { key -> onSelect(MainTab.primary.first { it.name == key }) },
                 tokens = navTokens, enabled = motion?.pending != true, reduceMotion = reduceMotion,
-                lowEffects = effects.lowEffects,
+                lowEffects = effects.lowEffects, frostedLens = effects.frostedLens,
                 modifier = placement.testTag("dock-pod"),
                 windowInsets = WindowInsets(0), contentPadding = PaddingValues(0.dp),
                 iconSlot = { item, _ -> TabGlyph(MainTab.primary.first { it.name == item.key },
@@ -216,7 +218,8 @@ fun LiquidBottomBar(
                         paintSurface = !unified, onEnhancementFailure = onEnhancementFailure))
                 },
                 indicatorSlot = {
-                    Box(Modifier.fillMaxSize().liquidGlass(navTokens, active = true, lowEffects = effects.lowEffects,
+                    // The clear style shares the outer material; selection is only a tinted outline.
+                    if (!effects.frostedLens) Box(Modifier.fillMaxSize().liquidGlass(navTokens, active = true, lowEffects = effects.lowEffects,
                         source = source, filtered = filtered, filteredOrigin = filteredOrigin, host = host,
                         effects = effects, observeContentChanges = observeContentChanges,
                         onEnhancementFailure = onEnhancementFailure))
