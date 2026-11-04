@@ -1,7 +1,5 @@
 package com.flux.manga.ui.pages
 
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -193,7 +191,6 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
         color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             // Bound the preview, even when cached metadata arrives later. Full text lives in detail.
-            val contentHeight = cardHeight - 16.dp
             val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
             val informationWidth = (maxWidth - coverWidth - 24.dp).coerceAtLeast(1.dp)
             Row(Modifier.fillMaxWidth().height(cardHeight), horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -207,8 +204,7 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
                         Text("$error，重试", style = MaterialTheme.typography.labelSmall, maxLines = 2)
                     }
                 }
-                Column(Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 8.dp, end = 12.dp)
-                    .verticalScroll(rememberScrollState()).heightIn(min = contentHeight),
+                Column(Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 8.dp, end = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val singleTitle = HomeFeaturedTitle(card.title, informationWidth)
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -222,7 +218,7 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
                             color = ReadingSurfaceStyle.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     information?.summary?.replace(Regex("\\s+"), " ")?.trim()?.takeIf(String::isNotBlank)?.let { summary ->
-                        Text(summary, style = MaterialTheme.typography.bodySmall,
+                        Text(summary, modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall,
                             maxLines = if (singleTitle) 3 else 2,
                             overflow = TextOverflow.Ellipsis, color = ReadingSurfaceStyle.muted)
                     }

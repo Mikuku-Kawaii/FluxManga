@@ -102,7 +102,7 @@ internal fun ReferenceShelfPage(
     SideEffect { reportScroll { shownScroll.firstVisibleItemIndex; shownScroll.firstVisibleItemScrollOffset; Unit } }
     val fontScale = LocalDensity.current.fontScale
     val collectionHeader: @Composable () -> Unit = {
-        Column(Modifier.fillMaxWidth().then(if (isRoot) Modifier else Modifier.background(ReadingSurfaceStyle.pageTop)),
+        Column(Modifier.fillMaxWidth().then(if (isRoot) Modifier.readingPageBackdrop() else Modifier.background(ReadingSurfaceStyle.pageTop)),
             verticalArrangement = Arrangement.spacedBy(0.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
               // Anchor the heading near the filter row while keeping toolbar touch targets intact.
@@ -425,26 +425,25 @@ private fun ContinueCard(book: ShelfBook, model: ShelfViewModel, open: (ShelfBoo
                          read: (ShelfBook) -> Unit) {
     val cardHeight = featuredCardHeight()
     @Composable fun Info(modifier: Modifier) {
-        Column(modifier.padding(top = 8.dp, bottom = 8.dp, end = 12.dp)
-            .verticalScroll(rememberScrollState()).heightIn(min = cardHeight - 16.dp),
-            verticalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier.padding(top = 8.dp, bottom = 8.dp, end = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(book.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.clickable(onClickLabel = "查看详情") { open(book) },
                     maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    ShelfUpdateLabel(book.information, book.chapterId, book.online)
+                    Text(shelfUpdateStatus(book.information, book.chapterId, book.online).label,
+                        style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     DetailInfoText(listOfNotNull(shelfReadingLabel(if (book.online) "上次读到第 ${book.ordinal} 页" else book.positionText,
                         book.information, book.chapterId, book.online), book.ratio?.let { "${(it * 100).toInt()}%" }).joinToString(" · "),
                         label = "阅读位置", style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
                 }
             }
-            Column(Modifier.padding(top = 8.dp)) {
-                ReferenceButton(onClick = { read(book) }, modifier = Modifier.testTag("shelf-continue")) {
-                    ReferenceIcon(ReferenceSymbol.PLAY)
-                    Spacer(Modifier.width(8.dp))
-                    Text("继续阅读")
-                }
+            ReferenceButton(onClick = { read(book) }, modifier = Modifier.testTag("shelf-continue")) {
+                ReferenceIcon(ReferenceSymbol.PLAY)
+                Spacer(Modifier.width(8.dp))
+                Text("继续阅读", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

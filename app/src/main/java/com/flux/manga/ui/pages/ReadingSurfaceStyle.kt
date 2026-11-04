@@ -8,8 +8,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -61,6 +68,22 @@ internal fun Modifier.readingCardShadow(shape: Shape = ReadingSurfaceStyle.cardS
     val shadowColor = if (ReadingSurfaceStyle.dark) Color.Black.copy(alpha = .30f) else Color(0xFF182432).copy(alpha = .14f)
     return shadow(6.dp, shape, clip = false,
         ambientColor = shadowColor, spotColor = shadowColor)
+}
+
+/** Opaque sticky content follows the page gradient instead of revealing scrolling book covers. */
+@Composable
+internal fun Modifier.readingPageBackdrop(): Modifier {
+    val top = ReadingSurfaceStyle.pageTop
+    val bottom = ReadingSurfaceStyle.pageBottom
+    var topInRoot by remember { mutableFloatStateOf(0f) }
+    var pageHeight by remember { mutableFloatStateOf(1f) }
+    return onGloballyPositioned { coordinates ->
+        topInRoot = coordinates.positionInRoot().y
+        pageHeight = coordinates.findRootCoordinates().size.height.toFloat().coerceAtLeast(1f)
+    }.drawBehind {
+        drawRect(Brush.verticalGradient(listOf(top, bottom),
+            startY = -topInRoot, endY = pageHeight - topInRoot))
+    }
 }
 
 /** Replaces the old one-line slash summary; the detail page still owns all tag actions. */
