@@ -1,5 +1,7 @@
 package com.flux.manga.data
 
+import com.flux.manga.R
+
 import android.app.*
 import android.content.Context
 import android.content.Intent
@@ -71,7 +73,7 @@ internal class ChapterDownloadService : Service() {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setSmallIcon(R.drawable.lucide_download)
             .setContentTitle("FluxManga 下载")
             .setContentText(notice.text)
             .setContentIntent(open)

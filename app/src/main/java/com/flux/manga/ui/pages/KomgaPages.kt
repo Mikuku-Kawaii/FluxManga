@@ -200,7 +200,7 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
             } else {
                 state.detail?.let { detail ->
                     item(key = "hero") {
-                        DetailHero(detail.manga.title, { OnlineCover(model.library, sourceId, detail.manga.key.mangaId, fillWidth = true) }, tags = {
+                        DetailHero(detail.manga.title, { OnlineCover(model.library, sourceId, detail.manga.key.mangaId, fillWidth = true, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) }, tags = {
                             KomgaDetailTags(detail.manga.key.sourceId, detail.manga.key.mangaId, detail.tags, compact = true, open = openTag)
                         }) {
                             WorkMetadata(detail.metadata, "$sourceId:$mangaId", searchAuthor)

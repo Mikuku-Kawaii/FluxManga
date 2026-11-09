@@ -1,5 +1,6 @@
 package com.flux.manga.ui.glass
 
+import com.flux.manga.ui.LucideIcon
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
@@ -30,8 +31,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -133,7 +132,7 @@ fun GlassLabPage(back: () -> Unit) {
                             .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(onClick = back, modifier = Modifier.testTag("glass-back")) { Text("‹ 返回") }
+                                TextButton(onClick = back, modifier = Modifier.testTag("glass-back")) { LucideIcon(R.drawable.lucide_chevron_left, Modifier.size(16.dp)); Text("返回") }
                                 if (density.fontScale < 1.5f) Text("材质研究 / 04", Modifier.weight(1f), color = palette.muted, fontSize = 12.sp)
                                 else Spacer(Modifier.weight(1f))
                                 TextButton(onClick = { dark = !dark }, modifier = Modifier.testTag("glass-theme")) {
@@ -284,32 +283,13 @@ private fun StudyDock(
 
 @Composable
 private fun DockIcon(kind: Int, color: Color, modifier: Modifier) {
-    Canvas(modifier) {
-        val w = size.width
-        val stroke = 1.7.dp.toPx()
-        when (kind) {
-            0 -> {
-                drawCircle(color, w * .25f, Offset(w * .4f, w * .4f), style = Stroke(stroke))
-                drawLine(color, Offset(w * .6f, w * .6f), Offset(w * .88f, w * .88f), stroke, StrokeCap.Round)
-            }
-            1 -> {
-                for (x in listOf(.18f, .42f, .7f)) drawLine(color, Offset(w * x, w * .18f), Offset(w * x, w * .82f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(w * .1f, w * .9f), Offset(w * .9f, w * .9f), stroke, StrokeCap.Round)
-            }
-            2 -> {
-                drawCircle(color, w * .34f, center, style = Stroke(stroke))
-                drawLine(color, Offset(w * .35f, w * .65f), Offset(w * .65f, w * .35f), stroke, StrokeCap.Round)
-            }
-            3 -> {
-                drawCircle(color, w * .2f, center, style = Stroke(stroke))
-                for (i in 0..7) {
-                    val angle = i * Math.PI / 4
-                    val direction = Offset(kotlin.math.cos(angle).toFloat(), kotlin.math.sin(angle).toFloat())
-                    drawLine(color, center + direction * (w * .33f), center + direction * (w * .45f), stroke, StrokeCap.Round)
-                }
-            }
-            4 -> drawArc(color, 45f, 270f, false, Offset(w * .17f, w * .17f), Size(w * .66f, w * .66f), style = Stroke(stroke, cap = StrokeCap.Round))
-        }
+    val glyph = when (kind) {
+        0 -> R.drawable.lucide_search
+        1 -> R.drawable.lucide_library
+        2 -> R.drawable.lucide_compass
+        3 -> R.drawable.lucide_sun
+        else -> R.drawable.lucide_moon
     }
+    LucideIcon(glyph, modifier, color)
 }
 

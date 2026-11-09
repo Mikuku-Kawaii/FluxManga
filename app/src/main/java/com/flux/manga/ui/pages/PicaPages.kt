@@ -335,7 +335,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         }
         item { PicaFeedback(model, state) }
         state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }, tags = {
+            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) { model.cover(book) } }, tags = {
                 WorkTags(book.categories.map { it to "category:$it" } + book.tags.map { it to "search:$it" }) { value, _ ->
                     list(value.substringBefore(':'), value.substringAfter(':'))
                 }

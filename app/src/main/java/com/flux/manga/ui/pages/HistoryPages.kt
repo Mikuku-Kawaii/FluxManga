@@ -186,7 +186,7 @@ private fun VisitCover(item: VisitItem, model: VisitsModel, open: (() -> Unit)? 
     }
     CoverArtwork(bitmap?.takeIf { !private || active }, active && available && bitmap == null && !failed && !missing,
         when { !available -> "封面不可用"; !active -> "封面"; missing -> "暂无封面"; failed -> "封面加载失败"; else -> "正在加载封面" },
-        Modifier.fillMaxWidth().aspectRatio(.7f).then(if (open != null) Modifier.clickable(role = Role.Button,
+        Modifier.fillMaxWidth().aspectRatio(ReadingSurfaceStyle.bookCoverRatio).then(if (open != null) Modifier.clickable(role = Role.Button,
             onClickLabel = "打开《${item.visit.title}》详情", onClick = open) else Modifier),
         retry = if (active && failed) ({ attempt++ }) else null, description = "《${item.visit.title}》封面")
 }
@@ -195,6 +195,8 @@ private fun VisitCover(item: VisitItem, model: VisitsModel, open: (() -> Unit)? 
 @Composable
 internal fun SearchHistoryPanel(model: SearchHistoryModel, sourceId: String?, search: (String) -> Unit, sources: () -> Unit) {
     val state by model.state.collectAsStateWithLifecycle()
+    val home = sourceId == com.flux.manga.data.HOME_SEARCH_HISTORY
+    val rows = if (home) state.rows.distinctBy { it.query } else state.rows
     var expanded by rememberSaveable { mutableStateOf(false) }
     var clear by rememberSaveable { mutableStateOf(false) }
     var invalid by rememberSaveable { mutableStateOf(false) }
@@ -202,10 +204,10 @@ internal fun SearchHistoryPanel(model: SearchHistoryModel, sourceId: String?, se
     Column(Modifier.fillMaxWidth().testTag("online-search-history"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, verticalArrangement = Arrangement.Center) {
             Text("搜索记录", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).semantics { heading() })
-            if (state.rows.isNotEmpty()) TextButton(onClick = { managing = !managing }) { Text(if (managing) "完成" else "管理") }
+            if (rows.isNotEmpty()) TextButton(onClick = { managing = !managing }) { Text(if (managing) "完成" else "管理") }
         }
         if (state.loading) Text("正在读取搜索记录…")
-        else if (state.rows.isEmpty() && state.error == null) Text("暂无搜索记录", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else if (rows.isEmpty() && state.error == null) Text("暂无搜索记录", color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.error?.let { RequestFeedback(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = feedbackAttempt(model::refresh), enabled = !state.busy) { Text("重试读取记录") } }
         if (invalid) {
             RequestFeedback("此记录的图源与当前范围不同或已不可用，请检查图源配置。", color = MaterialTheme.colorScheme.error,
@@ -213,7 +215,7 @@ internal fun SearchHistoryPanel(model: SearchHistoryModel, sourceId: String?, se
             TextButton(onClick = sources) { Text("检查图源配置") }
         }
         if (!managing) FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            (if (expanded) state.rows else state.rows.take(6)).forEach { row ->
+            (if (expanded) rows else rows.take(6)).forEach { row ->
                 TextButton(onClick = feedbackAttempt({
                     invalid = sourceId == null || (!sourceId.startsWith("aggregate-v1:") && historySource(row.sourceId) != sourceId)
                     if (!invalid) search(row.query)
@@ -222,15 +224,15 @@ internal fun SearchHistoryPanel(model: SearchHistoryModel, sourceId: String?, se
                     colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = MaterialTheme.colorScheme.onSurface)) { Text(row.query) }
             }
-        } else state.rows.forEach { row ->
+        } else rows.forEach { row ->
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(row.query, Modifier.weight(1f))
-                TextButton(onClick = { model.remove(row) }, enabled = !state.busy,
+                TextButton(onClick = { model.remove(row, allSources = home) }, enabled = !state.busy,
                     modifier = Modifier.semantics { contentDescription = "删除搜索记录：${row.query}" }) { Text("删除") }
             }
         }
-        if (!managing && state.rows.size > 6) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "收起记录" else "全部 ${state.rows.size} 条记录") }
-        if (managing && state.rows.isNotEmpty()) TextButton(onClick = { clear = true }, enabled = !state.busy) { Text("清空搜索记录") }
+        if (!managing && rows.size > 6) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "收起记录" else "全部 ${rows.size} 条记录") }
+        if (managing && rows.isNotEmpty()) TextButton(onClick = { clear = true }, enabled = !state.busy) { Text("清空搜索记录") }
     }
     if (clear) ReferenceDialog(onDismissRequest = { clear = false }, title = { Text("清空搜索记录？") },
         text = { Text("只清空当前空间在线搜索记录，样本历史、书目与阅读进度保持。", Modifier.verticalScroll(rememberScrollState())) },

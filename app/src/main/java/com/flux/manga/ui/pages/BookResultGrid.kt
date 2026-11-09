@@ -57,7 +57,7 @@ internal fun BookResultCard(title: String, open: () -> Unit, grid: Boolean = tru
             }
         }
     } else Column(Modifier.fillMaxWidth().clickable(enabled = enabled, role = Role.Button,
-        onClickLabel = "查看《$title》详情", onClick = open), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        onClickLabel = "查看《$title》详情", onClick = open), verticalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.stackedBookTitleGap)) {
         cover()
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, titleModifier.fillMaxWidth(), style = MaterialTheme.typography.titleSmall,

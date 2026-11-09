@@ -46,12 +46,38 @@ internal fun blacklistSuggestions(session: WorldSession, input: String, blocked:
                 // Save the original namespaced tag, not the translated label or a search expression.
                 BlacklistSuggestion(it.key, if (it.name == it.original) it.key else "${it.name} · ${it.key}")
             }
-            candidates.filter { it.value.isNotBlank() }.distinctBy { normalizedBlockedTag(it.value) }
-                .filter { normalizedBlockedTag(it.value) !in excluded &&
-                    (query in normalizedBlockedTag(it.value) || query in normalizedBlockedTag(it.label)) }
-                .sortedWith(compareBy<BlacklistSuggestion> { !normalizedBlockedTag(it.value).startsWith(query) }
-                    .thenBy { normalizedBlockedTag(it.value) })
-                .take(limit + 1).toList()
+            matchingSuggestions(candidates, query, excluded, limit)
+        }
+        if (session.accepts(identity) && session.state.value.foreground) value = matches
+    }
+    return result
+}
+
+private fun matchingSuggestions(candidates: Sequence<BlacklistSuggestion>, query: String, excluded: Set<String>,
+    limit: Int): List<BlacklistSuggestion> =
+    candidates.filter { it.value.isNotBlank() }.distinctBy { normalizedBlockedTag(it.value) }
+        .filter { normalizedBlockedTag(it.value) !in excluded &&
+            (query in normalizedBlockedTag(it.value) || query in normalizedBlockedTag(it.label)) }
+        .sortedWith(compareBy<BlacklistSuggestion> { !normalizedBlockedTag(it.value).startsWith(query) }
+            .thenBy { normalizedBlockedTag(it.value) })
+        .take(limit + 1).toList()
+
+@Composable
+internal fun titleKeywordSuggestions(session: WorldSession, input: String, blocked: List<String>, presets: List<String>,
+    limit: Int): List<BlacklistSuggestion> {
+    val query = normalizedBlockedTag(input)
+    if (query.isEmpty()) return emptyList()
+    val identity = session.identity.value
+    val pages = preloadedPages(session)
+    val shelf by pages.shelf().state.collectAsState()
+    val feeds = pages.loadedFeeds().map { model -> key(model) { model.feed.state.collectAsState().value } }
+    val books = shelf.books
+    val result by produceState(emptyList<BlacklistSuggestion>(), identity, query, blocked, feeds, books, limit) {
+        value = emptyList()
+        val matches = withContext(Dispatchers.Default) {
+            val names = presets.asSequence() + books.asSequence().filter { it.key.world == identity.world }.map { it.title } +
+                feeds.asSequence().flatMap { it.results.values.asSequence() }.flatMap { it.cards.asSequence() }.map { it.title }
+            matchingSuggestions(names.map { BlacklistSuggestion(it) }, query, blocked.map(::normalizedBlockedTag).toSet(), limit)
         }
         if (session.accepts(identity) && session.state.value.foreground) value = matches
     }

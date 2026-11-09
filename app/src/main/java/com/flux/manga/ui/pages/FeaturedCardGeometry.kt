@@ -1,23 +1,27 @@
 package com.flux.manga.ui.pages
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
-/** Home recommendations and shelf continuation share one frame, including large text. */
+/** Reserve the final image bounds before a bitmap, placeholder or caption is composed. */
 @Composable
-internal fun featuredCardHeight(): Dp {
-    val density = LocalDensity.current
-    val typography = MaterialTheme.typography
-    val title = with(density) { typography.titleMedium.lineHeight.toDp() } * 2
-    val metadata = with(density) { typography.bodySmall.lineHeight.toDp() }
-    // Reserve two title lines, bounded metadata and a complete action/summary at this font scale.
-    val continuation = title + metadata * 2 + referenceActionHeight() + 27.dp
-    val recommendation = title + metadata * 4 + with(density) { 16.sp.toDp() } + 38.dp
-    return maxOf(160.dp, continuation, recommendation)
+internal fun FeaturedCardFrame(cover: @Composable BoxScope.() -> Unit,
+    information: @Composable (Dp) -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val ratio = ReadingSurfaceStyle.bookCoverRatio
+        val coverWidth = minOf((maxHeight - 8.dp) * ratio, maxWidth * .40f)
+        val inset = (maxHeight - coverWidth / ratio) / 2
+        Row(Modifier.fillMaxSize().padding(start = inset, end = 10.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.sideBookTitleGap)) {
+            Box(Modifier.width(coverWidth).fillMaxHeight().padding(vertical = inset)
+                .clip(RoundedCornerShape(12.dp)), content = cover)
+            BoxWithConstraints(Modifier.weight(1f).align(Alignment.Top)) { information(maxWidth) }
+        }
+    }
 }
-
-internal fun featuredCoverWidth(availableWidth: Dp, height: Dp): Dp = (height * .7f).coerceAtMost(availableWidth * .4f)

@@ -1,5 +1,9 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+
+import com.flux.manga.ui.LucideIcon
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
@@ -343,7 +347,8 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                 item(key = "batch-actions") {
                     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, verticalArrangement = Arrangement.Center) {
                         TextButton(onClick = { showBatch = !showBatch }, modifier = Modifier.semantics { stateDescription = if (showBatch) "已展开" else "已收起" }) {
-                            Text(if (showBatch) "收起本批 ${state.batch.size} 项结果 ↑" else "查看本批 ${state.batch.size} 项结果 ›")
+                            Text(if (showBatch) "收起本批 ${state.batch.size} 项结果" else "查看本批 ${state.batch.size} 项结果")
+                            LucideIcon(if (showBatch) R.drawable.lucide_chevron_up else R.drawable.lucide_chevron_right, Modifier.size(16.dp))
                         }
                         if (state.batch.any { it.retryable }) TextButton(onClick = feedbackAttempt(model::retryImport), enabled = !busy) {
                             Text("重试未完成项")
@@ -387,7 +392,7 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                 ReferenceBookSummary(cover = { LocalCover(card, model, state.revision) },
                     onClick = { if (!busy) openBook(card.key.mangaId) }) {
                     TextButton(onClick = { openBook(card.key.mangaId) }, enabled = !busy, shape = androidx.compose.ui.graphics.RectangleShape,
-                        modifier = Modifier.testTag("local-book-${card.title}"),
+                        modifier = Modifier.testTag("local-book-${card.title}"), contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
                         Text(card.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
@@ -430,13 +435,13 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                     description = detail.metadata.summary, descriptionIdentity = detail.card.key.mangaId,
                     readingPosition = detail.card.progress?.let { "第 ${it.ordinal} 页" })
                 TextButton(onClick = { showBookmarks = true }, enabled = !busy,
-                    modifier = Modifier.testTag("local-bookmarks")) { Text("书签与备注 ›") }
+                    modifier = Modifier.testTag("local-bookmarks")) { Text("书签与备注"); SettingsChevron(modifier = Modifier.size(16.dp)) }
             }
             val orderedPages = if (reversePages) detail.chapter.pages.asReversed() else detail.chapter.pages
             item {
                 FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, verticalArrangement = Arrangement.Center) {
                     Text("页目录 · ${orderedPages.size} 页", Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = { reversePages = !reversePages }) { Text(if (reversePages) "倒序 ↓" else "正序 ↑") }
+                    TextButton(onClick = { reversePages = !reversePages }) { Text(if (reversePages) "倒序" else "正序"); LucideIcon(if (reversePages) R.drawable.lucide_chevron_down else R.drawable.lucide_chevron_up, Modifier.size(16.dp)) }
                 }
             }
             items(orderedPages, key = { it.id }) { page ->
@@ -447,7 +452,8 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                         .heightIn(min = 56.dp).padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Text("第 ${page.ordinal} 页", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        Text("预览 ›", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("预览", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        SettingsChevron(modifier = Modifier.size(16.dp))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -556,7 +562,7 @@ internal fun LocalCover(card: MangaCard, model: LocalLibraryViewModel, revision:
     }
     CoverArtwork(bitmap, loading, when {
         !card.available -> "副本缺失"; failed -> "封面加载失败"; loading -> "正在加载封面"; else -> "暂无封面"
-    }, Modifier.fillMaxWidth().aspectRatio(.7f), retry = if (failed) ({ retry++ }) else null,
+    }, Modifier.fillMaxWidth().aspectRatio(ReadingSurfaceStyle.bookCoverRatio), retry = if (failed) ({ retry++ }) else null,
         description = "《${card.title}》封面", imageModifier = Modifier.testTag("cover-${card.key.mangaId}"),
         retryModifier = Modifier.testTag("cover-retry-${card.key.mangaId}"))
 }

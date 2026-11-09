@@ -80,8 +80,10 @@ internal fun HomeBook(card: MangaCard, model: LocalLibraryViewModel, revision: I
                      open: (String) -> Unit, read: (String) -> Unit) {
     Card(Modifier.fillMaxWidth().readingCardShadow(CardDefaults.shape).testTag("home-$section-${card.key.mangaId}")) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            LocalCover(card, model, revision)
-            Text(card.title, style = MaterialTheme.typography.titleMedium)
+            Column(verticalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.stackedBookTitleGap)) {
+                LocalCover(card, model, revision)
+                Text(card.title, style = MaterialTheme.typography.titleMedium)
+            }
             Text("${card.pageCount?.let { "$it 页" } ?: "页数待获取"}${if (card.favorite) " · 已收藏" else ""}")
             TextButton(onClick = { open(card.key.mangaId) }, modifier = Modifier.heightIn(min = 48.dp).testTag("home-detail-$section-${card.key.mangaId}")
                 .semantics { contentDescription = "查看《${card.title}》详情" }) {

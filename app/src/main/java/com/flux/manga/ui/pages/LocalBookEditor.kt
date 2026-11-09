@@ -193,7 +193,9 @@ private fun BookEditorPreview(page: PageResource, model: LocalBookEditorModel) {
         catch (_: IOException) { failed = true }
     }
     Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-        image?.let { Image(it.asImageBitmap(), "第 ${page.ordinal} 页封面预览", Modifier.width(140.dp).fillMaxHeight(), contentScale = ContentScale.Crop) }
+        image?.let { Image(it.asImageBitmap(), "第 ${page.ordinal} 页封面预览",
+            Modifier.fillMaxHeight().aspectRatio(ReadingSurfaceStyle.bookCoverRatio, matchHeightConstraintsFirst = true),
+            contentScale = ContentScale.Crop) }
             ?: if (failed) {
                 RequestFeedback("第 ${page.ordinal} 页封面预览失败")
                 TextButton(onClick = feedbackAttempt { attempt++ }) { Text("重试预览") }

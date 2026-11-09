@@ -21,6 +21,8 @@ internal enum class VisitAvailability(val message: String) {
 internal data class VisitItem(val visit: BrowseVisit, val availability: VisitAvailability)
 internal data class VisitBatch(val items: List<VisitItem>, val more: Boolean)
 
+internal const val HOME_SEARCH_HISTORY = "aggregate-v1:home"
+
 internal fun onlineHistoryScope(sourceId: String) = "online:$sourceId"
 internal fun historySource(scope: String): String? = scope.takeIf { it.startsWith("online:") }?.removePrefix("online:")?.takeIf { it.isNotBlank() }
 internal fun searchHistoryEntry(sourceId: String, query: String, time: Long): SearchHistory? =
@@ -129,12 +131,14 @@ internal class BrowsingHistory(private val context: Context, private val session
     }
     suspend fun submit(source: String, query: String) {
         active()
-        if (identity.world != PrototypeWorld.SFW) return
+        if (identity.world != PrototypeWorld.SFW && source != HOME_SEARCH_HISTORY) return
         val entry = searchHistoryEntry(source, query, System.currentTimeMillis()) ?: return
         data.worldData(identity.world, { session.accepts(identity) }) { active(); it.remember(entry); it.trimOnlineSearchHistory() }
     }
-    suspend fun removeSearch(row: SearchHistory?) = data.worldData(identity.world, { session.accepts(identity) }) {
+    suspend fun removeSearch(row: SearchHistory?, allSources: Boolean = false) = data.worldData(identity.world, { session.accepts(identity) }) {
         active()
-        if (row == null) it.clearOnlineSearchHistory() else if (historySource(row.sourceId) != null) it.deleteSearchHistory(row.sourceId, row.query)
+        if (row == null) it.clearOnlineSearchHistory()
+        else if (allSources) it.deleteOnlineQuery(row.query)
+        else if (historySource(row.sourceId) != null) it.deleteSearchHistory(row.sourceId, row.query)
     }
 }

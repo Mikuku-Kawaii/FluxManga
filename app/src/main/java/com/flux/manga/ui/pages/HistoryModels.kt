@@ -103,5 +103,5 @@ internal class SearchHistoryModel(app: Application, private val session: WorldSe
     }
     fun refresh() = run { }
     fun submit(source: String, query: String) { if (query.isNotBlank()) run { repository.submit(source, query) } }
-    fun remove(row: SearchHistory?) = run { repository.removeSearch(row) }
+    fun remove(row: SearchHistory?, allSources: Boolean = false) = run { repository.removeSearch(row, allSources) }
 }

@@ -1,6 +1,7 @@
 package com.flux.manga.ui.glass
 
-import androidx.compose.foundation.Canvas
+import com.flux.manga.R
+import com.flux.manga.ui.LucideIcon
 import android.animation.ValueAnimator
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -47,7 +48,6 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 import com.flux.manga.ui.navigation.MainTab
 import com.flux.manga.ui.navigation.PrototypeWorld
@@ -236,74 +236,19 @@ fun LiquidBottomBar(
 
 @Composable
 private fun SwitchGlyph(ink: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(26.dp).testTag("dock-switch-icon")) {
-        fun p(x: Float, y: Float) = Offset(size.width * x / 24f, size.height * y / 24f)
-        fun line(x: Float, y: Float, x2: Float, y2: Float) = drawLine(ink, p(x, y), p(x2, y2),
-            1.8.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-        line(4f, 7f, 20f, 7f); line(16f, 3f, 20f, 7f); line(20f, 7f, 16f, 11f)
-        line(20f, 17f, 4f, 17f); line(8f, 13f, 4f, 17f); line(4f, 17f, 8f, 21f)
-    }
+    LucideIcon(R.drawable.lucide_arrow_right_left, modifier.size(26.dp).testTag("dock-switch-icon"), ink)
 }
 
 @Composable
 private fun TabGlyph(tab: MainTab, palette: GlassPalette) {
-    Canvas(Modifier.size(DockGeometry.Icon.dp).testTag("dock-icon-${tab.name}")) {
-        val stroke = 1.7.dp.toPx()
-        when (tab) {
-            MainTab.HOME -> {
-                val path = Path().apply {
-                    moveTo(size.width * .08f, size.height * .45f)
-                    lineTo(size.width * .5f, size.height * .1f)
-                    lineTo(size.width * .92f, size.height * .45f)
-                    moveTo(size.width * .2f, size.height * .36f)
-                    lineTo(size.width * .2f, size.height * .9f)
-                    lineTo(size.width * .8f, size.height * .9f)
-                    lineTo(size.width * .8f, size.height * .36f)
-                    moveTo(size.width * .42f, size.height * .9f)
-                    lineTo(size.width * .42f, size.height * .65f)
-                    lineTo(size.width * .58f, size.height * .65f)
-                    lineTo(size.width * .58f, size.height * .9f)
-                }
-                drawPath(path, palette.foreground, style = Stroke(stroke))
-            }
-            MainTab.TAGS -> {
-                val path = Path().apply {
-                    moveTo(size.width * .12f, size.height * .12f)
-                    lineTo(size.width * .55f, size.height * .12f)
-                    lineTo(size.width * .92f, size.height * .5f)
-                    lineTo(size.width * .5f, size.height * .92f)
-                    lineTo(size.width * .12f, size.height * .55f)
-                    close()
-                }
-                drawPath(path, palette.foreground, style = Stroke(stroke))
-                drawCircle(palette.foreground, size.width * .055f, Offset(size.width * .32f, size.height * .32f))
-            }
-            MainTab.SEARCH -> {
-                drawCircle(palette.foreground, size.width * .28f, Offset(size.width * .42f, size.height * .42f), style = Stroke(stroke))
-                drawLine(palette.foreground, Offset(size.width * .63f, size.height * .63f), Offset(size.width * .9f, size.height * .9f), stroke)
-            }
-            MainTab.LIBRARY -> {
-                val book = Path().apply {
-                    moveTo(size.width * .5f, size.height * .2f)
-                    quadraticTo(size.width * .27f, size.height * .02f, size.width * .08f, size.height * .16f)
-                    lineTo(size.width * .08f, size.height * .85f)
-                    quadraticTo(size.width * .3f, size.height * .74f, size.width * .5f, size.height * .92f)
-                    quadraticTo(size.width * .7f, size.height * .74f, size.width * .92f, size.height * .85f)
-                    lineTo(size.width * .92f, size.height * .16f)
-                    quadraticTo(size.width * .73f, size.height * .02f, size.width * .5f, size.height * .2f)
-                    lineTo(size.width * .5f, size.height * .92f)
-                }
-                drawPath(book, palette.foreground, style = Stroke(stroke))
-            }
-            MainTab.DISCOVER -> {
-                val path = Path().apply {
-                    moveTo(size.width / 2, stroke); lineTo(size.width - stroke, size.height / 2)
-                    lineTo(size.width / 2, size.height - stroke); lineTo(stroke, size.height / 2); close()
-                }
-                drawPath(path, palette.foreground, style = Stroke(stroke))
-            }
-        }
+    val glyph = when (tab) {
+        MainTab.HOME -> R.drawable.lucide_house
+        MainTab.LIBRARY -> R.drawable.lucide_book_open
+        MainTab.TAGS -> R.drawable.lucide_tag
+        MainTab.SEARCH -> R.drawable.lucide_search
+        MainTab.DISCOVER -> R.drawable.lucide_compass
     }
+    LucideIcon(glyph, Modifier.size(DockGeometry.Icon.dp).testTag("dock-icon-${tab.name}"), palette.foreground)
 }
 
 @Composable

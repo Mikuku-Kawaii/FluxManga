@@ -335,7 +335,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
         item { JmFeedback(model, state) }
         state.detail?.let { book ->
             item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(id) } }, tags = {
+                DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) { model.cover(id) } }, tags = {
                     WorkTags(book.tags.map { it to it }) { value, _ -> tag(value) }
                 }) {
                     DetailAuthors(book.author.split(" / ").map { it to it }, searchAuthor)

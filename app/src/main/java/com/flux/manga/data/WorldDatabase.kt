@@ -62,6 +62,8 @@ interface WorldDao : ReadingStatisticsDao, RecordExportDao {
     @Query("SELECT * FROM search_history WHERE sourceId LIKE 'online:%' ORDER BY usedAt DESC, sourceId, query LIMIT 50")
     fun onlineSearchHistory(): List<SearchHistory>
     @Query("DELETE FROM search_history WHERE sourceId LIKE 'online:%'") fun clearOnlineSearchHistory()
+    @Query("DELETE FROM search_history WHERE sourceId LIKE 'online:%' AND query = :query")
+    fun deleteOnlineQuery(query: String)
     @Query("DELETE FROM search_history WHERE sourceId = :source AND query = :query")
     fun deleteSearchHistory(source: String, query: String)
     @Query("DELETE FROM search_history WHERE sourceId LIKE 'online:%' AND rowid NOT IN (SELECT rowid FROM search_history WHERE sourceId LIKE 'online:%' ORDER BY usedAt DESC, sourceId, query LIMIT 50)")

@@ -1,5 +1,7 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+import com.flux.manga.ui.LucideIcon
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -20,7 +22,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 
@@ -100,13 +101,7 @@ internal fun ShelfSelectionBadge(checked: Boolean, modifier: Modifier = Modifier
         contentColor = MaterialTheme.colorScheme.onPrimary,
         border = BorderStroke(1.dp, if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)) {
         if (checked) {
-            val color = LocalContentColor.current
-            Canvas(Modifier.padding(6.dp)) {
-                drawLine(color, Offset(0f, size.height * .5f), Offset(size.width * .36f, size.height * .85f),
-                    2.dp.toPx(), StrokeCap.Round)
-                drawLine(color, Offset(size.width * .36f, size.height * .85f), Offset(size.width, size.height * .15f),
-                    2.dp.toPx(), StrokeCap.Round)
-            }
+            LucideIcon(R.drawable.lucide_check, Modifier.padding(6.dp))
         }
     }
 }

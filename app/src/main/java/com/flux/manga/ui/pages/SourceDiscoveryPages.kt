@@ -1,6 +1,5 @@
 package com.flux.manga.ui.pages
 
-import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -11,17 +10,12 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
-import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.*
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
 
@@ -59,7 +53,8 @@ private fun DiscoveryCapabilityPanel(title: String, feature: String, state: Disc
     open: (() -> Unit)? = null, sources: () -> Unit = {}, retry: () -> Unit = {}) {
         ReferencePanel(Modifier.testTag(tag)) {
         if (open != null) TextButton(onClick = open, modifier = Modifier.testTag("open-$tag").semantics { heading() }) {
-            Text("$title ›", style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            SettingsChevron()
         } else Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
         Text(when (state.status) {
             DiscoveryStatus.LOADING -> "正在确认图源…"
@@ -106,16 +101,10 @@ internal fun DiscoverySectionPage(session: WorldSession, section: DiscoverySecti
 
 @Composable
 internal fun OnlineSearchPage(session: WorldSession, back: () -> Unit, sources: () -> Unit,
-    open: (String, String) -> Unit, initialQuery: String = "") {
+    open: (String, String) -> Unit, initialQuery: String, recordAuthorSearch: Boolean = false) {
     val model = discoveryModel(session)
     val state by model.state.collectAsStateWithLifecycle()
-    val identity by session.identity.collectAsStateWithLifecycle()
-    val app = LocalContext.current.applicationContext as Application
-    val history = if (initialQuery.isBlank()) preloadedPages(session).searchHistory()
-        else viewModel<SearchHistoryModel>(factory = viewModelFactory {
-            initializer { SearchHistoryModel(app, session, createSavedStateHandle()) }
-        })
-    AggregateSearchPage(session, state, history, back, sources, model::refresh, open, initialQuery)
+    AggregateSearchPage(session, state, back, sources, model::refresh, open, initialQuery, recordAuthorSearch)
 }
 
 /** Old user-tag IDs are not source tags. Retain saved route decoding without reading old links. */

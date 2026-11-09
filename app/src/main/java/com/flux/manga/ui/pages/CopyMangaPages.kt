@@ -105,7 +105,7 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                 item("state") { CopyRequestStatus(detail.busy, detail.detail != null, detail.error, detail.notice, model::refreshDetail, model::cancelDetail) }
                 detail.detail?.let { result ->
                     item("title") {
-                        DetailHero(result.manga.title, { CopyMangaCover(model.covers, result.manga.key.mangaId, fillWidth = true) }, tags = {
+                        DetailHero(result.manga.title, { CopyMangaCover(model.covers, result.manga.key.mangaId, fillWidth = true, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) }, tags = {
                             WorkTags(detail.themes?.map { it.name to it.pathWord }, compact = true, openInDialog = true) { id, name -> openTag(CopyMangaEndpoint.SOURCE_ID, id, name) }
                         }) {
                             WorkMetadata(result.metadata, "$sourceId:$mangaId", searchAuthor)

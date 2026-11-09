@@ -1,5 +1,9 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+
+import com.flux.manga.ui.LucideIcon
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -160,7 +164,8 @@ internal fun CollectionImportPage(
 internal fun ImportScopePicker(current: String, choices: List<Pair<String, String>>, enabled: Boolean, choose: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     TextButton({ expanded = true }, enabled = enabled) {
-        Text((choices.firstOrNull { it.first == current }?.second ?: "收藏分类") + " ▾")
+        Text(choices.firstOrNull { it.first == current }?.second ?: "收藏分类")
+        LucideIcon(R.drawable.lucide_chevron_down, Modifier.size(16.dp))
     }
     if (expanded) ReferenceSheet(onDismissRequest = { expanded = false }, title = { Text("收藏范围") },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {

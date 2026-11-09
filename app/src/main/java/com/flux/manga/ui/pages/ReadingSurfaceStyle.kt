@@ -23,6 +23,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,6 +33,10 @@ import androidx.compose.ui.unit.sp
 
 /** Content-page finishes only. Dock palettes, typography, sampling and motion stay independent. */
 internal object ReadingSurfaceStyle {
+    const val bookCoverRatio = 3f / 4f
+    const val detailArtworkRatio = .7f
+    val stackedBookTitleGap = 2.dp
+    val sideBookTitleGap = 6.dp
     val cardShape = RoundedCornerShape(16.dp)
     val coverShape = RoundedCornerShape(8.dp)
     val capsuleShape = RoundedCornerShape(50)
@@ -88,16 +95,29 @@ internal fun Modifier.readingPageBackdrop(): Modifier {
 
 /** Replaces the old one-line slash summary; the detail page still owns all tag actions. */
 @Composable
-internal fun ReadingTagBadges(tags: List<String>) {
-    Row(Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = tags.joinToString("、") },
+internal fun ReadingTagBadges(tags: List<String>, width: Dp) {
+    val style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val visible = remember(tags, width, style, measurer, density) {
+        var remaining = with(density) { width.roundToPx() }
+        val padding = with(density) { 14.dp.roundToPx() }
+        val gap = with(density) { 4.dp.roundToPx() }
+        buildList {
+            for (tag in tags.take(3)) {
+                val pixels = measurer.measure(tag, style = style, maxLines = 1).size.width + padding
+                if (isNotEmpty() && pixels + gap > remaining) break
+                remaining -= pixels + if (isEmpty()) 0 else gap
+                add(tag)
+            }
+        }
+    }
+    Row(Modifier.width(width).clearAndSetSemantics { contentDescription = tags.joinToString("、") },
         horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        tags.take(3).forEach { tag ->
+        visible.forEach { tag ->
             val ink = ReadingSurfaceStyle.tagInk(tag)
-            Text(tag, Modifier.weight(1f, fill = false)
-                .background(ink.copy(alpha = .12f), ReadingSurfaceStyle.capsuleShape)
-                .padding(horizontal = 7.dp, vertical = 2.dp),
-                color = ink, style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal),
+            Text(tag, Modifier.background(ink.copy(alpha = .12f), ReadingSurfaceStyle.capsuleShape)
+                .padding(horizontal = 7.dp, vertical = 2.dp), color = ink, style = style,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }

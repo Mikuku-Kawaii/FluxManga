@@ -81,7 +81,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                     return@ReferenceRefreshColumn
                 item("state") { BaoziRequestStatus(detail.busy, detail.error, detail.notice, model::refreshDetail, model::cancelDetail) }
                 detail.book?.let { book ->
-                    item("book") { DetailHero(book.card.title, { OnlineCover(model.library, sourceId, mangaId, fillWidth = true) }, tags = {
+                    item("book") { DetailHero(book.card.title, { OnlineCover(model.library, sourceId, mangaId, fillWidth = true, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) }, tags = {
                         WorkTags(book.tags?.map { it to it }, { it in com.flux.manga.data.BaoziCategories.tags }, compact = true, openInDialog = true) { id, name -> openTag(BaoziEndpoint.SOURCE_ID, id, name) }
                     }) {
                         WorkMetadata(book.metadata, "$sourceId:$mangaId", searchAuthor)

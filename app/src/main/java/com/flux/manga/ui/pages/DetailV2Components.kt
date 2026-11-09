@@ -39,12 +39,26 @@ internal fun DetailHero(title: String, cover: @Composable () -> Unit, titleTag: 
         Text(title, style = MaterialTheme.typography.titleLarge)
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val coverWidth = (maxWidth * .34f).coerceAtMost(126.dp)
-        val coverHeight = coverWidth * 1.414f
-        @Composable fun Information(modifier: Modifier = Modifier) {
-            // Keep metadata visible now that there is no aggregate information action.
-            // The information column can grow without changing the cover's aspect ratio.
-            Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        val typography = MaterialTheme.typography
+        val infoGap = 2.dp
+        val coverHeight = with(LocalDensity.current) {
+            // Two title lines, author, status, update date and two rows of tags.
+            val tagHeight = maxOf(compactTagMinHeight, typography.labelMedium.lineHeight.toDp() + compactTagVerticalPadding * 2)
+            typography.titleLarge.lineHeight.toDp() * 2 + typography.bodyMedium.lineHeight.toDp() * 2 +
+                typography.bodySmall.lineHeight.toDp() + tagHeight * 2 + compactTagRowGap + infoGap * 4
+        }
+        val coverWidth = minOf(coverHeight * .75f, maxWidth * .40f)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.sideBookTitleGap),
+            verticalAlignment = Alignment.Top) {
+            Layout(content = cover, modifier = Modifier.size(coverWidth, coverHeight)
+                .readingCardShadow(ReadingSurfaceStyle.coverShape).clip(ReadingSurfaceStyle.coverShape)) { children, frame ->
+                val imageWidth = maxOf(frame.maxWidth, kotlin.math.ceil(frame.maxHeight * .7f).toInt())
+                val images = children.map { it.measure(Constraints.fixedWidth(imageWidth)) }
+                layout(frame.maxWidth, frame.maxHeight) {
+                    images.forEach { it.placeRelative((frame.maxWidth - it.width) / 2, (frame.maxHeight - it.height) / 2) }
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(infoGap)) {
                 Text(title, style = MaterialTheme.typography.titleLarge,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                     onTextLayout = { titleOverflow = it.hasVisualOverflow },
@@ -53,21 +67,10 @@ internal fun DetailHero(title: String, cover: @Composable () -> Unit, titleTag: 
                 ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                     metadata()
                 }
-                CompositionLocalProvider(LocalDetailTagRows provides 3, LocalDetailHeroTags provides true) {
+                CompositionLocalProvider(LocalDetailHeroTags provides true) {
                     tags()
                 }
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-            Layout(content = cover, modifier = Modifier.width(coverWidth).height(coverHeight)
-                .readingCardShadow(ReadingSurfaceStyle.coverShape).clip(ReadingSurfaceStyle.coverShape)) { children, frame ->
-                val imageWidth = maxOf(frame.maxWidth, kotlin.math.ceil(frame.maxHeight * .7f).toInt())
-                val images = children.map { it.measure(Constraints.fixedWidth(imageWidth)) }
-                layout(frame.maxWidth, frame.maxHeight) {
-                    images.forEach { it.placeRelative((frame.maxWidth - it.width) / 2, (frame.maxHeight - it.height) / 2) }
-                }
-            }
-            Information(Modifier.weight(1f))
         }
     }
 }

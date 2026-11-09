@@ -158,9 +158,7 @@ internal fun PrivateTagsPage(session: WorldSession, bottom: Dp, settings: () -> 
             item("heading") { DiscoveryHeading("private-tags-settings", settings, "标签") }
             item("query") { ReferenceSearchField(query, { query = it.take(200) }, "查找标签",
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submit() }), trailingIcon = {
-                    IconButton(feedbackAttempt(submit), Modifier.semantics { contentDescription = "查找标签" }) { DiscoverySearchGlyph() }
-                }) }
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submit() })) }
             if (names.isEmpty() && busy) item("layout") { ReadTagPlaceholder(columns) }
             if (names.isEmpty() && !busy && issues > 0) item("read-failure") {
                 ReadFailure(states.values.mapNotNull { it.error ?: it.notice }.distinct().joinToString("\n"), refresh)

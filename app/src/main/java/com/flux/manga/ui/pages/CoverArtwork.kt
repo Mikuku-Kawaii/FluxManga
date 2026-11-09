@@ -63,7 +63,7 @@ internal fun CoverArtwork(bitmap: Bitmap?, loading: Boolean, message: String, mo
 /** Private list and detail covers use the same visibility contract and encrypted source loader. */
 @Composable
 internal fun PrivateSourceCover(session: WorldSession, source: String, id: String, title: String,
-    load: suspend () -> Bitmap) {
+    coverRatio: Float = ReadingSurfaceStyle.bookCoverRatio, load: suspend () -> Bitmap) {
     val identity by session.identity.collectAsState()
     val visibility by session.state.collectAsState()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
@@ -99,6 +99,6 @@ internal fun PrivateSourceCover(session: WorldSession, source: String, id: Strin
     }
     CoverArtwork(bitmap?.takeIf { active }, active && bitmap == null && error == null && !missing,
         if (!active) "封面" else if (missing) "暂无封面" else error ?: "正在加载封面",
-        Modifier.fillMaxWidth().aspectRatio(.7f), retry = if (active && error != null) ({ cache.retry(source, id); attempt++ }) else null,
+        Modifier.fillMaxWidth().aspectRatio(coverRatio), retry = if (active && error != null) ({ cache.retry(source, id); attempt++ }) else null,
         description = "《$title》封面")
 }

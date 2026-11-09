@@ -68,7 +68,7 @@ internal fun ReadLayoutPlaceholder(detail: Boolean = false) {
         } else {
             repeat(2) { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 repeat(3) { Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReadPlaceholder(Modifier.fillMaxWidth().aspectRatio(.7f))
+                    ReadPlaceholder(Modifier.fillMaxWidth().aspectRatio(ReadingSurfaceStyle.bookCoverRatio))
                     ReadPlaceholder(Modifier.fillMaxWidth().height(18.dp))
                     ReadPlaceholder(Modifier.fillMaxWidth(.6f).height(14.dp))
                 } }

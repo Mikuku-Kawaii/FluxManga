@@ -396,7 +396,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
         }
         item { EhFeedback(model, state) }
         state.book?.let { book -> item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title) { model.cover(book) } }, tags = {
+            DetailHero(book.title, { PrivateSourceCover(session, source, book.id, book.title, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) { model.cover(book) } }, tags = {
                 WorkTags(book.tags.map { text ->
                     (if (translated.enabled) translated.dictionary?.label(text) ?: text else text) to text
                 }) { text, _ ->

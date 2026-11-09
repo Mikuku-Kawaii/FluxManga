@@ -23,7 +23,8 @@ internal class TagBlacklistFilter(private val app: Application, private val sess
     }
 
     suspend fun apply(page: SourceCardPage): SourceCardPage = withContext(Dispatchers.IO) {
-        val blocked = store.read().map(::normalizedBlockedTag).toSet()
+        val tagRules = store.read()
+        val blocked = if (tagRules.enabled) tagRules.tags.map(::normalizedBlockedTag).toSet() else emptySet()
         val titleRules = store.readTitles()
         val keywords = if (titleRules.enabled) titleRules.keywords.map(::normalizedBlockedTag).filter(String::isNotEmpty) else emptyList()
         if ((blocked.isEmpty() && keywords.isEmpty()) || page.cards.isEmpty()) return@withContext page

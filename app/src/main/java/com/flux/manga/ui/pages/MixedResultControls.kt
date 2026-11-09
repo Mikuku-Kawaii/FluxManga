@@ -1,5 +1,9 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+
+import com.flux.manga.ui.LucideIcon
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -107,7 +111,8 @@ internal fun ResultSourceFilter(feeds: List<ResultFeed>, selected: String?, coun
         if (choices.size > 1) Box {
             TextButton(onClick = { expanded = true }, shape = MaterialTheme.shapes.small, modifier = Modifier.heightIn(min = 48.dp)
                 .testTag("result-source-filter").semantics { stateDescription = current?.title ?: "全部来源" }) {
-                Text("${current?.title ?: "全部来源"} ▾")
+                Text(current?.title ?: "全部来源")
+                LucideIcon(R.drawable.lucide_chevron_down, Modifier.size(16.dp))
             }
             DropdownMenu(expanded, { expanded = false }) {
                 DropdownMenuItem(text = { Text("全部来源") }, onClick = { expanded = false; select(null) },

@@ -15,7 +15,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 
-internal val LocalDetailTagRows = compositionLocalOf { 2 }
+internal val compactTagMinHeight = 28.dp
+internal val compactTagVerticalPadding = 3.dp
+internal val compactTagRowGap = 4.dp
 
 @Composable
 internal fun KomgaDetailTags(sourceId: String, mangaId: String, tags: List<String>?, compact: Boolean = false, open: (String, String) -> Unit) {
@@ -28,7 +30,7 @@ internal fun KomgaDetailTags(sourceId: String, mangaId: String, tags: List<Strin
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Boolean = { true }, compact: Boolean = false,
-    openInDialog: Boolean = false, maxRows: Int? = null, open: (String, String) -> Unit) {
+    openInDialog: Boolean = false, maxRows: Int = 2, open: (String, String) -> Unit) {
     if (tags.isNullOrEmpty()) return
     var expanded by rememberSaveable(tags) { mutableStateOf(false) }
     val dialog = openInDialog || LocalDetailHeroTags.current
@@ -36,7 +38,6 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
     val dense = (compact || LocalDetailHeroTags.current) && !full
     val dismissInformation = LocalDetailInformationDismiss.current
     val truncated = remember(tags) { mutableStateMapOf<String, Boolean>() }
-    val rows = maxRows ?: LocalDetailTagRows.current
     @Composable fun Tag(name: String, id: String, dismiss: Boolean = false) {
         if (canOpen(id)) DetailTagButton(dense && !dismiss,
             onClick = { if (dismiss) expanded = false; dismissInformation?.invoke(); open(id, name) }) {
@@ -63,7 +64,7 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
         val chips = children.dropLast(1)
         val toggle = children.last()
         val gap = (if (dense) 4.dp else 8.dp).roundToPx()
-        val rowGap = (if (dense) 4.dp else 2.dp).roundToPx()
+        val rowGap = (if (dense) compactTagRowGap else 2.dp).roundToPx()
         data class Positioned(val item: Placeable, val x: Int, val y: Int, val row: Int)
         fun arrange(items: List<Placeable>): List<Positioned> {
             var x = 0; var y = 0; var row = 0; var height = 0
@@ -75,15 +76,15 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
             }
         }
         val natural = arrange(chips)
-        val overflow = natural.any { it.row >= rows } || truncated.values.any { it }
+        val overflow = natural.any { it.row >= maxRows } || truncated.values.any { it }
         val placed = when {
             !overflow -> natural
             expanded && !dialog -> arrange(chips + toggle)
             else -> {
-                var count = natural.count { it.row < rows }
+                var count = natural.count { it.row < maxRows }
                 var result = arrange(chips.take(count) + toggle)
                 // Reserve the toggle inside the final allowed row, never add an extra row.
-                while (count > 0 && result.last().row >= rows) {
+                while (count > 0 && result.last().row >= maxRows) {
                     count--; result = arrange(chips.take(count) + toggle)
                 }
                 result
@@ -109,9 +110,9 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
 private fun DetailTagButton(compact: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
     label: @Composable () -> Unit) {
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides if (compact) 0.dp else 48.dp) {
-        OutlinedButton(onClick, modifier.heightIn(min = if (compact) 28.dp else 40.dp).widthIn(min = 1.dp),
+        OutlinedButton(onClick, modifier.heightIn(min = if (compact) compactTagMinHeight else 40.dp).widthIn(min = 1.dp),
             shape = RoundedCornerShape(6.dp),
-            contentPadding = PaddingValues(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 3.dp else 6.dp)) {
+            contentPadding = PaddingValues(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) compactTagVerticalPadding else 6.dp)) {
             ProvideTextStyle(if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge) { label() }
         }
     }

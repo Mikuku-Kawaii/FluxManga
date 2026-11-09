@@ -10,7 +10,7 @@ tasks.register("generateLicenseAssets") {
         rootProject.file("docs/third-party/inventory.json"),
         rootProject.file("docs/third-party/source-adapters.json"))
     inputs.files(rootProject.fileTree("docs/third-party") {
-        include("licenses/**", "maven-notices/**", "rust-licenses/**", "update-delta/*.txt", "portable-backup/*.txt")
+        include("licenses/**", "maven-notices/**", "rust-licenses/**", "update-delta/*.txt", "portable-backup/*.txt", "lucide/*.txt")
     }, fileTree("src/main/assets/licenses"))
     // Komga is an external protocol reference, not bundled server code.
     inputs.file(rootProject.file("docs/verification/detail-metadata-local/komga-MIT.txt"))
@@ -60,6 +60,9 @@ tasks.register("generateLicenseAssets") {
                 adapter["license_declared"] as String,
                 "${adapter["repository"]}/tree/${adapter["commit"]}", texts)
         }
+        entry("lucide", "Lucide Icons 0.468.0", "adaptation", "ISC / MIT",
+            "https://github.com/lucide-icons/lucide/tree/0.468.0",
+            listOf(rootProject.file("docs/third-party/lucide/LICENSE.txt"), rootProject.file("docs/third-party/lucide/Feather-MIT.txt")))
         entry("liquid-material", "液态材质核心 · AndroidLiquidGlass", "adaptation", "Apache-2.0",
             "https://github.com/Kyant0/AndroidLiquidGlass/tree/65ab177e90e5c1d8c62e70cf7755841982da65f6",
             listOf(file("src/main/assets/licenses/liquid-material-Apache-2.0.txt"), file("src/main/assets/licenses/liquid-material-NOTICE.txt")))

@@ -59,7 +59,7 @@ internal fun HomeDiscoveryRail(model: MixedDiscoveryModel, cards: List<MangaCard
         }
         val groups = cards.chunked(if (updates) 3 else columns)
         val pager = rememberPagerState { groups.size }
-        val coverWidth = 104.dp.coerceAtMost(maxWidth * .32f)
+        val coverWidth = 72.dp.coerceAtMost(maxWidth * .32f)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             HorizontalPager(state = pager, beyondViewportPageCount = 0, pageSpacing = 12.dp,
                 verticalAlignment = Alignment.Top,
@@ -69,9 +69,9 @@ internal fun HomeDiscoveryRail(model: MixedDiscoveryModel, cards: List<MangaCard
                     groups[page].forEach { card -> key(card.key) {
                         Row(Modifier.fillMaxWidth().clickable(role = Role.Button,
                             onClickLabel = "查看《${card.title}》详情", onClick = { open(card.key.sourceId, card.key.mangaId) }),
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.sideBookTitleGap)) {
                             Box(Modifier.width(coverWidth)) {
-                                OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true, coverRatio = 1.6f)
+                                OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true)
                             }
                             Column(Modifier.weight(1f).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface,

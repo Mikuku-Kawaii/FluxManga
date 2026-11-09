@@ -38,8 +38,12 @@ internal fun MangaCard.shelfBook() = ShelfBook(key, title, favorite, available, 
     progress?.ordinal, progress?.chapterId, progress?.updatedAt, false, local = this, importedAt = importedAt)
 internal fun OnlineShelfItem.shelfBook() = ShelfBook(MangaKey(PrototypeWorld.SFW, book.sourceId, book.mangaId),
     title, book.favorite, available, null, progress?.ordinal, progress?.chapterId, progress?.updatedAt, true, remote = this)
-internal fun latestReadable(books: List<ShelfBook>) = books.filter { it.available && it.validProgress }
-    .maxWithOrNull(compareBy<ShelfBook> { it.readAt ?: 0L }.thenBy { it.stableKey })
+internal fun recentReadable(books: List<ShelfBook>): List<ShelfBook> =
+    books.asSequence().filter { it.available && it.validProgress }
+        .sortedWith(compareByDescending<ShelfBook> { it.readAt ?: 0L }.thenByDescending { it.stableKey })
+        .distinctBy { it.stableKey }.take(3).toList()
+
+internal fun latestReadable(books: List<ShelfBook>) = recentReadable(books).firstOrNull()
 internal val ShelfBook.sourceFilterKey get() = "${if (online) "online" else "local"}:${key.sourceId}"
 internal fun sourceBooks(books: List<ShelfBook>, source: String?) =
     if (source == null) books else books.filter { it.sourceFilterKey == source }

@@ -7,14 +7,18 @@ import androidx.compose.foundation.pager.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -120,47 +124,79 @@ private fun HomeFeedState(model: MixedDiscoveryModel, cards: List<MangaCard>, so
     }
 }
 
+private val recommendationShadowInset = 6.dp
+private val recommendationLineStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
+
+private data class RecommendationLayout(
+    val title: TextStyle, val summary: TextStyle, val metadata: TextStyle,
+    val textLine: Dp, val authorHeight: Dp, val badgeHeight: Dp, val height: Dp,
+)
+
+@Composable
+private fun recommendationLayout(): RecommendationLayout {
+    val typography = MaterialTheme.typography
+    val inherited = LocalTextStyle.current
+    val title = inherited.merge(typography.titleMedium).copy(fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
+        lineHeightStyle = recommendationLineStyle)
+    val meta = inherited.merge(typography.bodySmall)
+    val summary = meta.copy(lineHeight = title.lineHeight, lineHeightStyle = recommendationLineStyle)
+    val tag = inherited.merge(typography.labelSmall).copy(fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(density, measurer, title, summary, meta, tag) {
+        // Include the actual fallback font metrics and round each line up before allocating the slots.
+        fun linePixels(style: TextStyle): Int {
+            val single = measurer.measure("漫Ag", style = style).size.height
+            val double = measurer.measure("漫Ag\n漫Ag", style = style).size.height
+            return maxOf(single, double - single, with(density) { kotlin.math.ceil(style.lineHeight.toPx()).toInt() }) + 1
+        }
+        with(density) {
+            val line = maxOf(linePixels(title), linePixels(summary))
+            val author = linePixels(meta)
+            val badge = linePixels(tag) + 2 * 2.dp.roundToPx()
+            val paddingAndGaps = 2 * 8.dp.roundToPx() + 3 * 4.dp.roundToPx()
+            val height = (4 * line + author + badge + paddingAndGaps).toDp()
+            RecommendationLayout(title, summary, meta, line.toDp(), author.toDp(), badge.toDp(), maxOf(152.dp, height))
+        }
+    }
+}
+
+@Composable
+private fun Modifier.recommendationCardFrame(layout: RecommendationLayout) =
+    padding(horizontal = 4.dp, vertical = recommendationShadowInset).height(layout.height).readingCardShadow()
+
 /** Both worlds keep the final recommendation-card geometry while restoring or fetching data. */
 @Composable
 private fun HomeFeaturedPlaceholder() {
-    val height = featuredCardHeight()
-    Surface(modifier = Modifier.readingCardShadow().semantics(mergeDescendants = true) { contentDescription = "正在加载推荐" }, shape = ReadingSurfaceStyle.cardShape,
-        color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val coverWidth = featuredCoverWidth(maxWidth, height)
-            Row(Modifier.fillMaxWidth().height(height), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Spacer(Modifier.width(coverWidth).fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surfaceVariant))
-                Column(Modifier.weight(1f).padding(top = 8.dp, bottom = 8.dp, end = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ReadPlaceholder(Modifier.fillMaxWidth().height(24.dp))
-                    ReadPlaceholder(Modifier.fillMaxWidth(.6f).height(16.dp))
-                    ReadPlaceholder(Modifier.fillMaxWidth(.75f).height(20.dp))
-                    ReadPlaceholder(Modifier.fillMaxWidth(.5f).height(16.dp))
-                    ReadPlaceholder(Modifier.fillMaxWidth().height(36.dp))
-                }
-            }
-        }
+    val layout = recommendationLayout()
+    Surface(modifier = Modifier.recommendationCardFrame(layout).semantics(mergeDescendants = true) { contentDescription = "正在加载推荐" },
+        shape = ReadingSurfaceStyle.cardShape, color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
+        FeaturedCardFrame(cover = {
+            Spacer(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+        }) { width -> RecommendationInfo(layout, width, "", "", emptyList(), "", placeholder = true) }
     }
 }
 
 @Composable
 private fun HomeCoverPlaceholders(columns: Int) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        repeat(columns) { Surface(Modifier.weight(1f).aspectRatio(.7f).readingCardShadow(ReadingSurfaceStyle.coverShape), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {} }
+        repeat(columns) { Surface(Modifier.weight(1f).aspectRatio(ReadingSurfaceStyle.bookCoverRatio).readingCardShadow(ReadingSurfaceStyle.coverShape), shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {} }
     }
 }
 
 @Composable
 private fun HomeFeaturedPager(session: WorldSession, model: MixedDiscoveryModel, cards: List<MangaCard>, open: (String, String) -> Unit) {
     val pager = rememberPagerState { cards.size }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val layout = recommendationLayout()
+    val pagerHeight = layout.height + recommendationShadowInset * 2
+    Box(Modifier.fillMaxWidth().height(pagerHeight)) {
         HorizontalPager(pager, pageSpacing = 8.dp, beyondViewportPageCount = 0,
             verticalAlignment = Alignment.Top,
-            key = { cards[it].key.let { key -> "${key.sourceId}:${key.mangaId}" } }, modifier = Modifier.fillMaxWidth()) { page ->
-            HomeFeaturedBook(session, model, cards[page], page == pager.currentPage, open)
+            key = { cards[it].key.let { key -> "${key.sourceId}:${key.mangaId}" } }, modifier = Modifier.matchParentSize()) { page ->
+            HomeFeaturedBook(session, model, cards[page], page == pager.currentPage, layout, open)
         }
-        if (cards.size > 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+        // Anchor the dots below the pager without adding a row to the section height.
+        if (cards.size > 1) Row(Modifier.align(Alignment.TopCenter).offset(y = pagerHeight + 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically) {
             repeat(cards.size) { page ->
                 Box(Modifier.size(width = if (page == pager.currentPage) 20.dp else 5.dp, height = 5.dp)
@@ -173,7 +209,7 @@ private fun HomeFeaturedPager(session: WorldSession, model: MixedDiscoveryModel,
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, card: MangaCard, visible: Boolean, open: (String, String) -> Unit) {
+private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, card: MangaCard, visible: Boolean, layout: RecommendationLayout, open: (String, String) -> Unit) {
     val identity by session.identity.collectAsStateWithLifecycle()
     val visibility by session.state.collectAsStateWithLifecycle()
     val metadata = model.featured
@@ -185,69 +221,70 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
     val loaded = metadata.books[card.key]
     val information = loaded?.info
     val error = metadata.errors[card.key]
-    val cardHeight = featuredCardHeight()
     Surface(onClick = { open(card.key.sourceId, card.key.mangaId) },
-        modifier = Modifier.readingCardShadow(), shape = ReadingSurfaceStyle.cardShape,
+        modifier = Modifier.recommendationCardFrame(layout), shape = ReadingSurfaceStyle.cardShape,
         color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            // Bound the preview, even when cached metadata arrives later. Full text lives in detail.
-            val coverWidth = featuredCoverWidth(maxWidth, cardHeight)
-            val informationWidth = (maxWidth - coverWidth - 24.dp).coerceAtLeast(1.dp)
-            Row(Modifier.fillMaxWidth().height(cardHeight), horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(coverWidth).fillMaxHeight()) {
-                    OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true,
-                        integrated = true)
-                    if (error != null) TextButton({ metadata.retry(card.key) }, Modifier.align(Alignment.BottomCenter)
-                        .fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .94f)),
-                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {
-                        Text("$error，重试", style = MaterialTheme.typography.labelSmall, maxLines = 2)
-                    }
-                }
-                Column(Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 8.dp, end = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val singleTitle = HomeFeaturedTitle(card.title, informationWidth)
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        val author = information?.author?.takeIf(String::isNotBlank) ?: card.author
-                        if (author.isNotBlank()) Text(author, style = MaterialTheme.typography.bodySmall,
-                            color = ReadingSurfaceStyle.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        information?.tags?.takeIf { it.isNotEmpty() }?.let { tags -> ReadingTagBadges(tags) }
-                        val chapterLabel = listOfNotNull(loaded?.chapters?.let { "共 $it 话" },
-                            information?.status?.takeIf(String::isNotBlank)).joinToString(" · ")
-                        if (chapterLabel.isNotBlank()) Text(chapterLabel, style = MaterialTheme.typography.bodySmall,
-                            color = ReadingSurfaceStyle.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    information?.summary?.replace(Regex("\\s+"), " ")?.trim()?.takeIf(String::isNotBlank)?.let { summary ->
-                        Text(summary, modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall,
-                            maxLines = if (singleTitle) 3 else 2,
-                            overflow = TextOverflow.Ellipsis, color = ReadingSurfaceStyle.muted)
-                    }
-                }
+        FeaturedCardFrame(cover = {
+            OnlineCover(model.library, card.key.sourceId, card.key.mangaId, fillWidth = true, integrated = true)
+            val caption = listOfNotNull(information?.status?.trim()?.takeIf(String::isNotEmpty),
+                loaded?.chapters?.let { "${it}话" }).joinToString(" · ")
+            if (caption.isNotEmpty()) Text(caption, Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .75f))))
+                .padding(start = 6.dp, end = 4.dp, top = 12.dp, bottom = 4.dp),
+                color = Color.White, style = MaterialTheme.typography.labelSmall,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (error != null) TextButton({ metadata.retry(card.key) }, Modifier.align(Alignment.TopCenter)
+                .fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .94f)),
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {
+                Text("$error，重试", style = MaterialTheme.typography.labelSmall, maxLines = 2)
             }
+        }) { width ->
+            RecommendationInfo(layout, width, card.title, information?.author?.takeIf(String::isNotBlank) ?: card.author,
+                information?.tags ?: card.sourceTags.orEmpty(), information?.summary.orEmpty())
         }
     }
 }
 
-/** Measure wrapping at the same width as Text; never clip the second line with a fixed-height box. */
 @Composable
-private fun HomeFeaturedTitle(title: String, availableWidth: Dp): Boolean {
+private fun RecommendationInfo(layout: RecommendationLayout, width: Dp, title: String, author: String, tags: List<String>,
+    summary: String, placeholder: Boolean = false) {
+    val ink = ReadingSurfaceStyle.muted
     val density = LocalDensity.current
+    val titleText = remember(title) { title.replace(Regex("\\s+"), " ").trim() }
+    // Four text lines shared by the title and synopsis, at the same line height.
+    val titleStyle = layout.title
+    val summaryStyle = layout.summary
     val measurer = rememberTextMeasurer()
-    val text = remember(title) { title.replace(Regex("\\s+"), " ").trim() }
-    val baseStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-    val width = with(density) { availableWidth.roundToPx() }
-    val singleSize = listOf(20, 19, 18, 17, 16).firstOrNull { size ->
-        val measured = measurer.measure(text, style = baseStyle.copy(fontSize = size.sp, lineHeight = 28.sp),
-            constraints = Constraints(maxWidth = width), softWrap = true, maxLines = 2,
-            overflow = TextOverflow.Clip)
-        measured.lineCount == 1 && !measured.hasVisualOverflow
+    val widthPx = with(density) { width.roundToPx() }
+    val titleLines = if (placeholder) 2 else measurer.measure(titleText, style = titleStyle, maxLines = 2,
+        overflow = TextOverflow.Ellipsis, constraints = Constraints(maxWidth = widthPx)).lineCount.coerceIn(1, 2)
+    val summaryLines = 4 - titleLines
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        RecommendationSlot(layout.textLine * titleLines, placeholder, .88f) {
+            Text(titleText, Modifier.fillMaxWidth(), style = titleStyle, maxLines = titleLines, overflow = TextOverflow.Ellipsis)
+        }
+        RecommendationSlot(layout.authorHeight, placeholder, .55f) {
+            Text(author, style = layout.metadata, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        RecommendationSlot(layout.badgeHeight, placeholder, .8f) {
+            ReadingTagBadges(tags, width)
+        }
+        RecommendationSlot(layout.textLine * summaryLines, placeholder, .96f) {
+            Text(summary.replace(Regex("\\s+"), " ").trim(), Modifier.fillMaxWidth(), style = summaryStyle, color = ink, maxLines = summaryLines,
+                overflow = TextOverflow.Ellipsis)
+        }
     }
-    val single = singleSize != null
-    Text(text, Modifier.fillMaxWidth(),
-        style = baseStyle.copy(fontSize = (singleSize ?: 16).sp, lineHeight = if (single) 28.sp else 22.sp),
-        softWrap = true, minLines = if (single) 1 else 2, maxLines = if (single) 1 else 2,
-        overflow = TextOverflow.Ellipsis)
-    return single
+}
+
+/** Loading bars follow the same text slots as the final content. */
+@Composable
+private fun RecommendationSlot(height: Dp, placeholder: Boolean, fraction: Float, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(height), contentAlignment = Alignment.CenterStart) {
+        content()
+        if (placeholder) Row(Modifier.matchParentSize()) {
+            ReadPlaceholder(Modifier.fillMaxWidth(fraction).fillMaxHeight())
+        }
+    }
 }
 
 /** Defer list replacement until scrolling settles; live item keys keep the visible anchor. */

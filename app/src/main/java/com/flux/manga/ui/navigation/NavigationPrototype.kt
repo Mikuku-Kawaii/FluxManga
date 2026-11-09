@@ -195,14 +195,17 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
             com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) })
         } }
         entry<OnlineSearch> {
-            com.flux.manga.ui.pages.OnlineSearchPage(session, navigation::back,
-                navigation::openSources, navigation::openKomgaBook)
+            com.flux.manga.ui.pages.OnlineSearchInput(session, navigation::back, navigation::openSources, navigation::submitOnlineSearch)
+        }
+        entry<OnlineSearchResults> { route ->
+            if (route.world == navigation.world) com.flux.manga.ui.pages.OnlineSearchPage(session, navigation::back,
+                navigation::openSources, navigation::openKomgaBook, route.query)
         }
         entry<AuthorSearch> { route ->
             if (route.world == navigation.world) {
                 if (route.local) Shelf(searchMode = true, initialAuthor = route.name)
                 else com.flux.manga.ui.pages.OnlineSearchPage(session, navigation::back,
-                    navigation::openSources, navigation::openKomgaBook, initialQuery = "作者：${route.name}")
+                    navigation::openSources, navigation::openKomgaBook, initialQuery = "作者：${route.name}", recordAuthorSearch = true)
             }
         }
         entry<Search> {

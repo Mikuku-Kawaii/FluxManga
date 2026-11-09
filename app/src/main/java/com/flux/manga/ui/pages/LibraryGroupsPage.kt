@@ -110,7 +110,10 @@ internal fun LibraryGroupsPage(session: WorldSession, bookKey: String?, back: ()
                             onClickLabel = "编辑分组书目", onClick = { selectedGroup = row.id; selecting = false; selectedKeys = emptyList(); query = "" })
                             .heightIn(min = 48.dp), verticalArrangement = Arrangement.Center) {
                             Text(row.name, style = MaterialTheme.typography.titleMedium)
-                            Text("编辑书目 ›", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("编辑书目", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                SettingsChevron(modifier = Modifier.size(16.dp))
+                            }
                         }
                         Box {
                             ReferenceActionsButton("分组操作：${row.name}", { menuGroup = row.id })

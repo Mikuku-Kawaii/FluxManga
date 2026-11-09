@@ -1,5 +1,9 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+
+import com.flux.manga.ui.LucideIcon
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -103,7 +107,7 @@ internal fun RequestFeedbackHost(state: RequestFeedbackState, active: Boolean, r
                             .verticalScroll(rememberScrollState()).padding(vertical = 10.dp),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                         IconButton(onClick = { closing = true }, modifier = Modifier.semantics { contentDescription = "关闭提示" }) {
-                            Text("×", style = MaterialTheme.typography.titleLarge)
+                            LucideIcon(R.drawable.lucide_x, Modifier.size(20.dp))
                         }
                     }
                 }

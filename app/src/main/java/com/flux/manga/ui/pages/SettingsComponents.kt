@@ -1,6 +1,7 @@
 package com.flux.manga.ui.pages
 
-import androidx.compose.foundation.Canvas
+import com.flux.manga.R
+import com.flux.manga.ui.LucideIcon
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.toggleable
@@ -13,11 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalFocusManager
@@ -134,13 +130,7 @@ internal fun SettingsRow(title: String, summary: String, tag: String, symbol: Se
 
 @Composable
 internal fun SettingsChevron(back: Boolean = false, modifier: Modifier = Modifier) {
-    val color = MaterialTheme.colorScheme.onSurfaceVariant
-    Canvas(modifier.size(24.dp).clearAndSetSemantics { }) {
-        val a = if (back) 15f else 9f; val b = if (back) 9f else 15f
-        val path = Path().apply { moveTo(size.width * a / 24, size.height * 5 / 24)
-            lineTo(size.width * b / 24, size.height / 2); lineTo(size.width * a / 24, size.height * 19 / 24) }
-        drawPath(path, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-    }
+    LucideIcon(if (back) R.drawable.lucide_chevron_left else R.drawable.lucide_chevron_right, modifier, MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /** The entire row owns one switch action, including in the stacked large-text layout. */
@@ -184,34 +174,22 @@ internal fun SettingsChoiceRow(title: String, selected: Boolean, select: () -> U
     }
 }
 
-/** Small original line icons; no bitmap assets, icon runtime or sampled backdrop. */
 @Composable
 private fun SettingsGlyph(symbol: SettingsSymbol, modifier: Modifier) {
-    val color = MaterialTheme.colorScheme.primary
-    Canvas(modifier.clearAndSetSemantics { }) {
-        val stroke = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round)
-        fun point(x: Float, y: Float) = Offset(size.width * x / 24, size.height * y / 24)
-        fun line(x: Float, y: Float, x2: Float, y2: Float) = drawLine(color, point(x,y), point(x2,y2), stroke.width, StrokeCap.Round)
-        fun circle(x: Float, y: Float, r: Float) = drawCircle(color, size.width * r / 24, point(x,y), style = stroke)
-        fun box(x: Float, y: Float, w: Float, h: Float) = drawRoundRect(color, point(x,y), Size(size.width*w/24,size.height*h/24),
-            androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()), style = stroke)
-        when (symbol) {
-            SettingsSymbol.STARTUP -> {
-                drawArc(color, -60f, 300f, false, point(3f,3f), Size(size.width*18/24,size.height*18/24), style=stroke)
-                line(12f,2f,12f,12f)
-            }
-            SettingsSymbol.APPEARANCE -> { circle(9f,9f,7f); circle(15f,15f,7f) }
-            SettingsSymbol.READING -> { box(2f,4f,20f,16f); line(12f,4f,12f,20f); line(5f,8f,9f,8f); line(15f,8f,19f,8f) }
-            SettingsSymbol.SOURCES -> repeat(3) { i -> val y=2f+i*7; box(2f,y,20f,6f); circle(6f,y+3,0.6f) }
-            SettingsSymbol.GROUPS -> { box(2f,7f,20f,14f); line(3f,7f,3f,3f); line(3f,3f,10f,3f); line(10f,3f,13f,7f) }
-            SettingsSymbol.DOWNLOAD -> { line(12f,2f,12f,16f); line(7f,11f,12f,16f); line(12f,16f,17f,11f); line(3f,18f,3f,22f); line(3f,22f,21f,22f); line(21f,22f,21f,18f) }
-            SettingsSymbol.PRIVACY -> { box(4f,10f,16f,12f); drawArc(color,180f,180f,false,point(7f,1f),Size(size.width*10/24,size.height*16/24),style=stroke); circle(12f,16f,1f) }
-            SettingsSymbol.PROTECTION -> { val path=Path().apply { moveTo(size.width/2,0f); lineTo(size.width*0.9f,size.height*0.2f); lineTo(size.width*0.8f,size.height*0.7f); lineTo(size.width/2,size.height); lineTo(size.width*0.2f,size.height*0.7f); lineTo(size.width*0.1f,size.height*0.2f); close() }; drawPath(path,color,style=stroke); line(7f,12f,10f,15f); line(10f,15f,17f,8f) }
-            SettingsSymbol.STORAGE -> { box(2f,3f,20f,18f); line(3f,15f,21f,15f); circle(17f,18f,0.7f) }
-            SettingsSymbol.UPDATE -> { drawArc(color,40f,285f,false,point(2f,2f),Size(size.width*20/24,size.height*20/24),style=stroke); line(19f,2f,19f,8f); line(13f,8f,19f,8f) }
-            SettingsSymbol.ABOUT -> { circle(12f,12f,10f); circle(12f,7f,0.7f); line(12f,11f,12f,18f) }
-        }
+    val glyph = when (symbol) {
+        SettingsSymbol.STARTUP -> R.drawable.lucide_power
+        SettingsSymbol.APPEARANCE -> R.drawable.lucide_palette
+        SettingsSymbol.READING -> R.drawable.lucide_book_open
+        SettingsSymbol.SOURCES -> R.drawable.lucide_server
+        SettingsSymbol.GROUPS -> R.drawable.lucide_folder
+        SettingsSymbol.DOWNLOAD -> R.drawable.lucide_download
+        SettingsSymbol.PRIVACY -> R.drawable.lucide_lock_keyhole
+        SettingsSymbol.PROTECTION -> R.drawable.lucide_shield_check
+        SettingsSymbol.STORAGE -> R.drawable.lucide_hard_drive
+        SettingsSymbol.UPDATE -> R.drawable.lucide_refresh_cw
+        SettingsSymbol.ABOUT -> R.drawable.lucide_info
     }
+    LucideIcon(glyph, modifier, MaterialTheme.colorScheme.primary)
 }
 
 @Preview(name = "Settings light", widthDp = 392, heightDp = 850)

@@ -77,7 +77,7 @@ internal fun onlineShelfModel(session: WorldSession): OnlineShelfModel {
 
 @Composable
 internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: String, open: (() -> Unit)? = null, fillWidth: Boolean = false,
-    coverRatio: Float = .7f, integrated: Boolean = false) {
+    coverRatio: Float = ReadingSurfaceStyle.bookCoverRatio, integrated: Boolean = false) {
     val visibility by library.visibility.collectAsState()
     val coverEpoch = if (library.privateWorld) visibility.visibilityEpoch else 0L
     val revision by library.coverCache.revision.collectAsState()

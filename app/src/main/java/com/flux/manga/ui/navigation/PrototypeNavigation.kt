@@ -40,6 +40,9 @@ data object Search : NavKey
 data object OnlineSearch : NavKey
 
 @Serializable
+data class OnlineSearchResults(val world: PrototypeWorld, val query: String) : NavKey
+
+@Serializable
 data class AuthorSearch(val world: PrototypeWorld, val name: String, val local: Boolean = false) : NavKey
 
 @Serializable
@@ -283,6 +286,10 @@ class PrototypeNavigation(
         if (route.name.isNotEmpty() && currentStack.last() != route) currentStack.add(route)
     }
     fun openDiscovery(section: DiscoverySection) { if (currentStack.last() != DiscoveryList(section)) currentStack.add(DiscoveryList(section)) }
+    fun submitOnlineSearch(query: String) {
+        val term = query.trim().take(200)
+        if (currentStack.last() == OnlineSearch && term.isNotEmpty()) currentStack.add(OnlineSearchResults(world, term))
+    }
     fun openOnlineSearch() {
         if (currentStack.last() != OnlineSearch) currentStack.add(OnlineSearch)
     }
@@ -492,9 +499,9 @@ internal fun restoreNavigation(selectedName: String, slots: List<List<NavKey>>,
     }
     fun remap(routes: List<NavKey>, tab: MainTab): List<NavKey>? {
         if (routes.drop(1).any {
-            !supportedChild(it) || (it is AuthorSearch && it.world != world) || (world == PrototypeWorld.SFW && isPrivateSourceRoute(it)) || (it is UnifiedTagResults && it.world != world) || (it is SourceTagResults && it.world != world) || (it is MangaDetail && it.world != world) || (it is MangaReader && it.world != world) ||
+            !supportedChild(it) || (it is OnlineSearchResults && (it.world != world || it.query.isBlank())) || (it is AuthorSearch && it.world != world) || (world == PrototypeWorld.SFW && isPrivateSourceRoute(it)) || (it is UnifiedTagResults && it.world != world) || (it is SourceTagResults && it.world != world) || (it is MangaDetail && it.world != world) || (it is MangaReader && it.world != world) ||
                 (world == PrototypeWorld.NSFW && !isPrivateSourceRoute(it) && it !is MangaDetail && it !is MangaReader &&
-                    it !is AuthorSearch && it != Search && it != OnlineSearch && it != OnlineSources && it != DownloadQueue && it != AppSettings && it != LibrarySettings && it != PrivacyMaintenanceSettings && it != DataProtection && it != PrivacySettings && it != AppearanceSettings && it != StartupSettings && it != AboutSettings && it != OpenSourceLicenses && it !is LicenseEntryRoute && it !is LicenseDocumentRoute && it != AppUpdates && it != ReadingSettings && it != ReadingStatisticsRoute && it != RecordExportRoute && it != PortableBackupRoute && it != DownloadStorageSettings && it != SpaceStorageSettings && it !is LibraryGroups && it != FfiProbe && it != GlassLab && it !is ShelfList && it !is TagResults && it !is DiscoveryList && it !is UnifiedTagResults)
+                    it !is AuthorSearch && it !is OnlineSearchResults && it != Search && it != OnlineSearch && it != OnlineSources && it != DownloadQueue && it != AppSettings && it != LibrarySettings && it != PrivacyMaintenanceSettings && it != DataProtection && it != PrivacySettings && it != AppearanceSettings && it != StartupSettings && it != AboutSettings && it != OpenSourceLicenses && it !is LicenseEntryRoute && it !is LicenseDocumentRoute && it != AppUpdates && it != ReadingSettings && it != ReadingStatisticsRoute && it != RecordExportRoute && it != PortableBackupRoute && it != DownloadStorageSettings && it != SpaceStorageSettings && it !is LibraryGroups && it != FfiProbe && it != GlassLab && it !is ShelfList && it !is TagResults && it !is DiscoveryList && it !is UnifiedTagResults)
         }) return null
         return listOf(TabRoot(tab)) + routes.drop(1).map {
             when (it) {
@@ -532,7 +539,7 @@ internal fun restoreNavigation(selectedName: String, slots: List<List<NavKey>>,
 }
 
 private fun supportedChild(route: NavKey) = when (route) {
-    is AuthorSearch -> true
+    is AuthorSearch, is OnlineSearchResults -> true
     is PrivateDownloadsRoute, is PrivateOfflineReaderRoute -> true
     is GalleryTagsRoute, is EhInteractionRoute -> true
     ExSettingsRoute, is ExBrowseRoute, is ExBookRoute, is ExReaderRoute -> true

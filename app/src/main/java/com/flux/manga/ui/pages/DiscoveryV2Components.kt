@@ -1,5 +1,7 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+import com.flux.manga.ui.LucideIcon
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -14,14 +16,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun DiscoverySearchGlyph() {
-    val color = MaterialTheme.colorScheme.onSurfaceVariant
-    androidx.compose.foundation.Canvas(Modifier.size(24.dp).clearAndSetSemantics { }) {
-        val unit = size.width / 24
-        drawCircle(color, 7 * unit, androidx.compose.ui.geometry.Offset(10 * unit, 10 * unit),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(2 * unit))
-        drawLine(color, androidx.compose.ui.geometry.Offset(15 * unit, 15 * unit),
-            androidx.compose.ui.geometry.Offset(21 * unit, 21 * unit), 2 * unit, androidx.compose.ui.graphics.StrokeCap.Round)
-    }
+    LucideIcon(R.drawable.lucide_search, tint = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable

@@ -1,5 +1,9 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+
+import com.flux.manga.ui.LucideIcon
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -67,7 +71,7 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
             error = state.error, notice = state.notice,
             summary = state.task?.let { "${if (it.done) "已完成" else "导入进度"} · 新增 ${it.added} · 已存在 ${it.existing}" },
             favorite = favorite, changeFavorite = { favorite = it }, information = informationModel,
-            scope = { TextButton({ preview = false }, enabled = !state.busy) { Text("${state.selected!!.name} ▾") } },
+            scope = { TextButton({ preview = false }, enabled = !state.busy) { Text(state.selected!!.name); LucideIcon(R.drawable.lucide_chevron_down, Modifier.size(16.dp)) } },
             pagination = {
                 if (!state.entriesLoaded || state.nextEntry != null) TextButton(model::moreEntries,
                     enabled = !state.busy && state.entries.size < 1000) { Text("加载更多 / 重试本页") }

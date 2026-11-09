@@ -36,7 +36,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     private var privateDirectory: PrivateTagsModel? = null
     private var dictionary: GalleryTagsModel? = null
     private var recentVisits: VisitsModel? = null
-    private val searches = mutableMapOf<String?, AggregateSearchModel>()
+    val visibleSearches = mutableSetOf<AggregateSearchModel>()
     private val coverWarmers = mutableMapOf<MixedDiscoveryModel, Job>()
     private var running = false
     private var configurationFingerprint: String? = null
@@ -92,9 +92,6 @@ internal class PreloadedPages(private val app: Application, private val session:
     fun visits(): VisitsModel = recentVisits ?: obtain(localStore, "visits") {
         VisitsModel(app, session, 20)
     }.also { recentVisits = it }
-    fun search(komga: String?): AggregateSearchModel = searches.getOrPut(komga) {
-        obtain(networkStore, "search:$komga") { AggregateSearchModel(app, session, komga) }
-    }
     fun searchHistory(): SearchHistoryModel = obtain(localStore, "search-history") {
         SearchHistoryModel(app, session, SavedStateHandle())
     }
@@ -157,7 +154,7 @@ internal class PreloadedPages(private val app: Application, private val session:
         privateDirectory?.leave()
         dictionary?.stop() // Existing privacy boundary: no retained tag index in background.
         recentVisits?.leave()
-        searches.values.forEach { it.search.pause() }
+        visibleSearches.forEach { it.search.pause() }
     }
 
     fun localDataChanged() {
@@ -168,7 +165,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     fun baoziRecovered() {
         if (!running || !session.accepts(identity)) return
         // Pending reads replay themselves. Only retry already-failed Baozi feeds, preserving other sources.
-        (feeds.values.map { it.feed } + searches.values.map { it.search }).forEach { controller ->
+        (feeds.values.map { it.feed } + visibleSearches.map { it.search }).forEach { controller ->
             controller.state.value.results.forEach { (source, result) ->
                 if (com.flux.manga.data.isBaoziSource(source) && !result.busy && result.notice == null) {
                     if (result.appendError != null) controller.more(source)
@@ -202,7 +199,7 @@ internal class PreloadedPages(private val app: Application, private val session:
         val resume = running
         pause()
         networkStore.clear(); networkStore = ViewModelStore()
-        configuration = null; feeds.clear(); directories.clear(); searches.clear(); privateDirectory = null
+        configuration = null; feeds.clear(); directories.clear(); privateDirectory = null
         revision.value++
         if (resume) start()
         shelf().refresh(silent = true)

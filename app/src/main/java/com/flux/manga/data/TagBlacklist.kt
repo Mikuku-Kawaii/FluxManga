@@ -4,12 +4,14 @@ import android.content.Context
 import com.flux.manga.session.WorldSession
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONTokener
 import java.text.Normalizer
 import java.util.Locale
 
 internal fun normalizedBlockedTag(value: String) = Normalizer.normalize(value.trim(), Normalizer.Form.NFKC)
     .lowercase(Locale.ROOT)
 
+internal data class TagBlacklistRules(val enabled: Boolean = true, val tags: List<String> = emptyList())
 internal data class TitleBlacklistRules(val enabled: Boolean = false, val keywords: List<String> = emptyList())
 
 /** Private rules use the same encrypted, world-owned storage as source configuration. */
@@ -17,19 +19,22 @@ internal class TagBlacklist(context: Context, private val session: WorldSession)
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     private fun active() = session.accepts(identity) && session.state.value.foreground
-    suspend fun read(): List<String> {
-        val bytes = data.session(identity.world, SLOT, ::active) ?: return emptyList()
+    suspend fun read(): TagBlacklistRules {
+        val bytes = data.session(identity.world, SLOT, ::active) ?: return TagBlacklistRules()
         return try {
-            val rows = JSONArray(bytes.toString(Charsets.UTF_8))
-            List(rows.length()) { rows.getString(it) }
+            val value = JSONTokener(bytes.toString(Charsets.UTF_8)).nextValue()
+            // Earlier versions stored only a tag array and always applied its rules.
+            val rows = if (value is JSONArray) value else (value as JSONObject).getJSONArray("tags")
+            TagBlacklistRules(enabled = value !is JSONObject || value.getBoolean("enabled"),
+                tags = List(rows.length()) { rows.getString(it) })
         } finally { bytes.fill(0) }
     }
-    suspend fun save(tags: List<String>): List<String> {
-        val values = tags.map(String::trim).filter(String::isNotEmpty).distinctBy(::normalizedBlockedTag)
-        val bytes = JSONArray(values).toString().toByteArray()
+    suspend fun save(rules: TagBlacklistRules): TagBlacklistRules {
+        val saved = rules.copy(tags = rules.tags.map(String::trim).filter(String::isNotEmpty).distinctBy(::normalizedBlockedTag))
+        val bytes = JSONObject().put("enabled", saved.enabled).put("tags", JSONArray(saved.tags)).toString().toByteArray()
         try { data.putSession(identity.world, SLOT, bytes, ::active) }
         finally { bytes.fill(0) }
-        return values
+        return saved
     }
     suspend fun readTitles(): TitleBlacklistRules {
         val bytes = data.session(identity.world, TITLE_SLOT, ::active) ?: return TitleBlacklistRules()

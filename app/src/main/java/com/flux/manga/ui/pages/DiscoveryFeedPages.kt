@@ -48,8 +48,10 @@ internal fun DiscoveryFeedSummary(session: WorldSession, sourceId: String, secti
             ReferencePanel(Modifier.width(156.dp).clickable(role = Role.Button, onClickLabel = "查看详情") {
                 open(sourceId, card.key.mangaId)
             }) {
-                OnlineCover(model.library, sourceId, card.key.mangaId)
-                Text(card.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Column(verticalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.stackedBookTitleGap)) {
+                    OnlineCover(model.library, sourceId, card.key.mangaId)
+                    Text(card.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
                 TextButton(onClick = { open(sourceId, card.key.mangaId) }) { Text("查看详情") }
             }
         }

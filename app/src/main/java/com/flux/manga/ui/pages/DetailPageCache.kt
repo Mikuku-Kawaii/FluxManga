@@ -18,6 +18,37 @@ internal class DetailPageCache(private val context: Context, private val session
     suspend fun read(slot: String = "book") = cache(slot).read()
     suspend fun <T> decode(slot: String = "book", parse: (JSONObject) -> T): T? =
         read(slot)?.let { json -> readDisplayCache { parse(json) } }
+    /** Resolve the saved chapter ID using only this book's existing directory snapshots. */
+    suspend fun resumeChapterName(chapterId: String, groups: Map<String, List<String>>): String? {
+        if (isEhSource(source) || isExSource(source)) return null
+        val pica = isPicaSource(source)
+        fun findTitle(json: JSONObject?): String? {
+            val rows = json?.optJSONArray("chapters") ?: return null
+            for (i in 0 until rows.length()) {
+                val row = rows.optJSONObject(i) ?: continue
+                if (row.optString(if (pica) "order" else "id") != chapterId) continue
+                val title = if (row.isNull("title")) "" else row.getString("title").trim()
+                if (title.isNotEmpty()) return if (title.all(Char::isDigit)) "第${title}话" else title
+                val number = row.optInt(if (pica) "order" else "ordinal", 0)
+                if (number > 0) return "第${number}话"
+            }
+            return null
+        }
+        if (pica) return findTitle(read("chapters")) ?: chapterId.toIntOrNull()?.takeIf { it > 0 }?.let { "第${it}话" }
+        val book = read()
+        findTitle(book)?.let { return it }
+        if (isCopySource(source)) {
+            val slots = linkedSetOf<String>()
+            groups.filterValues { chapterId in it }.keys.filterTo(slots) { it.startsWith("chapters:") }
+            book?.optJSONArray("groups")?.let { directory ->
+                for (i in 0 until directory.length()) directory.optJSONObject(i)?.optString("id")
+                    ?.takeIf(String::isNotBlank)?.let { slots.add("chapters:$it") }
+            }
+            for (slot in slots) findTitle(read(slot))?.let { return it }
+        }
+        return null
+    }
+
     suspend fun write(value: JSONObject, slot: String = "book") {
         // No disk rewrite when only the current request/session generation changed.
         val target = cache(slot)

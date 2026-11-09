@@ -1,5 +1,7 @@
 package com.flux.manga.ui.pages
 
+import com.flux.manga.R
+import com.flux.manga.ui.LucideIcon
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,7 +20,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /** A visible alternative to long press, distinct from the settings menu glyph. */
@@ -34,19 +35,7 @@ internal fun ReferenceActionsButton(label: String, open: () -> Unit, modifier: M
 internal fun ReferenceMoreButton(label: String, tag: String, open: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     IconButton(onClick = open, interactionSource = interaction, modifier = Modifier.testTag(tag).semantics { contentDescription = label }) {
-        val color = LocalContentColor.current
-        androidx.compose.foundation.Canvas(Modifier.size(24.dp).referencePressFeedback(interaction).clearAndSetSemantics { }) {
-            repeat(3) { index ->
-                val y = (6 + index * 6).dp.toPx()
-                drawLine(
-                    color = color,
-                    start = androidx.compose.ui.geometry.Offset(3.dp.toPx(), y),
-                    end = androidx.compose.ui.geometry.Offset(21.dp.toPx(), y),
-                    strokeWidth = 2.dp.toPx(),
-                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                )
-            }
-        }
+        LucideIcon(R.drawable.lucide_menu, Modifier.referencePressFeedback(interaction))
     }
 }
 
@@ -149,10 +138,10 @@ internal fun ReferenceBookSummary(cover: @Composable () -> Unit, onClick: (() ->
     val coverAction = if (onClick == null) Modifier else Modifier.clickable(onClickLabel = "查看详情", onClick = onClick)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BoxWithConstraints {
-            if (maxWidth < 280.dp || largeText) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (maxWidth < 280.dp || largeText) Column(verticalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.stackedBookTitleGap)) {
                 Box(Modifier.width(126.dp).then(coverAction)) { cover() }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
-            } else Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            } else Row(horizontalArrangement = Arrangement.spacedBy(ReadingSurfaceStyle.sideBookTitleGap), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(88.dp).then(coverAction)) { cover() }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
             }

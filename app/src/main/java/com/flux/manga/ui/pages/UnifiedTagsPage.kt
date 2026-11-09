@@ -151,8 +151,6 @@ internal fun UnifiedTagsPage(session: WorldSession, configuration: DiscoveryStat
             ReferenceSearchField(query, { query = it.take(200) }, "查找标签",
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submit() }),
-                trailingIcon = { IconButton(onClick = feedbackAttempt(submit), enabled = configuration.status != DiscoveryStatus.LOADING,
-                    modifier = Modifier.semantics { contentDescription = "查找标签" }) { DiscoverySearchGlyph() } },
                 modifier = Modifier.fillMaxWidth().testTag("source-tag-query"))
           }
         }
