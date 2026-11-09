@@ -347,7 +347,8 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,
                 read = { target?.let(read) }, canRead = target != null && !state.busy, hasProgress = state.resume != null,
                 description = book.description, descriptionIdentity = "$source:${book.id}",
-                readingPosition = readingPosition(state.progress, state.chapters.map { DetailCatalogEntry(it.order.toString(), chapterTitle(it.title, it.order)) }))
+                readingPosition = readingPosition(state.progress, state.chapters.map { DetailCatalogEntry(it.order.toString(), chapterTitle(it.title, it.order)) },
+                    hasMoreChapters = (book.chapterCount ?: 0) > 1) { index -> state.chapters[index].order })
         } } }
         if (state.chapters.size != 1) {
             item { TextButton({ model.chapters(id) }, enabled = state.book != null && !state.busy) { Text("刷新章节目录") } }

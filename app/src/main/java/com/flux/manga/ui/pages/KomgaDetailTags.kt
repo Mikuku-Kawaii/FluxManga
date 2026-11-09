@@ -30,7 +30,7 @@ internal fun KomgaDetailTags(sourceId: String, mangaId: String, tags: List<Strin
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Boolean = { true }, compact: Boolean = false,
-    openInDialog: Boolean = false, maxRows: Int = 2, open: (String, String) -> Unit) {
+    openInDialog: Boolean = false, maxRows: Int = 3, open: (String, String) -> Unit) {
     if (tags.isNullOrEmpty()) return
     var expanded by rememberSaveable(tags) { mutableStateOf(false) }
     val dialog = openInDialog || LocalDetailHeroTags.current
@@ -44,7 +44,7 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
             Text(name, maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
                 onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
         } else Text(name, Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            style = if (dense && !dismiss) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLarge,
             maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
             onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
     }
@@ -112,8 +112,8 @@ private fun DetailTagButton(compact: Boolean, onClick: () -> Unit, modifier: Mod
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides if (compact) 0.dp else 48.dp) {
         OutlinedButton(onClick, modifier.heightIn(min = if (compact) compactTagMinHeight else 40.dp).widthIn(min = 1.dp),
             shape = RoundedCornerShape(6.dp),
-            contentPadding = PaddingValues(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) compactTagVerticalPadding else 6.dp)) {
-            ProvideTextStyle(if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge) { label() }
+            contentPadding = PaddingValues(horizontal = if (compact) 9.dp else 10.dp, vertical = if (compact) compactTagVerticalPadding else 6.dp)) {
+            ProvideTextStyle(MaterialTheme.typography.labelLarge) { label() }
         }
     }
 }

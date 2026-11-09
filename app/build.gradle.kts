@@ -25,7 +25,7 @@ android {
         applicationId = "com.flux.manga"
         minSdk = 31
         targetSdk = 36
-        versionCode = providers.gradleProperty("fluxVersionCode").getOrElse("23").toInt()
+        versionCode = providers.gradleProperty("fluxVersionCode").getOrElse("24").toInt()
         versionName = providers.gradleProperty("fluxVersionName").getOrElse("26.11.09")
         // Public release configuration only. Never put signing private keys in BuildConfig.
         fun updateString(name: String, property: String, fallback: String = "") {

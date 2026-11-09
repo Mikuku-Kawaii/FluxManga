@@ -433,7 +433,7 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
                     hasProgress = detail.card.progress != null, readModifier = Modifier.testTag("local-read"),
                     favoriteModifier = Modifier.testTag("local-favorite-${detail.card.key.mangaId}"),
                     description = detail.metadata.summary, descriptionIdentity = detail.card.key.mangaId,
-                    readingPosition = detail.card.progress?.let { "第 ${it.ordinal} 页" })
+                    readingPosition = detail.card.progress?.let { "第${it.ordinal}页" })
                 TextButton(onClick = { showBookmarks = true }, enabled = !busy,
                     modifier = Modifier.testTag("local-bookmarks")) { Text("书签与备注"); SettingsChevron(modifier = Modifier.size(16.dp)) }
             }

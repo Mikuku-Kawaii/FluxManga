@@ -17,12 +17,25 @@ internal fun chapterEntries(chapters: List<SourceChapter>) = chapters.withChapte
     DetailCatalogEntry(it.id, it.title, it.pageCount?.let { count -> "$count 页" }.orEmpty())
 }
 internal fun orderedCatalog(entries: List<DetailCatalogEntry>, reverse: Boolean) = if (reverse) entries.asReversed() else entries
-internal fun progressSummary(progress: OnlineReadingProgress?, entries: List<DetailCatalogEntry>): String? =
-    readingPosition(progress, entries)?.let { "上次阅读：$it" }
+internal fun progressSummary(progress: OnlineReadingProgress?, entries: List<DetailCatalogEntry>): String? = progress?.let {
+    val name = entries.firstOrNull { entry -> entry.id == it.chapterId }?.title.orEmpty()
+    "上次阅读：" + (if (name.isBlank()) "" else "$name · ") + "第 ${it.ordinal} 页"
+}
 
-internal fun readingPosition(progress: OnlineReadingProgress?, entries: List<DetailCatalogEntry>): String? = progress?.let {
-    val chapter = entries.firstOrNull { chapter -> chapter.id == it.chapterId }?.title
-    (chapter?.takeIf(String::isNotBlank)?.let { name -> "$name · " } ?: "") + "第 ${it.ordinal} 页"
+private const val chapterNumeral = """(?:[0-9]+(?:\.[0-9]+)?|[零〇一二两兩三四五六七八九十百千万萬]+)"""
+private val numberedChapter = Regex("""(?:第\s*)?($chapterNumeral)\s*[话話章回集]""")
+private val plainChapterNumber = Regex(chapterNumeral)
+
+internal fun readingPosition(progress: OnlineReadingProgress?, entries: List<DetailCatalogEntry>,
+    hasMoreChapters: Boolean = false, ordinalAt: (Int) -> Int = { it + 1 }): String? = progress?.let {
+    val page = "第${it.ordinal}页"
+    if (entries.size <= 1 && !hasMoreChapters) return@let page
+    val index = entries.indexOfFirst { entry -> entry.id == it.chapterId }
+    if (index < 0) return@let page
+    val title = java.text.Normalizer.normalize(entries[index].title.trim(), java.text.Normalizer.Form.NFKC)
+    val number = numberedChapter.find(title)?.groupValues?.get(1) ?: plainChapterNumber.matchEntire(title)?.value
+        ?: ordinalAt(index).toString()
+    "第${number}话·$page"
 }
 
 internal fun baoziChapterEntries(chapters: List<com.flux.manga.data.BaoziChapter>) = chapters.mapIndexed { index, chapter ->

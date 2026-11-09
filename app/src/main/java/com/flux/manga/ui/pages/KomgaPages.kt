@@ -211,7 +211,10 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
                             download = download, read = { read(if (state.hasProgress) null else state.chapters.firstOrNull()?.id) },
                             canRead = state.hasProgress || state.chapters.isNotEmpty(), hasProgress = state.hasProgress,
                             description = detail.description, descriptionIdentity = "$sourceId:$mangaId",
-                            readingPosition = readingPosition(state.progress, chapterEntries(state.chapters)))
+                            readingPosition = readingPosition(state.progress, chapterEntries(state.chapters),
+                                hasMoreChapters = state.next is SourceContinuation.Next || (state.chapterTotal ?: 0L) > 1) {
+                                index -> state.chapters[index].ordinal.toInt().takeIf { it > 0 } ?: (index + 1)
+                            })
                     }
                     item(key = "directory") {
                         RecordedDetailCatalog(session, sourceId, mangaId, chapterEntries(state.chapters), state.progress?.chapterId, { read(it) }, busy = state.busy,

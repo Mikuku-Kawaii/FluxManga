@@ -110,6 +110,7 @@ internal fun DetailActions(favorite: Boolean, saving: Boolean, modifier: Modifie
                 Spacer(Modifier.width(6.dp))
                 Text(if (!hasProgress) "开始阅读" else readingPosition?.takeIf(String::isNotBlank)
                     ?.let { "继续阅读（$it）" } ?: "继续阅读",
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }

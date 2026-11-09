@@ -117,7 +117,11 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
                             read = { read?.invoke(if (detail.hasProgress) null else chapters.items.firstOrNull()?.id) },
                             canRead = read != null && (detail.hasProgress || chapters.items.isNotEmpty()), hasProgress = detail.hasProgress,
                             description = result.description, descriptionIdentity = "$sourceId:$mangaId",
-                            readingPosition = readingPosition(detail.progress, chapterEntries(chapters.items)))
+                            readingPosition = readingPosition(detail.progress, chapterEntries(chapters.items),
+                                hasMoreChapters = chapters.next is SourceContinuation.Next || (chapters.total ?: 0L) > 1 ||
+                                    detail.groups.orEmpty().any { (it.chapterCount?.toLong() ?: 0L) > (if (it.id == chapters.groupId) 1L else 0L) }) {
+                                index -> chapters.items[index].ordinal.toInt().takeIf { it > 0 } ?: (index + 1)
+                            })
                     }
                 }
                 if (detail.detail != null) {
