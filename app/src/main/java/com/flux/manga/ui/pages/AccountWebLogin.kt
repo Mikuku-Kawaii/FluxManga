@@ -673,12 +673,20 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         override fun onReceivedHttpError(web: WebView, request: WebResourceRequest, response: WebResourceResponse) {
                             if (alive && request.isForMainFrame) {
                                 ready = false
-                                if (site == BaoziWebSite && response.statusCode == 403 && !gateAttempted && !verifyingBrowser &&
-                                    site.accepts(request.url.toString())) {
-                                    web.post { if (alive) openGate(web) }
-                                    return
+                                if (site == BaoziWebSite && response.statusCode == 403 && site.accepts(request.url.toString())) {
+                                    // The official challenge can itself be served with HTTP 403.
+                                    // Let its page finish and run; status alone is not a failed login.
+                                    // Existing challenge observation and the recovery deadline decide the outcome.
+                                    if (request.url.path?.startsWith("/__gatekeeper_challenge/") == true) {
+                                        verifyingBrowser = true
+                                        return
+                                    }
+                                    if (!gateAttempted && !verifyingBrowser) {
+                                        web.post { if (alive) openGate(web) }
+                                        return
+                                    }
+                                    recoveryNeedsUser = true
                                 }
-                                if (site == BaoziWebSite && response.statusCode == 403) recoveryNeedsUser = true
                                 error = "网站返回 HTTP ${response.statusCode}；请在网页完成验证或稍后重试"
                             }
                         }

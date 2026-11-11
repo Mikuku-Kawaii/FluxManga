@@ -164,6 +164,12 @@ internal class PreloadedPages(private val app: Application, private val session:
 
     fun baoziRecovered() {
         if (!running || !session.accepts(identity)) return
+        // A successful feed does not clear independently failed recommendation details.
+        // Release those failed metadata slots so the visible cards reload in place.
+        feeds.values.forEach { model ->
+            model.featured.errors.keys.filter { com.flux.manga.data.isBaoziSource(it.sourceId) }
+                .forEach(model.featured::retry)
+        }
         // Pending reads replay themselves. Only retry already-failed Baozi feeds, preserving other sources.
         (feeds.values.map { it.feed } + visibleSearches.map { it.search }).forEach { controller ->
             controller.state.value.results.forEach { (source, result) ->

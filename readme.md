@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable-nodpi/ic_launcher_artwork.png" width="88" height="88" alt="FluxManga 图标" />
+<img src="app/src/main/res/drawable-nodpi/ic_launcher_portrait.png" width="88" height="88" alt="FluxManga 图标" />
 
 # FluxManga · 流光漫匣
 

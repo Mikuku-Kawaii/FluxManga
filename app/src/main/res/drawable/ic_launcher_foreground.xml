@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fit the approved square artwork within the adaptive icon's 72/108 viewport. -->
+<!-- Enlarge the portrait to 84/108 so its flat lower edge falls beyond the launcher mask. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:inset="16.666667%">
+    android:inset="11.111111%">
     <bitmap
-        android:src="@drawable/ic_launcher_artwork"
+        android:src="@drawable/ic_launcher_portrait"
         android:gravity="fill"
         android:filter="true" />
 </inset>
