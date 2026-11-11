@@ -20,7 +20,7 @@ import javax.crypto.spec.SecretKeySpec
 internal fun picaId(value: String) = value.matches(Regex("[0-9a-f]{24}"))
 internal fun isPicaSource(source: String) = source.startsWith("picacg-user-") && picaId(source.removePrefix("picacg-user-"))
 internal fun isPrivateComicSource(source: String) = isJmSource(source) || isPicaSource(source) || isEhSource(source) || isExSource(source)
-internal data class PicaAccount(val uid: String, val name: String, val token: String) { val source get() = "picacg-user-$uid" }
+internal data class PicaAccount(val uid: String, val name: String, val token: String, val connectionId: String = "") { val source get() = "picacg-user-$uid" }
 internal data class PicaBook(val id: String, val title: String, val cover: String, val author: String = "", val artist: String = "",
     val description: String = "", val tags: List<String> = emptyList(), val categories: List<String> = emptyList(), val finished: Boolean = false,
     val updatedAt: String = "", val tagsKnown: Boolean = false, val chapterCount: Int? = null)
@@ -28,6 +28,8 @@ internal data class PicaChapter(val order: Int, val title: String, val updatedAt
 internal data class PicaImage(val id: String, val ordinal: Int, val url: String)
 internal data class PicaPage<T>(val items: List<T>, val page: Int, val next: Int?)
 internal fun picaFailure(error: Exception) = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
+    is PicaLoginExpired -> "PicACG 登录已失效，请设置自动登录或重新登录"
+    is SourceException.HttpStatus -> if (error.status.toInt() == 403) "PicACG 访问受限，请在官网检查账号或完成验证" else "PicACG 请求失败（HTTP ${error.status}）"
     is SourceException.AuthenticationRequired -> "登录已失效或访问受限，请在图源管理重新登录"
     is SourceException.Timeout -> "PicACG 请求超时，请重试"
     is SourceException.RateLimited -> "PicACG 请求过于频繁，请稍后重试"
@@ -40,15 +42,19 @@ internal class PicaStore(context: Context, private val session: WorldSession) {
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     fun active() = identity.world == PrototypeWorld.NSFW && session.accepts(identity)
-    suspend fun account(): PicaAccount? {
+    suspend fun saved(): PicaSavedSession? {
         val bytes = data.session(identity.world, "picacg-account-v1", ::active) ?: return null
-        return try { JSONObject(bytes.toString(Charsets.UTF_8)).let {
-            PicaAccount(it.getString("uid"), it.getString("name"), it.getString("token")).also { account -> require(picaId(account.uid) && account.token.isNotBlank()) }
-        } } finally { bytes.fill(0) }
+        return try { picaSavedSession(JSONObject(bytes.toString(Charsets.UTF_8))) } finally { bytes.fill(0) }
     }
-    suspend fun save(account: PicaAccount?) {
-        val bytes = account?.let { JSONObject().put("uid", it.uid).put("name", it.name).put("token", it.token).toString().toByteArray() }
-        try { data.putSession(identity.world, "picacg-account-v1", bytes, ::active) } finally { bytes?.fill(0) }
+    suspend fun account(): PicaAccount? = saved()?.account
+    suspend fun save(saved: PicaSavedSession?, allowed: () -> Boolean) {
+        val bytes = saved?.let {
+            JSONObject().put("uid", it.account.uid).put("name", it.account.name).put("token", it.account.token)
+                .put("connectionId", it.account.connectionId).apply {
+                    it.login?.let { login -> put("autoLogin", JSONObject().put("username", login.username).put("password", login.password)) }
+                }.toString().toByteArray()
+        }
+        try { data.putSession(identity.world, "picacg-account-v1", bytes, { active() && allowed() }) } finally { bytes?.fill(0) }
     }
     suspend fun remember(source: String, book: PicaBook, favorite: Boolean? = null) = data.worldData(identity.world, ::active) { dao ->
         require(isPicaSource(source))
@@ -66,7 +72,8 @@ internal class PicaStore(context: Context, private val session: WorldSession) {
 }
 
 /** Pinned Apache-2.0/MIT protocol adaptation; see picacg-NOTICE.txt. */
-internal class PicaClient(private val session: WorldSession, private val account: PicaAccount?, owner: CoroutineScope) : Closeable {
+internal class PicaClient(private val session: WorldSession, private val account: PicaAccount?, owner: CoroutineScope,
+    private val recovery: PicaAccountRecovery? = null) : Closeable {
     val source = account?.source ?: "picacg-login"
     private val identity = session.identity.value
     private val context = SourceContext(SourceWorld.NSFW, source, identity.processSession, identity.generation.toULong(), source)
@@ -84,9 +91,26 @@ internal class PicaClient(private val session: WorldSession, private val account
     override fun close() { release(); lifetime.cancel() }
     private fun active() { if (closed.get() || !session.accepts(identity) || !session.state.value.foreground) throw CancellationException("Expired PicACG session") }
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
-    private suspend fun request(path: String, body: JSONObject? = null, token: String? = account?.token): JSONObject = withContext(Dispatchers.IO) {
+    private suspend fun request(path: String, body: JSONObject? = null): JSONObject {
+        val bound = account ?: throw IOException("请先登录 PicACG")
+        val manager = requireNotNull(recovery)
+        val current = manager.current(bound)
+        val result = try { send(path, body, current.token) }
+        catch (error: PicaLoginExpired) {
+            val renewed = manager.recover(current)
+            currentCoroutineContext().ensureActive(); active()
+            try { send(path, body, renewed.token) }
+            catch (expired: PicaLoginExpired) {
+                manager.rejected(renewed)
+                throw IOException("PicACG 重新登录后仍被拒绝，请在图源管理检查账号")
+            }
+        }
+        manager.current(bound)
+        return result
+    }
+    private suspend fun send(path: String, body: JSONObject? = null, token: String? = account?.token): JSONObject = withContext(Dispatchers.IO) {
         active()
-        if (token.isNullOrBlank()) throw IOException("请先导入 PicACG 网页登录会话")
+        if (token.isNullOrBlank() && path != "auth/sign-in") throw PicaLoginExpired()
         val time = (System.currentTimeMillis() / 1000).toString()
         val nonce = UUID.randomUUID().toString().replace("-", "")
         val method = if (body == null) "GET" else "POST"
@@ -94,18 +118,39 @@ internal class PicaClient(private val session: WorldSession, private val account
         val key = "~d}\$Q7\$eIni=V)9\\RK/P.RM4;9[7|@/CA}b~OW!3?EV`:<>M7pddUBL5n|0/*Cn".toByteArray()
         val signature = Mac.getInstance("HmacSHA256").run { init(SecretKeySpec(key, "HmacSHA256")); doFinal(raw.toByteArray()) }
             .joinToString("") { "%02x".format(it) }
-        val reply = native.picaRequest(context, path, token.orEmpty(), time, nonce, signature, body?.toString())
+        val reply = try { native.picaRequest(context, path, token.orEmpty(), time, nonce, signature, body?.toString()) }
+        catch (error: SourceException.HttpStatus) {
+            if (error.status.toInt() == 401) throw PicaLoginExpired()
+            throw error
+        }
         try {
             currentCoroutineContext().ensureActive(); active()
             val json = JSONObject(reply.body.toString(Charsets.UTF_8))
-            if (json.getInt("code") !in 200..299) throw IOException("PicACG 未接受请求，请核对账号或稍后重试")
+            val code = json.getInt("code")
+            if (code == 401) throw PicaLoginExpired()
+            if (code == 403) throw SourceException.HttpStatus(403u)
+            if (code !in 200..299) {
+                if (path == "auth/sign-in" && code in 400..499) throw PicaLoginRejected()
+                throw IOException("PicACG 未接受请求，请核对账号或稍后重试")
+            }
             json.getJSONObject("data")
         } finally { reply.body.fill(0) }
     }
     suspend fun verifyToken(token: String): PicaAccount {
         require(token.isNotBlank() && token.length <= 4096 && token.all { it.code in 33..126 })
-        val profile = request("users/profile", token = token).getJSONObject("user")
+        val profile = send("users/profile", token = token).getJSONObject("user")
         return PicaAccount(profile.getString("_id").also { require(picaId(it)) }, profile.getString("name"), token)
+    }
+    // Existing pinned pica-go LoginRequest: email is the account name, not necessarily an email address.
+    suspend fun signIn(login: PicaAutoLogin): PicaAccount {
+        require(login.username.isNotBlank() && login.username.toByteArray().size <= 256 && login.password.toByteArray().size in 1..4096)
+        val token = try { send("auth/sign-in", JSONObject().put("email", login.username).put("password", login.password), token = "").getString("token") }
+        catch (error: PicaLoginExpired) { throw PicaLoginRejected() }
+        catch (error: SourceException.HttpStatus) {
+            if (error.status.toInt() in setOf(400, 403, 422)) throw PicaLoginRejected()
+            throw error
+        }
+        return verifyToken(token)
     }
     private fun image(value: JSONObject): String {
         val server = URI(value.getString("fileServer"))
@@ -117,7 +162,7 @@ internal class PicaClient(private val session: WorldSession, private val account
     }
     private fun book(row: JSONObject) = PicaBook(row.getString("_id").also { require(picaId(it)) }, row.getString("title"),
         image(row.getJSONObject("thumb")), row.text("author"), row.text("artist"), row.text("description"),
-        row.strings("tags"), row.strings("categories"), row.optBoolean("finished"), row.text("update_at"),
+        row.strings("tags"), row.strings("categories"), row.optBoolean("finished"), row.text("updated_at").ifBlank { row.text("update_at") },
         tagsKnown = row.optJSONArray("tags") != null && row.optJSONArray("categories") != null,
         chapterCount = row.optInt("epsCount", -1).takeIf { it >= 0 })
     private fun <T> page(value: JSONObject, number: Int, parse: (JSONObject, Int) -> T): PicaPage<T> {

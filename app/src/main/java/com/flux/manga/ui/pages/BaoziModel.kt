@@ -36,11 +36,12 @@ internal class BaoziModel(private val app: Application, private val session: Wor
     private fun active() = identity.world == PrototypeWorld.SFW && session.accepts(identity)
     private suspend fun source() = withContext(Dispatchers.IO) {
         if (!active()) throw CancellationException()
-        session.baoziSources.client(app, sourceId).source
+        publicBookSource(app, session, sourceId)
     }
     var submitted by mutableStateOf<String?>(null); private set
     private val snapshot = CatalogPageCache(app, session, "baozi-search:$sourceId", source = sourceId)
-    val feed = DiscoveryFeedController(viewModelScope, ::active, ::baoziFailure,
+    private fun sourceFailure(error: Exception) = if (isPublicWebSource(sourceId)) publicWebFailure(error, sourceId) else baoziFailure(error)
+    val feed = DiscoveryFeedController(viewModelScope, ::active, ::sourceFailure,
         restore = { snapshot.feed(submitted.orEmpty()) }, save = { snapshot.saveFeed(submitted.orEmpty(), it) }) { page ->
         blacklist.apply(source().search(requireNotNull(submitted), page))
     }
@@ -54,7 +55,7 @@ internal class BaoziModel(private val app: Application, private val session: Wor
     private var revision = 0L
     private var visible = false
     init {
-        viewModelScope.launch {
+        if (isBaoziSource(sourceId)) viewModelScope.launch {
             session.baoziAccount(app).state.map { it.recoveryVersion }.distinctUntilChanged().drop(1).collect {
                 if (visible && active()) {
                     if (detail.value.error != null && detail.value.notice == null) refreshDetail()
@@ -69,7 +70,8 @@ internal class BaoziModel(private val app: Application, private val session: Wor
     }
     fun start() {
         visible = true
-        session.baoziAccount(app).retryRecovery()
+        if (isBaoziSource(sourceId)) session.baoziAccount(app).retryRecovery()
+        if (mangaId == null && isPublicWebSource(sourceId) && submitted != null) feed.resume()
         if (mangaId != null && !detail.value.attempted) refreshDetail()
         else if (mangaId != null && !detail.value.busy) work = viewModelScope.launch {
             try { updateLocal() } catch (cancelled: CancellationException) { throw cancelled }
@@ -123,7 +125,7 @@ internal class BaoziModel(private val app: Application, private val session: Wor
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
-                ensureActive(); if (active() && ticket == revision) mutable.value = detail.value.copy(busy = false, error = baoziFailure(failure))
+                ensureActive(); if (active() && ticket == revision) mutable.value = detail.value.copy(busy = false, error = sourceFailure(failure))
             }
         }
     }
@@ -132,5 +134,9 @@ internal class BaoziModel(private val app: Application, private val session: Wor
         val old = detail.value
         mutable.value = old.copy(busy = false, notice = if (old.busy) "请求已取消，可重试加载" else old.notice)
     }
-    fun leave() { visible = false; feed.cancel(); cancelDetail() }
+    fun leave() {
+        visible = false
+        if (isPublicWebSource(sourceId)) feed.leave() else feed.cancel()
+        cancelDetail()
+    }
 }

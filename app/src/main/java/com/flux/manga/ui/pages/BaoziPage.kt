@@ -29,9 +29,12 @@ import com.flux.manga.session.WorldSession
 internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, String) -> Unit,
     mangaId: String? = null, sourceId: String = BaoziEndpoint.SOURCE_ID,
     history: SearchHistoryModel? = null, sources: () -> Unit = {}, read: ((String?) -> Unit)? = null, openTag: (String, String, String) -> Unit = { _, _, _ -> }, download: () -> Unit = {}, searchAuthor: ((String) -> Unit)? = null) {
-    if (!com.flux.manga.data.isBaoziSource(sourceId)) { ReferenceHeading("来源不可用", "请返回后重新选择来源", back); return }
+    if (!com.flux.manga.data.isPublicBookSource(sourceId)) { ReferenceHeading("来源不可用", "请返回后重新选择来源", back); return }
     val app = LocalContext.current.applicationContext as Application
     val model: BaoziModel = viewModel(key = "baozi:$sourceId:$mangaId", factory = viewModelFactory { initializer { BaoziModel(app, session, mangaId, sourceId) } })
+    LaunchedEffect(model) {
+        if (mangaId == null && com.flux.manga.data.isPublicWebSource(sourceId) && model.submitted == null) model.search("")
+    }
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     DisposableEffect(model, lifecycle) {
         if (lifecycle == Lifecycle.State.RESUMED) model.start()
@@ -54,7 +57,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
     BookResultsLayout(enabled = mangaId == null) { columns ->
         ReferenceRefreshColumn(refreshing = feed.busy || detail.busy, refresh = { if (mangaId == null) model.feed.refresh() else model.refreshDetail() }, refreshEnabled = mangaId != null || model.submitted != null, modifier = Modifier.fillMaxSize().testTag(if (mangaId == null) "baozi-search" else "baozi-detail"), state = scroll,
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("heading") { if (mangaId == null) ReferenceHeading("包子漫画搜索", "", back) else DetailHeading(back) }
+            item("heading") { if (mangaId == null) ReferenceHeading("${discoverySourceName(sourceId)}搜索", "", back) else DetailHeading(back) }
             if (mangaId == null && history != null) {
                 item("query") { ReferencePanel {
                     ReferenceSubmitSearchField(history.query, history::query, "搜索作品", { submit(history.query) },
@@ -62,11 +65,11 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
                     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = feedbackAttempt({ submit("") })) { Text("浏览作品目录") }
                     }
-                    Text(when (model.submitted) { null -> "输入关键词搜索，留空可浏览目录。"; "" -> "按图源顺序显示作品目录。"; else -> "关键词：${model.submitted} · 暂不支持翻页" })
+                    Text(when (model.submitted) { null -> "输入关键词搜索，留空可浏览目录。"; "" -> "按图源顺序显示作品目录。"; else -> "关键词：${model.submitted}" })
                 } }
                 item("status") {
                     if (feed.busy && feed.cards.isEmpty()) ReadLayoutPlaceholder()
-                    if (model.submitted != null) BaoziRequestStatus(feed.busy, feed.error, feed.notice, model.feed::refresh, model.feed::cancel)
+                    if (model.submitted != null) BaoziRequestStatus(feed.busy, feed.error, feed.notice, model.feed::refresh, model.feed::cancel, discoverySourceName(sourceId))
                     if (feed.loaded && !feed.busy && feed.error == null && feed.cards.isEmpty()) Text("暂无匹配作品")
                 }
                 bookGridItems(feed.cards, columns, { "${it.key.sourceId}:${it.key.mangaId}" }) { card -> DiscoveryGridBook(model.library, card, open) }
@@ -79,10 +82,10 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
             } else if (mangaId != null) {
                 if (!readContentLayout(detail.book != null, detail.busy, detail.error ?: detail.notice.takeIf { detail.book == null }, model::refreshDetail, detail = true, cancel = model::cancelDetail))
                     return@ReferenceRefreshColumn
-                item("state") { BaoziRequestStatus(detail.busy, detail.error, detail.notice, model::refreshDetail, model::cancelDetail) }
+                item("state") { BaoziRequestStatus(detail.busy, detail.error, detail.notice, model::refreshDetail, model::cancelDetail, discoverySourceName(sourceId)) }
                 detail.book?.let { book ->
                     item("book") { DetailHero(book.card.title, { OnlineCover(model.library, sourceId, mangaId, fillWidth = true, coverRatio = ReadingSurfaceStyle.detailArtworkRatio) }, tags = {
-                        WorkTags(book.tags?.map { it to it }, { it in com.flux.manga.data.BaoziCategories.tags }, compact = true, openInDialog = true) { id, name -> openTag(BaoziEndpoint.SOURCE_ID, id, name) }
+                        WorkTags(book.tags?.map { it to it }, { com.flux.manga.data.isPublicWebSource(sourceId) || it in com.flux.manga.data.BaoziCategories.tags }, compact = true, openInDialog = true) { id, name -> openTag(sourceId, id, name) }
                     }) {
                         WorkMetadata(book.metadata, "$sourceId:$mangaId", searchAuthor)
                     } }
@@ -119,9 +122,9 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
 }
 
 @Composable
-private fun BaoziRequestStatus(busy: Boolean, error: String?, notice: String?, retry: () -> Unit, cancel: () -> Unit) {
+private fun BaoziRequestStatus(busy: Boolean, error: String?, notice: String?, retry: () -> Unit, cancel: () -> Unit, sourceName: String) {
     if (busy) {
-        Text("正在读取包子漫画…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        Text("正在读取${sourceName}…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         TextButton(onClick = cancel) { Text("取消请求") }
     }
     error?.let { RequestFeedback(it, busy = busy, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }

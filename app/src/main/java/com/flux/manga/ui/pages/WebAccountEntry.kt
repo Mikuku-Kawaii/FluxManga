@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 /** Website-owned registration; returning is not proof of an API session. */
 @Composable
 internal fun WebAccountEntry(url: String, note: String, enabled: Boolean = true,
+    session: com.flux.manga.session.WorldSession, passwordScope: String,
     connect: (suspend (AccountWebPage, String, String) -> Unit)? = null,
     autoConnectKey: (suspend (AccountWebPage, String, String) -> String?)? = null,
     afterConnected: () -> Unit = {}, accountNameLabel: String? = null, initialAccountName: String = "",
@@ -28,7 +29,7 @@ internal fun WebAccountEntry(url: String, note: String, enabled: Boolean = true,
     }
     if (opened && valid) {
         val site = remember(url, webSite) { webSite ?: AccountWebSite("网页账号", url, setOf(requireNotNull(uri.host).lowercase())) }
-        AccountWebLogin(site, close = { opened = false }, connect = connect, autoConnectKey = autoConnectKey,
+        AccountWebLogin(site, close = { opened = false }, session = session, passwordScope = passwordScope, connect = connect, autoConnectKey = autoConnectKey,
             afterConnected = afterConnected, accountNameLabel = accountNameLabel, initialAccountName = initialAccountName,
             restoreBaozi = restoreBaozi, setupBaoziAutoLogin = setupAutoLogin)
     }

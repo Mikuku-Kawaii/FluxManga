@@ -29,7 +29,7 @@ import java.time.format.DateTimeFormatter
 
 internal data class HomeUpdateInfo(val date: String = "", val chapter: String = "")
 
-private fun updateDate(raw: String?, suffix: String): String {
+internal fun updateDate(raw: String?, suffix: String): String {
     val text = raw.orEmpty().trim()
     val match = Regex("^(\\d{4})[-/年](\\d{1,2})[-/月](\\d{1,2})(?:日|(?=T|\\s|$))").find(text)
     return try {
@@ -102,7 +102,7 @@ internal fun HomeUpdateMetadata(model: MixedDiscoveryModel, card: MangaCard) {
     }
     val extra = model.updateInfo[card.key]
     val source = card.key.sourceId
-    val dateSuffix = if (isCopySource(source) || isBaoziSource(source) || isPrivateComicSource(source)) "更新" else "资料更新"
+    val dateSuffix = if (isCopySource(source) || com.flux.manga.data.isPublicBookSource(source) || isPrivateComicSource(source)) "更新" else "资料更新"
     Text(updateDate(card.updatedAt ?: extra?.date, dateSuffix), style = MaterialTheme.typography.bodySmall,
         fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, color = ReadingSurfaceStyle.muted)
     val chapter = card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter?.takeIf(String::isNotBlank)

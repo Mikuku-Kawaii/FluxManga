@@ -316,7 +316,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
             SettingsRow("搜索与编号直达", "", "jm-settings-browse", SettingsSymbol.SOURCES, browse, enabled = !state.busy)
         } }
     }
-    if (webLogin) AccountWebLogin(JmWebSite, close = { webLogin = false }, jmIdentityFields = true, loginUrls = JmWebLoginUrls,
+    if (webLogin) AccountWebLogin(JmWebSite, session = session, passwordScope = "jmcomic", close = { webLogin = false }, jmIdentityFields = true, loginUrls = JmWebLoginUrls,
         autoConnectKey = { page, uid, name -> page.jmAccount(uid, name).let { "${it.uid}:${it.username}:${it.cookie}" } },
         connect = { page, uid, name -> model.connectWebAccount(page.jmAccount(uid, name)) }, afterConnected = favorites)
 }
@@ -339,6 +339,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                     WorkTags(book.tags.map { it to it }) { value, _ -> tag(value) }
                 }) {
                     DetailAuthors(book.author.split(" / ").map { it to it }, searchAuthor)
+                    if (book.updatedAt.isNotBlank()) DetailInfoText(updateDate(book.updatedAt, "更新"), style = MaterialTheme.typography.bodySmall)
                     if (book.chapters.size > 1) DetailInfoText("${book.chapters.size} 章", style = MaterialTheme.typography.bodySmall)
                 }
                 DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,

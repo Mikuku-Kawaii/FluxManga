@@ -70,14 +70,13 @@ internal class DetailPageCache(private val context: Context, private val session
 internal fun detailInformation(b: SourceDetail) = OnlineBookInformation(b.manga.title, b.metadata.authors.joinToString(" / ") { it.name },
     b.description.orEmpty(), b.tags.orEmpty(), b.metadata.status.orEmpty(), b.metadata.updatedAt.orEmpty(), b.metadata.partial,
     contentUpdated = b.metadata.updateKind == SourceUpdateKind.CONTENT)
-internal fun detailInformation(b: JmBook) = OnlineBookInformation(b.title, b.author, b.description, b.tags)
-internal fun detailInformation(b: PicaBook) = OnlineBookInformation(b.title, listOf(b.author, b.artist).filter(String::isNotBlank).distinct().joinToString(" / "),
-    b.description, (b.tags + b.categories).distinct(), if (b.finished) "已完结" else "连载中")
-internal fun detailInformation(b: EhBook) = OnlineBookInformation(b.title,
-    summary = listOf(b.subtitle, b.uploader.takeIf(String::isNotBlank)?.let { "上传者：$it" }.orEmpty()).filter(String::isNotBlank).joinToString("\n"),
-    tags = (listOf(b.category).filter(String::isNotBlank) + b.tags).distinct(), status = "${b.pages} 页")
+internal fun detailInformation(b: JmBook) = b.information()
+internal fun detailInformation(b: PicaBook) = b.information()
+internal fun detailInformation(b: EhBook) = b.information()
 internal fun detailInformation(b: BaoziBook) = OnlineBookInformation(b.card.title, b.author, b.description, b.tags.orEmpty(),
     b.metadata.status.orEmpty(), b.metadata.updatedAt.orEmpty(), b.metadata.partial,
+    chapterGroups = b.chapters?.let { com.flux.manga.data.publicChapterGroups(b.card.key.sourceId, it.map { chapter -> chapter.id }) }.orEmpty(),
+    chaptersKnown = b.chapters != null,
     contentUpdated = b.metadata.updateKind == SourceUpdateKind.CONTENT)
 
 private fun JSONObject.text(name: String) = if (isNull(name)) null else getString(name)
@@ -88,18 +87,20 @@ private fun <T> JSONArray.rows(decode: (JSONObject) -> T) = List(length()) { dec
 private fun List<String>?.jsonStrings(): Any = this?.let(::JSONArray) ?: JSONObject.NULL
 
 internal fun detailJson(book: JmBook) = JSONObject().put("id", book.id).put("title", book.title).put("author", book.author)
-    .put("description", book.description).put("tags", JSONArray(book.tags))
+    .put("description", book.description).put("tags", JSONArray(book.tags)).put("updatedAt", book.updatedAt)
     .put("chapters", book.chapters.json { JSONObject().put("id", it.id).put("title", it.title) })
 internal fun jmDetail(json: JSONObject) = JmBook(json.getString("id"), json.getString("title"), json.getString("author"),
-    json.getString("description"), json.strings("tags").orEmpty(), json.getJSONArray("chapters").rows { JmChapter(it.getString("id"), it.getString("title")) })
+    json.getString("description"), json.strings("tags").orEmpty(), json.getJSONArray("chapters").rows { JmChapter(it.getString("id"), it.getString("title")) }, json.optString("updatedAt"))
 
 internal fun detailJson(book: PicaBook) = JSONObject().put("id", book.id).put("title", book.title).put("cover", book.cover)
     .put("author", book.author).put("artist", book.artist).put("description", book.description).put("tags", JSONArray(book.tags))
-    .put("categories", JSONArray(book.categories)).put("finished", book.finished)
+    .put("categories", JSONArray(book.categories)).put("finished", book.finished).put("updatedAt", book.updatedAt)
+    .put("tagsKnown", book.tagsKnown).put("chapterCount", book.chapterCount ?: JSONObject.NULL)
 internal fun picaDetail(j: JSONObject) = PicaBook(j.getString("id"), j.getString("title"), j.getString("cover"), j.getString("author"),
-    j.getString("artist"), j.getString("description"), j.strings("tags").orEmpty(), j.strings("categories").orEmpty(), j.getBoolean("finished"))
-internal fun picaChaptersJson(rows: List<PicaChapter>) = JSONObject().put("chapters", rows.json { JSONObject().put("order", it.order).put("title", it.title) })
-internal fun picaChapters(j: JSONObject) = j.getJSONArray("chapters").rows { PicaChapter(it.getInt("order"), it.getString("title")) }
+    j.getString("artist"), j.getString("description"), j.strings("tags").orEmpty(), j.strings("categories").orEmpty(), j.getBoolean("finished"),
+    j.optString("updatedAt"), j.optBoolean("tagsKnown"), j.optInt("chapterCount", -1).takeIf { it >= 0 })
+internal fun picaChaptersJson(rows: List<PicaChapter>) = JSONObject().put("chapters", rows.json { JSONObject().put("order", it.order).put("title", it.title).put("updatedAt", it.updatedAt) })
+internal fun picaChapters(j: JSONObject) = j.getJSONArray("chapters").rows { PicaChapter(it.getInt("order"), it.getString("title"), it.optString("updatedAt")) }
 
 internal fun detailJson(book: EhBook) = JSONObject().put("id", book.id).put("title", book.title).put("cover", book.cover)
     .put("subtitle", book.subtitle).put("uploader", book.uploader).put("category", book.category).put("pages", book.pages).put("tags", JSONArray(book.tags))

@@ -101,8 +101,8 @@ internal fun OnlineCover(library: OnlineLibrary, sourceId: String, mangaId: Stri
             throw cancelled
         }
         catch (_: com.flux.manga.core.SourceException.NotFound) { missing = true }
-        catch (_: com.flux.manga.core.SourceException.Timeout) { error = "加载超时" }
-        catch (_: Exception) { error = "加载失败" }
+        catch (_: com.flux.manga.core.SourceException.Timeout) { error = "${discoverySourceName(sourceId)}封面超时" }
+        catch (_: Exception) { error = "${discoverySourceName(sourceId)}封面加载失败" }
     }
     CoverArtwork(bitmap?.takeIf { !library.privateWorld || active }, active && bitmap == null && !missing && error == null,
         if (!active) "封面" else if (missing) "暂无封面" else error ?: "正在加载封面",

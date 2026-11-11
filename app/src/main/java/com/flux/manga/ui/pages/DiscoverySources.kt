@@ -13,16 +13,19 @@ import com.flux.manga.ui.navigation.DiscoverySection
 
 /** Stable provider choice; the configured Komga instance ID is resolved separately. */
 internal enum class DiscoverySource(val title: String) {
-    COPY("拷贝漫画"), KOMGA("Komga"), BAOZI("包子漫画");
+    COPY("拷贝漫画"), KOMGA("Komga"), BAOZI("包子漫画"), GUAZI("瓜子漫画"), KUAIKAN("快看漫画"), MANHUAGUI("漫画柜");
     fun id(state: DiscoveryState): String? = when {
         state.status == DiscoveryStatus.PRIVATE -> null
         this == COPY -> CopyMangaEndpoint.SOURCE_ID
         this == BAOZI -> com.flux.manga.data.BaoziEndpoint.SOURCE_ID
+        this == GUAZI -> com.flux.manga.data.PublicWebSite.GUAZI.sourceId
+        this == KUAIKAN -> com.flux.manga.data.PublicWebSite.KUAIKAN.sourceId
+        this == MANHUAGUI -> com.flux.manga.data.PublicWebSite.MANHUAGUI.sourceId
         state.status == DiscoveryStatus.READY -> state.sourceId
         else -> null
     }
     fun supports(section: DiscoverySection) = when (section) {
-        DiscoverySection.RECOMMENDATIONS -> this == COPY || this == BAOZI
+        DiscoverySection.RECOMMENDATIONS -> this != KOMGA
         DiscoverySection.UPDATES -> true
         DiscoverySection.VISITS -> false
     }
@@ -36,6 +39,7 @@ internal fun discoverySourceName(sourceId: String?) = when {
     sourceId?.startsWith("picacg-") == true -> "PicACG"
     sourceId?.startsWith("ehentai-") == true -> "E-Hentai"
     sourceId?.startsWith("exhentai-") == true -> "ExHentai"
+    sourceId != null && com.flux.manga.data.isPublicWebSource(sourceId) -> com.flux.manga.data.PublicWebSite.of(sourceId)!!.label
     sourceId == com.flux.manga.data.BaoziEndpoint.SOURCE_ID -> "包子漫画"
     sourceId == CopyMangaEndpoint.SOURCE_ID -> "拷贝漫画"
     sourceId?.startsWith("komga") == true -> "Komga"

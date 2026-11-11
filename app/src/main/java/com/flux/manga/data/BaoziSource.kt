@@ -35,7 +35,15 @@ internal fun baoziCoverLocation(raw: String?): BaoziCover {
         if (raw.length > 8192 || url.scheme != "https" || !allowed || url.port !in listOf(-1, 443) ||
             url.rawUserInfo != null || url.rawFragment != null || !url.rawPath.startsWith("/cover/") ||
             url.rawPath.contains("%") || url.rawPath.split('/').any { it == ".." || it == "." }) BaoziCover.Invalid
-        else if (url.path.endsWith("/404.jpg")) BaoziCover.Missing else BaoziCover.Url(url.toASCIIString())
+        else if (url.path.endsWith("/404.jpg")) BaoziCover.Missing else {
+            // Old catalog/detail HTML still names this host, which now returns a
+            // verification page. The current cover CDN serves the same path/query
+            // anonymously; never send the website's account cookies to it.
+            val address = url.toASCIIString()
+            BaoziCover.Url(if (host == "static-tw.baozimh.com")
+                address.replaceFirst("https://${url.rawAuthority}/", "https://static-tw.bzmgcn.com/")
+            else address)
+        }
     } catch (_: Exception) { BaoziCover.Invalid }
 }
 
@@ -46,7 +54,7 @@ internal class BaoziSource(private val context: SourceContext, private val accep
     private val chapterGet: (suspend (String, String) -> SourceHttpReply)? = null,
     private val metadataOrigin: String = BaoziEndpoint.BASE_URL,
     private val authenticationRequired: () -> Unit = {},
-    private val get: suspend (String) -> SourceHttpReply) {
+    private val get: suspend (String) -> SourceHttpReply) : PublicBookSource {
     init { require(isBaoziSource(context.sourceId) && context.world == SourceWorld.SFW && context.authRef == null) }
     private val covers = object : LinkedHashMap<String, BaoziCover>(256, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, BaoziCover>?) = size > 256
@@ -101,7 +109,7 @@ internal class BaoziSource(private val context: SourceContext, private val accep
         if (!path.startsWith("/comic/")) throw SourceException.InvalidResponse()
         return id(path.removePrefix("/comic/"))
     }
-    suspend fun search(input: String, page: SourcePageRequest, tag: String? = null, updates: Boolean = false): SourceCardPage = withContext(Dispatchers.IO) {
+    override suspend fun search(input: String, page: SourcePageRequest, tag: String?, updates: Boolean): SourceCardPage = withContext(Dispatchers.IO) {
         val query = input.trim()
         if (query.length > 200) throw SourceException.InvalidRequest()
         val number = when (page) {
@@ -123,7 +131,7 @@ internal class BaoziSource(private val context: SourceContext, private val accep
             SourceContinuation.Next(SourcePageRequest.Page(number + 1u)) else SourceContinuation.End)
     }
     /** Official home recommendation sections are a snapshot, not a fabricated paged feed. */
-    suspend fun recommendations(page: SourcePageRequest): SourceCardPage = withContext(Dispatchers.IO) {
+    override suspend fun recommendations(page: SourcePageRequest): SourceCardPage = withContext(Dispatchers.IO) {
         if (page != SourcePageRequest.Start) throw SourceException.InvalidRequest()
         homeSection(setOf("推荐国漫", "推荐韩漫", "推荐日漫", "推薦國漫", "推薦韓漫", "推薦日漫"))
     }
@@ -160,7 +168,7 @@ internal class BaoziSource(private val context: SourceContext, private val accep
         locations.forEach { (id, location) -> rememberCover(id, location) }
         return cards
     }
-    suspend fun detail(mangaId: String): BaoziBook = withContext(Dispatchers.IO) {
+    override suspend fun detail(mangaId: String): BaoziBook = withContext(Dispatchers.IO) {
         val key = key(mangaId)
         val doc = document("comic/${key.mangaId}")
         doc.selectFirst("link[rel=canonical]")?.attr("href")?.takeIf { it.isNotBlank() }?.let {
@@ -187,14 +195,14 @@ internal class BaoziSource(private val context: SourceContext, private val accep
             doc.selectFirst("p.comics-detail__desc")?.text().orEmpty(), chapters, chapterError,
             doc.selectFirst(".tag-list")?.select(".tag")?.map { it.text().trim() }?.filter { it.isNotEmpty() && it !in setOf("连载中", "連載中", "已完结", "已完結") }?.distinct(), baoziWorkMetadata(doc))
     }
-    suspend fun chapterPage(mangaId: String, page: SourcePageRequest): SourceChapterPage {
+    override suspend fun chapterPage(mangaId: String, page: SourcePageRequest): SourceChapterPage {
         if (page != SourcePageRequest.Start) throw SourceException.InvalidRequest()
         val book = detail(mangaId)
         if (book.chapterError != null || book.chapters == null) throw SourceException.InvalidResponse()
         val key = SourceMangaKey(context.world, context.sourceId, mangaId)
         return SourceChapterPage(context, book.chapters.mapIndexed { i, c -> SourceChapter(key, c.id, c.title, (i + 1).toUInt(), null) }, SourceContinuation.End, book.chapters.size.toUInt())
     }
-    suspend fun pages(mangaId: String, chapterId: String): SourcePages = withContext(Dispatchers.IO) {
+    override suspend fun pages(mangaId: String, chapterId: String): SourcePages = withContext(Dispatchers.IO) {
         id(mangaId)
         if (!chapterId.matches(Regex("[0-9]+_[0-9]+"))) throw SourceException.InvalidRequest()
         val directory = synchronized(directories) { directories[mangaId] } ?: detail(mangaId).chapters

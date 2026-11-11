@@ -17,6 +17,7 @@ internal class PicaReaderRepository(context: Context, private val session: World
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     private val store = PicaStore(context, session)
+    private val recovery = session.picaAccount(context)
     private val owner = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val setup = Mutex()
     private var client: PicaClient? = null
@@ -35,7 +36,7 @@ internal class PicaReaderRepository(context: Context, private val session: World
         active()
         client ?: store.account().let { account ->
             if (account?.source != source) throw IOException("请在图源管理登录原 PicACG 账号")
-            PicaClient(session, account, owner).also { client = it }
+            PicaClient(session, account, owner, recovery).also { client = it }
         }
     }
     private suspend fun directory(): List<PicaChapter> = directory ?: client().allChapters(manga).also { rows ->

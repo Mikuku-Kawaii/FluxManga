@@ -221,6 +221,18 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
     val loaded = metadata.books[card.key]
     val information = loaded?.info
     val error = metadata.errors[card.key]
+    val tags = information?.tags.orEmpty().ifEmpty { card.sourceTags.orEmpty() }
+        .map(String::trim).filter(String::isNotEmpty)
+    // Presentation only: publication status must not become a genre or blacklist rule.
+    val displayTags = tags.ifEmpty {
+        if (information?.detailsReady != true) emptyList() else listOf(when {
+            information.isFinished -> "已完结"
+            information.status.trim().uppercase(java.util.Locale.ROOT) in setOf("连载", "連載", "连载中", "連載中", "ONGOING") -> "连载中"
+            information.status.trim().uppercase(java.util.Locale.ROOT) in setOf("暂停", "暂停连载", "HIATUS") -> "暂停连载"
+            information.status.trim().uppercase(java.util.Locale.ROOT) in setOf("已弃坑", "ABANDONED") -> "已弃坑"
+            else -> "状态未知"
+        })
+    }
     Surface(onClick = { open(card.key.sourceId, card.key.mangaId) },
         modifier = Modifier.recommendationCardFrame(layout), shape = ReadingSurfaceStyle.cardShape,
         color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border) {
@@ -240,7 +252,7 @@ private fun HomeFeaturedBook(session: WorldSession, model: MixedDiscoveryModel, 
             }
         }) { width ->
             RecommendationInfo(layout, width, card.title, information?.author?.takeIf(String::isNotBlank) ?: card.author,
-                information?.tags ?: card.sourceTags.orEmpty(), information?.summary.orEmpty())
+                displayTags, information?.summary.orEmpty())
         }
     }
 }

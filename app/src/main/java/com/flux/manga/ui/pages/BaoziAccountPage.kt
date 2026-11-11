@@ -88,7 +88,7 @@ internal fun BaoziAccountPage(session: WorldSession, back: () -> Unit, open: (St
                 autoConnectKey = { page, _, name ->
                     val origin = page.baoziOrigin()
                     page.cookie(origin, "TSID").takeIf { it.isNotBlank() && name.isNotBlank() }?.let { "$origin:$name:$it" }
-                }, webSite = BaoziWebSite, restoreBaozi = model::savedWebAccount)
+                }, session = session, passwordScope = "baozi", webSite = BaoziWebSite, restoreBaozi = model::savedWebAccount)
             state.recoveryNotice?.let { Text(it, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

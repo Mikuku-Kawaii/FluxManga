@@ -30,6 +30,14 @@ internal fun sourceAccountSummary(kind: SourceKind, session: WorldSession?): Str
                 SourceKind.JM -> JmStore(context, session).settings().account?.username
                 SourceKind.PICA -> PicaStore(context, session).account()?.name
                 SourceKind.EH -> EhStore(context, session, GallerySite.EH).settings().account?.name
+                SourceKind.GUAZI, SourceKind.KUAIKAN, SourceKind.MANHUAGUI -> {
+                    val site = when (kind) {
+                        SourceKind.GUAZI -> PublicWebSite.GUAZI
+                        SourceKind.KUAIKAN -> PublicWebSite.KUAIKAN
+                        else -> PublicWebSite.MANHUAGUI
+                    }
+                    session.publicWebSources.account(site).read()?.name
+                }
                 SourceKind.EX -> EhStore(context, session, GallerySite.EX).settings().account?.name
             }
             if (active()) summary = if (name != null) "已保存账号${name.takeIf(String::isNotBlank)?.let { " · $it" }.orEmpty()}"

@@ -65,6 +65,8 @@ internal suspend fun adjacentReaderChapter(key: SourceMangaKey, current: String,
                 // Copy's flattened catalog resets its one-based ordinal for each group.
                 // Preserve that boundary, including when the next group arrives on a new page.
                 val ordinal = directory.chapters[index].ordinal
+                if (key.sourceId == com.flux.manga.data.PublicWebSite.MANHUAGUI.sourceId &&
+                    candidate.id.substringBefore('~') != current.substringBefore('~')) return null
                 if (isCopySource(key.sourceId) &&
                     (if (direction > 0) candidate.ordinal <= ordinal else candidate.ordinal >= ordinal)) return null
                 return candidate

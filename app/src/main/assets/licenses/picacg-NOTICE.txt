@@ -52,3 +52,19 @@ and epsCount. The existing website API remains the first route; the known
 upstream API is tried on bounded connection/server failures in the same
 Rust client. No login or write replay, Go runtime or additional dependency.
 Existing MIT/Apache notices and licenses remain applicable.
+
+2026-11-11 automatic re-login follow-up (supersedes the original no-password /
+no-automatic-login limitation above): reuses the same pinned MIT pica-go
+client.go Login and dto.go LoginRequest (email/password -> auth/sign-in).
+No Go runtime or new dependency. Explicit setup verifies users/profile UID,
+then stores credentials in the existing private-world encrypted session.
+A WorldSession owner merges expired-token reads, validates the same UID,
+renews the token and replays each read once. Login itself is not replayed or
+redirected to a fallback host; HTTP 403 and image failures do not trigger login.
+Cooldown, cancellation and manual connection identity protect account changes;
+logout removes saved credentials while preserving books and reading progress.
+Implementation/source review only; no compilation, tests or device deployment.
+
+2026-11-11 metadata follow-up: align comic update time with the pinned pica-go
+ComicInfo.updated_at field, retaining update_at compatibility. Preserve epsCount,
+tag availability and chapter timestamps through local metadata/cache mappings.

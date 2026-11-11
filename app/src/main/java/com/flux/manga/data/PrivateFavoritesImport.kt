@@ -20,6 +20,7 @@ private data class FavoritesBatch(val books: List<Pair<String, String>>, val nex
 
 /** Reuses the account-import transaction: book inserts and the next cursor commit together. */
 internal class PrivateFavoritesImport(context: Context, private val session: WorldSession, private val source: String) {
+    private val app = context.applicationContext
     private val identity = session.identity.value
     private val data = WorldDataStore(context)
     private val db = data.accountImportDatabase(PrototypeWorld.NSFW)
@@ -50,18 +51,26 @@ internal class PrivateFavoritesImport(context: Context, private val session: Wor
     }
     suspend fun task(): PrivateFavoritesTask? = db.transaction(::active) { it.task() }
 
+    private fun accountFingerprint(bytes: ByteArray): ByteArray {
+        val identity = if (isPicaSource(source)) {
+            val json = JSONObject(bytes.toString(Charsets.UTF_8))
+            "${json.getString("uid")}:${picaConnectionId(json)}".toByteArray()
+        } else bytes
+        return try { MessageDigest.getInstance("SHA-256").digest(identity) }
+        finally { if (identity !== bytes) identity.fill(0) }
+    }
     private fun AccountImportRows.requireAccount(fingerprint: ByteArray) {
         val bytes = read(accountSlot) ?: throw IOException("账号已退出，请重新登录后续办")
         try {
-            if (!MessageDigest.isEqual(fingerprint, MessageDigest.getInstance("SHA-256").digest(bytes)))
+            if (!MessageDigest.isEqual(fingerprint, accountFingerprint(bytes)))
                 throw IOException("账号或连接设置已变化，请返回图源管理后续办")
         } finally { bytes.fill(0) }
     }
 
     suspend fun run(owner: CoroutineScope, rescan: Boolean = false, update: (PrivateFavoritesTask) -> Unit) {
-        // Read one credential snapshot; both the client and commit guard use this exact snapshot.
+        // Guard manual account replacement; PicACG token renewal keeps its connection identity.
         val bytes = db.transaction(::active) { it.read(accountSlot) } ?: throw IOException("请先登录此图源账号")
-        val fingerprint = MessageDigest.getInstance("SHA-256").digest(bytes)
+        val fingerprint = accountFingerprint(bytes)
         val json = try { JSONObject(bytes.toString(Charsets.UTF_8)) } finally { bytes.fill(0) }
         when {
             isJmSource(source) -> {
@@ -78,9 +87,9 @@ internal class PrivateFavoritesImport(context: Context, private val session: Wor
                 }
             }
             isPicaSource(source) -> {
-                val account = PicaAccount(json.getString("uid"), json.getString("name"), json.getString("token"))
+                val account = picaSavedSession(json).account
                 if (account.source != source) throw IOException("请登录此任务所属的 PicACG 账号")
-                PicaClient(session, account, owner).use { client ->
+                PicaClient(session, account, owner, session.picaAccount(app)).use { client ->
                     drain(fingerprint, rescan, update) { cursor ->
                         val page = client.favorites(cursor?.toInt() ?: 1)
                         FavoritesBatch(page.items.map { it.id to it.title }, page.next?.toString())

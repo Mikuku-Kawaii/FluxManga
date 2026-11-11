@@ -6,9 +6,6 @@ import androidx.compose.runtime.Composable
 import com.flux.manga.data.isFinished
 import com.flux.manga.data.isReadToEnd
 import com.flux.manga.data.OnlineBookInformation
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 internal data class ShelfUpdateStatus(val label: String, val newerChapters: Boolean = false)
 
@@ -21,14 +18,9 @@ internal fun shelfUpdateStatus(info: OnlineBookInformation?, chapter: String?, o
     } == true
     if (info?.isFinished == true)
         return ShelfUpdateStatus("已完结", newer)
-    val date = info?.takeIf { it.contentUpdated }?.updated?.trim()?.let { raw ->
-        val match = Regex("^(\\d{4})[-/年](\\d{1,2})[-/月](\\d{1,2})(?:日|(?=T|\\s|$))").find(raw)
-        match?.let {
-            try { LocalDate.of(it.groupValues[1].toInt(), it.groupValues[2].toInt(), it.groupValues[3].toInt()) }
-            catch (_: java.time.DateTimeException) { null }
-        }
-    }
-    return ShelfUpdateStatus(date?.format(DateTimeFormatter.ofPattern("MM月dd日更新", Locale.CHINA))
+    val date = info?.takeIf { it.contentUpdated }?.updated?.let { updateDate(it, "更新") }
+        ?.takeUnless { it == "日期未提供" }
+    return ShelfUpdateStatus(date
         ?: "更新日期未知", newer)
 }
 

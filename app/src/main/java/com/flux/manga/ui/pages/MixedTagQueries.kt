@@ -20,8 +20,13 @@ internal fun mixedTagQueries(sources: List<String>, label: String, targets: List
     return sources.flatMap { source ->
         val matches = native.filter { it.sourceId == source }
         when {
-            matches.isNotEmpty() -> matches.map { MixedTagQuery(it, keyword = false) }
+            matches.isNotEmpty() -> matches.map { target ->
+                val website = PublicWebSite.of(source)
+                MixedTagQuery(target, keyword = website != null && target.id !in website.tags)
+            }
             source == BaoziEndpoint.SOURCE_ID && label in BaoziCategories.tags ->
+                listOf(MixedTagQuery(TagTarget(source, label), keyword = false))
+            PublicWebSite.of(source)?.tags?.containsKey(label) == true ->
                 listOf(MixedTagQuery(TagTarget(source, label), keyword = false))
             else -> listOf(MixedTagQuery(TagTarget(source, label), keyword = true))
         }

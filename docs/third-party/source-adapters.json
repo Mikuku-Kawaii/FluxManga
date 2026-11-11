@@ -1,8 +1,100 @@
 {
   "schema_version": 1,
   "baseline_date": "2026-10-22",
-  "scope": "Three public and four admitted private sources (JMComic, PicACG, E-Hentai, ExHentai). Representative pinned upstream samples and core local files only; not a complete source archive, SBOM or release proof. EX added 2026-10-24 without tests/build. Historical evidence retained; only reviewed shared-file hashes refreshed. EH/EX tag format support added 2026-10-24; translation dataset is user-provided, not bundled.",
+  "scope": "Six public and four admitted private sources (JMComic, PicACG, E-Hentai, ExHentai). Representative pinned upstream samples and core local files only; not a complete source archive, SBOM or release proof. EX added 2026-10-24 without tests/build. Historical evidence retained; only reviewed shared-file hashes refreshed. EH/EX tag format support added 2026-10-24; translation dataset is user-provided, not bundled. 2026-11-11 adds Guazi, Kuaikan and Manhuagui public catalogs; implementation only, no build or live acceptance.",
   "adapters": [
+    {
+      "id": "public-web-catalogs",
+      "source": "guazi,kuaikan,manhuagui",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "commit": "d9420cd1c66ecd3385946b616aacfcf8f6314f70",
+      "reuse": "adaptation",
+      "license_declared": "Apache-2.0",
+      "license": {
+        "path": "app/src/main/assets/licenses/public-web-Apache-2.0.txt",
+        "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+      },
+      "notice": {
+        "path": "app/src/main/assets/licenses/public-web-NOTICE.txt",
+        "sha256": "035bfc56eec02c92387fc64da26b39987255c8a5ece74153abd6076d439f9ea0"
+      },
+      "upstream_samples": [
+        {
+          "path": "docs/third-party/public-web/Guazimanhua.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/guazimanhua/src/eu/kanade/tachiyomi/extension/zh/guazimanhua/Guazimanhua.kt",
+          "sha256": "e71a3273eeeff802dad6af94c7b2e301a99797e5828fabf899df14458062d8a8"
+        },
+        {
+          "path": "docs/third-party/public-web/Manhuagui.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/manhuagui/src/eu/kanade/tachiyomi/extension/zh/manhuagui/Manhuagui.kt",
+          "sha256": "336f36bb40d526f41adb79ad75766f823360cc1bf29547824a5ddf47d475e559"
+        },
+        {
+          "path": "docs/third-party/public-web/Kuaikanmanhua.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/kuaikanmanhua/src/eu/kanade/tachiyomi/extension/zh/kuaikanmanhua/Kuaikanmanhua.kt",
+          "sha256": "caeca503d8533514060401e68882044614f7deb108757979de23a8b1b9fafbd4"
+        },
+        {
+          "path": "docs/third-party/public-web/KuaikanmanhuaDto.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/kuaikanmanhua/src/eu/kanade/tachiyomi/extension/zh/kuaikanmanhua/KuaikanmanhuaDto.kt",
+          "sha256": "ef0d281dcd29ff640f929772301de7733deadc6467e8f4849a9921311d0798a6"
+        },
+        {
+          "path": "docs/third-party/public-web/KuaikanmanhuaFilters.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/kuaikanmanhua/src/eu/kanade/tachiyomi/extension/zh/kuaikanmanhua/KuaikanmanhuaFilters.kt",
+          "sha256": "d37afa3b1e5f2703dc0c5452a3b3319e44c3cfc46b78e062a68cccccd54f04ab"
+        },
+        {
+          "path": "docs/third-party/public-web/GuaziFilters.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/guazimanhua/src/eu/kanade/tachiyomi/extension/zh/guazimanhua/Filters.kt",
+          "sha256": "7a52dae319fbfdcfd0aa9b81abb067a26756636bdf6b942fb7eade16abfa8b80"
+        },
+        {
+          "path": "docs/third-party/public-web/ManhuaguiFilters.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/src/zh/manhuagui/src/eu/kanade/tachiyomi/extension/zh/manhuagui/Filters.kt",
+          "sha256": "53cf9aebabd5214de888a0d164fc085eb8407718d1dae3648e0964211f8e3c86"
+        },
+        {
+          "path": "docs/third-party/public-web/LZString.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/lib/lzstring/src/keiyoushi/lib/lzstring/LZString.kt",
+          "sha256": "2468c63d3e6e445c33994d6c45b7d6890c778500d3e8758508190ae26c2ca93b"
+        },
+        {
+          "path": "docs/third-party/public-web/Unpacker.kt",
+          "url": "https://raw.githubusercontent.com/keiyoushi/extensions-source/d9420cd1c66ecd3385946b616aacfcf8f6314f70/lib/unpacker/src/keiyoushi/lib/unpacker/Unpacker.kt",
+          "sha256": "4b7f7e53ced0ef8e5c58fcd886a75614c684562f8aa18c95fba92817e9b1848d"
+        }
+      ],
+      "local_files": [
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PublicBookSource.kt",
+          "sha256": "e2d166237284b16984d48726e0347926301d46b92dcdef2b74c190b79b61560c"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PublicWebSite.kt",
+          "sha256": "b01a3f6809a428b20335eb32e0adafb1781de3841268e77e09c7cd894a6e1ac2"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/WorldPublicWebSources.kt",
+          "sha256": "1d9e52f42c75d5e896a98af09df18f8cffd4b4e0e5c68f70ff614247df94d115"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PublicWebPayload.kt",
+          "sha256": "2cf261a31f6b1a0b7bde9520b3006d199d8b77ef34c55b10c93fd0f5beb9956f"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PublicLzString.kt",
+          "sha256": "62e5f8fbc7686e29865e6ec15fc28341a32d1107de4f7efa6235762ce610f96c"
+        },
+        {
+          "path": "rust-core/src/transport.rs",
+          "sha256": "52ce5700d4c19f03cce16367c62612db4ca5e11a6c843c9ae6ace6173a6a0a9e"
+        }
+      ],
+      "evidence": [],
+      "local_changes": "2026-11-11: extracted public catalog selectors, category IDs, Nuxt payload and Packer/LZ image decoding. Reuses WorldSession, existing source models, scoped Rust HTTP, Android decoder, reader/download/cache pipeline. Native image files have existing RAII ownership; no full image byte buffers across FFI, new runtime, database or JS evaluation. New sources opt-in through existing selection preferences.",
+      "limits": "Anonymous only; no account login/cloud-library imports. Kuaikan latest is upstream new arrivals and paid/restricted chapters are not unlocked. Manhuagui public catalog only, no adult unlock; group boundaries retained. Source reviewed, no build, runtime tests, performance measurements or installation this turn."
+    },
     {
       "id": "komga-rest",
       "source": "komga",
@@ -179,7 +271,7 @@
       "local_files": [
         {
           "path": "app/src/main/java/com/flux/manga/data/BaoziSource.kt",
-          "sha256": "b228f8d2460889db05ce92087c896b779751b78c47d4dcde633e3314569736da"
+          "sha256": "ce362c0dd93d25ca031fe13fdecd334b2eecdf90fda259d663834d75d3b6b8b9"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/BaoziCategories.kt",
@@ -397,7 +489,7 @@
         },
         {
           "path": "app/src/main/java/com/flux/manga/ui/pages/JmPages.kt",
-          "sha256": "a9f27be3317197fec199dff1c1c66da4fdd787c64b89eec71ec7cdbdbadb36a0"
+          "sha256": "348fac04a2157e349bcf19b5309d69abd9d54b0116af12023a1fc191de0a012c"
         }
       ],
       "evidence": [
@@ -430,7 +522,7 @@
       },
       "notice": {
         "path": "app/src/main/assets/licenses/picacg-NOTICE.txt",
-        "sha256": "f7b86630d4c5997d9d02680104d984c89c3dd7cc3ee804a97292507d4d69d414"
+        "sha256": "330ac9331cceb16a5b64219a51602d20c36a2ffb6035daf689aa57e9bf499f92"
       },
       "upstream_samples": [
         {
@@ -482,23 +574,27 @@
       "local_files": [
         {
           "path": "app/src/main/java/com/flux/manga/data/Picacg.kt",
-          "sha256": "6b42f6c682d5a36e7ea46ee00728ecb7cc069855534344cd5601c3ca9fdc4c67"
+          "sha256": "d64c9d06cc889f48ceaf4244fbfdbc170774209c5774a8bc0853e34cef12e1b4"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/PicaImages.kt",
-          "sha256": "c14f7068a5b344506a1828f5718d8a35fd36437c362ebad1a8fa3c6bba5ddaca"
+          "sha256": "c990bcc90ea390888f04f3216bda0848ade264de00e6a9c5450aaf5e2b55b727"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/PicaReaderRepository.kt",
-          "sha256": "a52c35f19da9e230df4da96ed9ac10d38a8be6b9b72b42dc4d3bfb6e15feac6c"
+          "sha256": "bd463ce82570de9a22500120894ef234e82aee1b0683d7295c8a0657cab25840"
         },
         {
           "path": "app/src/main/java/com/flux/manga/ui/pages/PicaPages.kt",
-          "sha256": "13f8b55174651db83e05480f4d3a793f96df6f019c9fa1419f72cfda62445342"
+          "sha256": "35fe1b7e6bdbe6700cdd975f92ae46f938d355ef64c2219e140940a369b4eb7c"
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "88c37d6b5ae2950cef66bfbab664fbf8bbfd1d21708b25e8af8a2241450f2270"
+          "sha256": "4315083743c7ac2ea99230079237fa2502c803cd68bfdb9b56d27bc201ff7b18"
+        },
+        {
+          "path": "app/src/main/java/com/flux/manga/data/PicaAccountRecovery.kt",
+          "sha256": "c4b0aa4e0222722c14a53a62e401cac741171f6aebaccbdfdbdb136f9e0678b0"
         }
       ],
       "evidence": [
@@ -535,7 +631,7 @@
           ]
         }
       ],
-      "local_changes": "Pinned login/signature, UID profile, categories/catalog/rank/search/favorites, detail/chapters/pages mapped to Kotlin and existing Rust reqwest. JCA HMAC replaces the inspected helper; no copied hex table. Sequential directory paging sorted by order, explicit cloud-page import preserving existing rows, encrypted private images, source/account isolation and existing reader/library integration. No new runtime dependencies. 2026-10-24 EH integration: shared transport gains dedicated EH metadata/media scope and bounded credential-stripping redirects; private source predicate/root selector now include EH. Existing source protocol unchanged; only reviewed shared-file hashes and the appended shared status evidence are refreshed, without tests/build. Private-offline follow-up: expose bounded encoded page bytes to the existing device-key AES-GCM envelope and AtomicFile storage, preserve JM strip metadata, and keep EH/EX downloads on display quality. Foreground-only chapter selection/queue/resume and network-free reader reuse existing identities/progress. No additional upstream code or runtime dependency. 2026-10-25 homepage discovery: use actual JM promote / PicACG collections previews; add JM categories/blocks with source-preserving tag routes. Fixed MIT references and hashes in discovery-upstream/upstream.json; no new runtime.",
+      "local_changes": "Pinned login/signature, UID profile, categories/catalog/rank/search/favorites, detail/chapters/pages mapped to Kotlin and existing Rust reqwest. JCA HMAC replaces the inspected helper; no copied hex table. Sequential directory paging sorted by order, explicit cloud-page import preserving existing rows, encrypted private images, source/account isolation and existing reader/library integration. No new runtime dependencies. 2026-10-24 EH integration: shared transport gains dedicated EH metadata/media scope and bounded credential-stripping redirects; private source predicate/root selector now include EH. Existing source protocol unchanged; only reviewed shared-file hashes and the appended shared status evidence are refreshed, without tests/build. Private-offline follow-up: expose bounded encoded page bytes to the existing device-key AES-GCM envelope and AtomicFile storage, preserve JM strip metadata, and keep EH/EX downloads on display quality. Foreground-only chapter selection/queue/resume and network-free reader reuse existing identities/progress. No additional upstream code or runtime dependency. 2026-10-25 homepage discovery: use actual JM promote / PicACG collections previews; add JM categories/blocks with source-preserving tag routes. Fixed MIT references and hashes in discovery-upstream/upstream.json; no new runtime. 2026-11-11: reuse pinned pica-go Login/LoginRequest for explicit encrypted auto-login setup; same-UID merged recovery, one read replay, cooldown and manual connection guard. No new runtime, login fallback/replay, tests or build.",
       "limits": "Standard HTTPS/channel 1 only. No DNS routing, auto login/check-in, registration, remote favorite writes, separately enumerable likes, whole-account snapshot guarantee. User admitted M4; no tests, compilation, bindings generation, packaging or real-service requests in this stage. Encrypted offline code is untested/unbuilt: foreground page only, explicit resume, <=32 MiB/page, <=5000 pages/chapter, <=200 queued chapters. No background service/notification, private-body migration or EH/EX original-quality download. Latest homepage collections adaptation has no tests/build/live requests and no invented global pagination."
     },
     {

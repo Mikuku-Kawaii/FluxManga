@@ -180,6 +180,10 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
             com.flux.manga.ui.pages.BaoziPage(session, navigation::back, navigation::openKomgaBook, mangaId = route.mangaId, sourceId = route.sourceId, read = { navigation.openKomgaReader(route.sourceId, route.mangaId, it) }, openTag = navigation::openNamedTag, download = { navigation.openDownloadChapters(route.sourceId,route.mangaId) }, searchAuthor = navigation::openAuthorSearch)
             }
         }
+        entry<PublicWebBrowse> { route ->
+            com.flux.manga.ui.pages.BaoziPage(session, navigation::back, navigation::openKomgaBook,
+                sourceId = route.sourceId, history = com.flux.manga.ui.pages.preloadedPages(session).searchHistory(), sources = navigation::openSources)
+        }
         entry<BaoziReaderRoute> { route ->
             com.flux.manga.ui.pages.VisitedPage(session, "online", route.sourceId, route.mangaId) {
             com.flux.manga.ui.pages.OnlineReaderPage(session, route.sourceId, route.mangaId, route.chapterId, navigation::back, finished = { navigation.finishOnlineReading(route.sourceId, route.mangaId) })
@@ -277,7 +281,7 @@ internal fun NavigationPrototype(navigation: PrototypeNavigation, coreStatus: St
         entry<LicenseDocumentRoute> { route -> com.flux.manga.ui.pages.LicenseDocumentPage(route.entryId, route.hash, navigation::back) }
         entry<FfiProbe> { FfiProbePage(back = navigation::back) }
         entry<OnlineSources> { com.flux.manga.ui.pages.SourceManagementPage(navigation.world == PrototypeWorld.SFW, navigation::back, navigation::openKomgaConfiguration, navigation::openBaoziAccount, navigation::openCopyAccount, navigation::openJmSettings, navigation::openPicaSettings, navigation::openEhSettings, navigation::openExSettings,
-            session = session) }
+            session = session, publicCatalog = navigation::openPublicCatalog) }
         entry<EhInteractionRoute> { route -> com.flux.manga.ui.pages.EhInteractionPage(session, route.sourceId, route.mangaId,
             route.favorites, navigation::back, { if (com.flux.manga.data.isExSource(route.sourceId)) navigation.openExSettings() else navigation.openEhSettings() }) }
         entry<GalleryTagsRoute> { route -> com.flux.manga.ui.pages.GalleryTagsPage(session,

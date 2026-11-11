@@ -126,14 +126,18 @@ internal class DiscoveryFeedModel(app: Application, session: WorldSession, sourc
     private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val isCopy = sourceId == CopyMangaEndpoint.SOURCE_ID
-    private val access = if (isCopy) null else KomgaAccess(app, session, sourceId)
+    private val access = if (isCopy || isPublicBookSource(sourceId)) null else KomgaAccess(app, session, sourceId)
     val library = OnlineLibrary(app, session)
     private val snapshot = CatalogPageCache(app, session, "feed:${section.name}:$sourceId", source = sourceId)
     val feed = DiscoveryFeedController(viewModelScope,
         { identity.world == com.flux.manga.ui.navigation.PrototypeWorld.SFW && session.accepts(identity) },
-        if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (isCopy) ::copyMangaFailure else ::komgaFailure,
+        if (isPublicWebSource(sourceId)) { error -> publicWebFailure(error, sourceId) } else if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (isCopy) ::copyMangaFailure else ::komgaFailure,
         restore = { snapshot.feed("") }, save = { snapshot.saveFeed("", it) }, refreshRestored = true) { page ->
-        val result = if (sourceId == BaoziEndpoint.SOURCE_ID) {
+        val result = if (isPublicWebSource(sourceId)) {
+            session.publicWebSources.client(sourceId).let {
+                if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page) else it.search("", page, updates = true)
+            }
+        } else if (sourceId == BaoziEndpoint.SOURCE_ID) {
             withContext(Dispatchers.IO) { session.baoziSources.client(app).source.let {
                 if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page)
                 else it.search("", page, updates = true)

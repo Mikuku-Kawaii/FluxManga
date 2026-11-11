@@ -89,7 +89,8 @@ internal class SourceTagsModel(app: Application, session: WorldSession, sourceId
     private val access = KomgaAccess(app, session, sourceId)
     var query by mutableStateOf(saved.get<String>("tag-query").orEmpty()); private set
     val directory = SourceTagsController(viewModelScope, access::isActive, saved.get<String>("tag-submitted").orEmpty()) { query, page ->
-        if (sourceId == BaoziEndpoint.SOURCE_ID) SourceTagList(BaoziCategories.tags.keys.filter { it.contains(query, true) }, SourceContinuation.End)
+        if (isPublicWebSource(sourceId)) SourceTagList(PublicWebSite.of(sourceId)!!.tags.keys.filter { it.contains(query, true) }, SourceContinuation.End)
+        else if (sourceId == BaoziEndpoint.SOURCE_ID) SourceTagList(BaoziCategories.tags.keys.filter { it.contains(query, true) }, SourceContinuation.End)
         else access.client().tags(query, page)
     }
     fun query(value: String) { query = value.take(200); saved["tag-query"] = query }
@@ -102,9 +103,13 @@ internal class SourceTagBooksModel(app: Application, session: WorldSession, sour
     val library = OnlineLibrary(app, session)
     private val snapshot = CatalogPageCache(app, session, "tag-books:$sourceId", source = sourceId)
     val feed = DiscoveryFeedController(viewModelScope, access::isActive,
-        if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (sourceId == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure,
+        if (isPublicWebSource(sourceId)) { error -> publicWebFailure(error, sourceId) } else if (sourceId == BaoziEndpoint.SOURCE_ID) ::baoziFailure else if (sourceId == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure,
         restore = { snapshot.feed(tag) }, save = { snapshot.saveFeed(tag, it) }) { page ->
-        val result = if (sourceId == BaoziEndpoint.SOURCE_ID) withContext(Dispatchers.IO) {
+        val result = if (isPublicWebSource(sourceId)) session.publicWebSources.client(sourceId).let { client ->
+            if (tag in requireNotNull(PublicWebSite.of(sourceId)).tags) client.search("", page, tag = tag)
+            else client.search(tag, page)
+        }
+        else if (sourceId == BaoziEndpoint.SOURCE_ID) withContext(Dispatchers.IO) {
             val type = BaoziCategories.tags[tag] ?: throw SourceException.InvalidRequest()
             session.baoziSources.client(app).source.search("", page, tag = type)
         } else if (sourceId == CopyMangaEndpoint.SOURCE_ID) withContext(Dispatchers.IO) { session.copyMangaSources.client().themed(tag, page) } else access.client().tagged(tag, page)

@@ -96,8 +96,8 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
                 "云收藏（当前接口范围）", state.username)
             if (navigation.section == SourceSettingsSection.ACCOUNT) {
-            WebAccountEntry("https://mangacopy.com/web/login?url=person%2Fhome",
-                "使用官方用户名登录或注册，成功后自动连接账号与云收藏。", state.loaded && !state.busy,
+            WebAccountEntry("https://mangacopy.com/web/login?url=person%2Fhome", session = session, passwordScope = "copymanga", note =
+                "使用官方用户名登录或注册，成功后自动连接账号与云收藏。", enabled = state.loaded && !state.busy,
                 connect = { page, _, _ -> model.connectWebToken(page.copyToken()) },
                 autoConnectKey = { page, _, _ -> page.copyToken().takeIf(String::isNotBlank) },
                 afterConnected = model::start)

@@ -67,8 +67,9 @@ private object AccountWebStorage {
 
 internal fun accountWebLoginOccupied(): Boolean = AccountWebStorage.occupied
 
-internal class AccountWebSite(val title: String, val url: String, val hosts: Set<String>) {
+internal class AccountWebSite(val title: String, val url: String, val hosts: Set<String>, val desktop: Boolean = false) {
     private val port = Uri.parse(url).port.let { if (it == -1) 443 else it }
+    val passwordOrigins: Set<String> get() = hosts.map { "https://$it${if (port == 443) "" else ":$port"}" }.toSet()
     fun accepts(value: String?): Boolean {
         val uri = value?.let(Uri::parse) ?: return false
         return uri.scheme == "https" && uri.host?.lowercase() in hosts &&
@@ -128,6 +129,14 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
                 value.isNotBlank() && value.length <= 16384 && value.none { it == '\r' || it == '\n' }
             } else null
         }.orEmpty()
+    }
+
+    fun publicCatalogCookie(origin: String): String {
+        checkPage()
+        require(site.accepts(origin))
+        if (com.flux.manga.data.passwordOrigin(view.url) != com.flux.manga.data.passwordOrigin(origin))
+            throw IOException("请先返回图源官网，再连接账号")
+        return com.flux.manga.data.validPublicCookie(cookies.getCookie(origin).orEmpty())
     }
 
     fun baoziOrigin(): String {
@@ -363,6 +372,7 @@ private val JM_ACCOUNT_SNAPSHOT = """
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
+    session: com.flux.manga.session.WorldSession, passwordScope: String,
     connectLabel: String = "连接账号与收藏", connect: (suspend (AccountWebPage, String, String) -> Unit)? = null,
     afterConnected: () -> Unit = {}, destination: String? = null, jmIdentityFields: Boolean = false,
     loginUrls: List<String> = emptyList(),
@@ -379,6 +389,15 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     val latestRestoreBaozi by rememberUpdatedState(restoreBaozi)
     val latestRecoveryFailure by rememberUpdatedState(backgroundRecoveryFailure)
     val backgroundRecovery = backgroundRecoveryFailure != null
+    val passwords = remember(session, site, passwordScope) {
+        BrowserPasswordManager(site, com.flux.manga.data.BrowserPasswordStore(context, session, passwordScope))
+    }
+    var connected by remember { mutableStateOf(false) }
+    fun finishConnection() { latestClose(); latestConnected() }
+    suspend fun acceptConnection() {
+        connected = true
+        if (backgroundRecovery || !passwords.offer()) finishConnection()
+    }
     val baoziMemory = remember { BaoziWebMemory() }
     var baoziPassword by remember { mutableStateOf("") }
     var showBaoziPassword by remember { mutableStateOf(setupBaoziAutoLogin) }
@@ -433,7 +452,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     fun connectAccount() {
         val action = latestConnect ?: return
         val browser = view ?: return
-        if (!ready || busy) return
+        if (!ready || busy || connected) return
         val version = pageVersion
         busy = true; error = null
         connection = scope.launch {
@@ -442,7 +461,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 ensureActive()
                 if (alive) {
                     if (site == BaoziWebSite) BaoziBrowserProfile.accepted(context, baoziAccountId(username))
-                    latestClose(); latestConnected()
+                    acceptConnection()
                 }
             } catch (cancelled: CancellationException) {
                 if (alive && currentCoroutineContext().isActive && version == pageVersion) error = "连接已停止，可返回图源管理核对账号状态"
@@ -464,7 +483,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     fun loginBaozi(login: BaoziAutoLogin) {
         val action = latestConnect ?: return
         val browser = view ?: return
-        if (!ready || busy) return
+        if (!ready || busy || connected) return
         val version = pageVersion
         busy = true; error = null
         connection = scope.launch {
@@ -476,7 +495,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 ensureActive()
                 if (alive) {
                     BaoziBrowserProfile.accepted(context, baoziAccountId(login.username))
-                    baoziPassword = ""; latestClose(); latestConnected()
+                    baoziPassword = ""; acceptConnection()
                 }
             } catch (_: TimeoutCancellationException) {
                 if (alive) error = "自动登录超时，请检查网络后重试"
@@ -507,7 +526,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 delay(1000)
                 continue
             }
-            if (!busy) {
+            if (!busy && !connected) {
                 if (site == BaoziWebSite) {
                     // Name is only the import identity; TSID and shelf validation remain required.
                     username = page.baoziLoginEmail()
@@ -553,7 +572,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
         fun disposeBrowser() {
             if (disposed) return
             disposed = true; alive = false; connection?.cancel(); preparing?.cancel()
-            uid = ""; username = ""; baoziPassword = ""; baoziMemory.clear()
+            uid = ""; username = ""; baoziPassword = ""; baoziMemory.clear(); passwords.clear()
             browser?.apply {
                 BaoziBrowserProfile.detach(this)
                 (parent as? android.view.ViewGroup)?.removeView(this)
@@ -574,13 +593,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             if (!ownsStorage) error = "上一登录窗口仍在清理，请关闭后重新打开"
             else {
                 browser = WebView(context).apply {
-                    if (site == PicaWebSite) {
-                        // WebView treats wrap-content height specially: viewport-height CSS can
-                        // resolve to zero even when Compose later gives the view a nonzero size.
-                        layoutParams = android.view.ViewGroup.LayoutParams(
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                            android.view.ViewGroup.LayoutParams.MATCH_PARENT)
-                    }
+                    // Every login page needs a real viewport, including vh/fixed-position forms.
+                    layoutParams = android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT)
                     persistent = site == BaoziWebSite && BaoziBrowserProfile.attach(this)
                     importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
                     if (backgroundRecovery) {
@@ -591,10 +607,11 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
-                        if (site == PicaWebSite) {
+                        if (site == PicaWebSite || site.desktop) {
                             useWideViewPort = true
                             loadWithOverviewMode = true
                         }
+                        if (site.desktop) userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
                         allowFileAccess = false
                         allowContentAccess = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -604,6 +621,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         @Suppress("DEPRECATION")
                         saveFormData = false
                     }
+                    if (!backgroundRecovery) passwords.attach(this)
                     BaoziBrowserProfile.cookies(this).setAcceptCookie(true)
                     BaoziBrowserProfile.cookies(this).setAcceptThirdPartyCookies(this, false)
                     webChromeClient = object : WebChromeClient() {
@@ -618,20 +636,22 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             return true
                         }
                         override fun onPageStarted(web: WebView, url: String?, icon: android.graphics.Bitmap?) {
-                            pageVersion++; connection?.cancel(); busy = false
+                            pageVersion++; if (!connected) connection?.cancel(); busy = false
                             baoziMemory.candidate = null
                             verifyingBrowser = site == BaoziWebSite && Uri.parse(url.orEmpty()).path?.startsWith("/__gatekeeper_challenge/") == true
                             if (alive) { ready = false; progress = 0; error = null; host = Uri.parse(url.orEmpty()).host.orEmpty() }
                         }
                         override fun onPageFinished(web: WebView, url: String?) {
+                            if (!backgroundRecovery && alive && error == null) passwords.pageReady(web)
                             // Error pages also finish loading: they must not enable session import.
-                            // Pica may already be connecting after the visible commit; an account
+                            // A page may already be connecting after the visible commit; an account
                             // verification error must not disable manual retry when subresources finish.
-                            if (alive && !(site == PicaWebSite && ready)) ready = error == null && site.accepts(url)
+                            if (alive && !ready) ready = error == null && site.accepts(url)
                         }
                         override fun onPageCommitVisible(web: WebView, url: String?) {
+                            if (!backgroundRecovery && alive && error == null) passwords.pageReady(web)
                             // SPA login can be usable before slow subresources finish loading.
-                            if (alive && site == PicaWebSite && error == null && site.accepts(url)) ready = true
+                            if (alive && error == null && site.accepts(url)) ready = true
                             if (alive && site == BaoziWebSite && site.accepts(url)) {
                                 web.evaluateJavascript(BAOZI_LOGIN_EMAIL, null)
                             }
@@ -734,11 +754,13 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     Dialog(onDismissRequest = { back() }, properties = DialogProperties(usePlatformDefaultWidth = false,
         dismissOnClickOutside = false, dismissOnBackPress = false, decorFitsSystemWindows = false,
         securePolicy = SecureFlagPolicy.SecureOn)) {
-        BackHandler { back() }
+        BrowserPasswordDialogs(passwords, view, ::finishConnection)
+        BackHandler { if (connected) finishConnection() else back() }
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
                 FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton({ connection?.cancel(); latestClose() }) { Text("关闭") }
+                    TextButton({ scope.launch { passwords.act { passwords.open(view) } } }, enabled = ready && !busy && !connected) { Text("密码") }
                     TextButton({ back() }, enabled = !busy && view?.canGoBack() == true) { Text("网页返回") }
                     TextButton(feedbackAttempt({
                         ready = false; error = null; baoziMemory.automaticAttempted = false
@@ -761,7 +783,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 }
                 Text(site.title, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium)
                 Text(host.ifBlank { "正在准备登录页面…" }, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
-                if (busy || (error == null && progress < 100 && (site != PicaWebSite || !ready))) RequestLoading()
+                if (busy || (error == null && progress < 100 && !ready)) RequestLoading()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     view?.let { browser -> AndroidView(factory = { browser }, modifier = Modifier.fillMaxSize()) }
                 }
@@ -771,6 +793,9 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     // Keep connection/load failures visible inside the window that owns the action.
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium) }
+                    if (!passwords.managing && passwords.pending == null) passwords.message?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    }
                     if (slowPage && error == null) Text("网页加载较慢，请检查网络或重新打开。",
                         style = MaterialTheme.typography.bodySmall)
                     if (site == BaoziWebSite && error != null) TextButton(onClick = {
@@ -808,7 +833,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     }
                     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         destination?.let { target -> TextButton(feedbackAttempt({ error = null; view?.loadUrl(target) }), enabled = !busy && ready) { Text("打开本站") } }
-                        if (connect != null) ReferenceButton(feedbackAttempt(::connectAccount), enabled = ready && !busy && !verifyingBrowser) {
+                        if (connect != null) ReferenceButton(feedbackAttempt(::connectAccount), enabled = ready && !busy && !connected && !verifyingBrowser) {
                             Text(if (busy) "正在确认账号…" else connectLabel)
                         }
                         if (busy) TextButton({ connection?.cancel() }) { Text("取消连接") }

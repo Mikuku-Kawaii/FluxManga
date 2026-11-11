@@ -39,6 +39,12 @@ pub struct GalleryLoginReply {
 }
 
 #[derive(uniffi::Record)]
+pub struct PublicWebLoginReply {
+    pub body: Vec<u8>,
+    pub cookies: Vec<String>,
+}
+
+#[derive(uniffi::Record)]
 pub struct SourceHttpActivity {
     pub pending: u64,
     pub in_flight: u64,
@@ -81,6 +87,7 @@ struct State {
     preserve_forbidden: AtomicBool,
     jm_cookies: std::sync::Mutex<Vec<String>>,
     gallery_login_cookies: std::sync::Mutex<Vec<String>>,
+    public_login_cookies: std::sync::Mutex<Vec<String>>,
     route_hint: std::sync::Mutex<Option<String>>,
 }
 struct Count(Arc<AtomicU64>);
@@ -132,6 +139,8 @@ fn transport_error(error: reqwest::Error) -> SourceError {
             let text = value.to_string().to_ascii_lowercase();
             let kind = if ["dns error", "failed to lookup address", "name or service not known", "no address associated"].iter().any(|v| text.contains(v)) {
                 Some("dns")
+            } else if text.contains("tls handshake eof") {
+                Some("tls_eof")
             } else if ["invalid peer certificate", "invalid certificate", "tls handshake", "received fatal alert", "certificate verify failed"].iter().any(|v| text.contains(v)) {
                 Some("tls")
             } else { None };
@@ -219,6 +228,52 @@ fn baozi_cover_url(base: &Url, raw: &str) -> Result<Url, SourceError> {
     Ok(url)
 }
 
+fn public_catalog_origin(source: &str) -> Option<&'static str> {
+    match source {
+        "guazi-public-v1" => Some("https://www.guazimanhua.com/"),
+        "kuaikan-public-v1" => Some("https://www.kuaikanmanhua.com/"),
+        "manhuagui-public-v1" => Some("https://www.manhuagui.com/"),
+        _ => None,
+    }
+}
+
+fn public_catalog_url(source: &str, url: &Url, image: bool) -> bool {
+    if !eh_https(url) { return false; }
+    let host = url.host_str().unwrap_or_default();
+    let domain = |d: &str| host == d || host.ends_with(&format!(".{d}"));
+    if image {
+        return match source {
+            "guazi-public-v1" => domain("guazicdn.com") || domain("guazimanhua.com"),
+            // Official Nuxt responses also return hs1-f2.v3mh.com for covers/pages.
+            "kuaikan-public-v1" => domain("kkmh.com") || domain("v3mh.com") || domain("kuaikanmanhua.com"),
+            "manhuagui-public-v1" => domain("hamreus.com") || domain("manhuagui.com") || domain("mhgui.com"),
+            _ => false,
+        };
+    }
+    match source {
+        "guazi-public-v1" => matches!(host, "www.guazimanhua.com" | "guazimanhua.com") &&
+            matches!(url.path(), "/" | "/category.php" | "/comic.php" | "/chapter.php"),
+        "kuaikan-public-v1" => (host == "api.kkmh.com" && url.path() == "/v1/search/topic") ||
+            (host == "www.kuaikanmanhua.com" && ["/tag/", "/web/topic/", "/webs/comic-next/"].iter().any(|p| url.path().starts_with(p))),
+        "manhuagui-public-v1" => matches!(host, "www.manhuagui.com" | "tw.manhuagui.com" | "www.mhgui.com" | "tw.mhgui.com") &&
+            ["/list/", "/s/", "/comic/"].iter().any(|p| url.path().starts_with(p)),
+        _ => false,
+    }
+}
+
+fn public_account_url(source: &str, url: &Url) -> bool {
+    if !eh_https(url) { return false; }
+    let Some(origin) = public_catalog_origin(source) else { return false; };
+    let Ok(base) = Url::parse(origin) else { return false; };
+    if url.origin() != base.origin() { return false; }
+    public_catalog_url(source, url, false) || match source {
+        "guazi-public-v1" => url.path() == "/user.php" && url.query().is_none(),
+        "kuaikan-public-v1" => url.path() == "/v2/pweb/user_info/get" && url.query().is_none(),
+        "manhuagui-public-v1" => url.path() == "/tools/submit_ajax.ashx" && url.query() == Some("action=user_check_login"),
+        _ => false,
+    }
+}
+
 fn baozi_page_url(base: &Url, raw: &str) -> Result<Url, SourceError> {
     let url = Url::parse(raw).map_err(|_| SourceError::InvalidResponse)?;
     let host = url.host_str().unwrap_or_default();
@@ -247,6 +302,65 @@ fn baozi_page_url(base: &Url, raw: &str) -> Result<Url, SourceError> {
 
 #[uniffi::export]
 impl SourceHttpSession {
+    /// Catalog adapters have no credential defaults; account operations validate their own destinations.
+    #[uniffi::constructor]
+    pub fn public_catalog(context: SourceContext) -> Result<Self, SourceError> {
+        let base = public_catalog_origin(&context.source_id).ok_or(SourceError::InvalidRequest)?;
+        if context.world != SourceWorld::Sfw || context.auth_ref.is_some() { return Err(SourceError::InvalidRequest); }
+        Self::build(context, base.into(), None, None, None,
+            SourceHttpConfig { timeout_ms: 25_000, max_in_flight: 2, min_interval_ms: 1000, max_retries: 1, max_body_bytes: 4 * 1024 * 1024 })
+    }
+
+    pub async fn public_catalog_read(&self, context: SourceContext, raw: String) -> Result<SourceHttpReply, SourceError> {
+        let url = Url::parse(&raw).map_err(|_| SourceError::InvalidRequest)?;
+        if !public_catalog_url(&self.state.context.source_id, &url, false) { return Err(SourceError::InvalidRequest); }
+        match self.dispatch_headers(context, url, None, None, false, self.public_catalog_headers()?).await? {
+            Output::Bytes(reply) => Ok(reply), Output::Image(_) => unreachable!(),
+        }
+    }
+
+    /// Cookies are per operation, never client defaults or CDN headers.
+    pub async fn public_catalog_account_read(&self, context: SourceContext, raw: String, cookie: String) -> Result<SourceHttpReply, SourceError> {
+        let url = Url::parse(&raw).map_err(|_| SourceError::InvalidRequest)?;
+        if !public_account_url(&self.state.context.source_id, &url) || cookie.is_empty() || cookie.len() > 16384 {
+            return Err(SourceError::InvalidRequest);
+        }
+        let mut headers = self.public_catalog_headers()?;
+        let mut value = header::HeaderValue::from_str(&cookie).map_err(|_| SourceError::InvalidRequest)?;
+        value.set_sensitive(true);
+        headers.insert(header::COOKIE, value);
+        headers.insert(header::CACHE_CONTROL, header::HeaderValue::from_static("no-cache"));
+        match self.dispatch_headers(context, url, None, None, false, headers).await? {
+            Output::Bytes(reply) => Ok(reply), Output::Image(_) => unreachable!(),
+        }
+    }
+
+    /// Observed website form. Never retry a password submission.
+    pub async fn public_catalog_sign_in(&self, context: SourceContext, username: String, password: String) -> Result<PublicWebLoginReply, SourceError> {
+        if self.state.context.source_id != "manhuagui-public-v1" || username.is_empty() || username.len() > 320 || password.is_empty() || password.len() > 4096 {
+            return Err(SourceError::InvalidRequest);
+        }
+        let url = self.state.base.join("tools/submit_ajax.ashx?action=user_login").map_err(|_| SourceError::InvalidRequest)?;
+        let mut form = Url::parse("https://form.invalid/").map_err(|_| SourceError::InvalidRequest)?;
+        form.query_pairs_mut().append_pair("txtUserName", &username).append_pair("txtPassword", &password).append_pair("chkRemember", "on");
+        let body = RequestBody { bytes: form.query().unwrap_or_default().as_bytes().to_vec(), content_type: "application/x-www-form-urlencoded", retryable: false };
+        let mut headers = self.public_catalog_headers()?;
+        headers.insert(header::ORIGIN, header::HeaderValue::from_static("https://www.manhuagui.com"));
+        headers.insert("x-requested-with", header::HeaderValue::from_static("XMLHttpRequest"));
+        match self.dispatch_headers(context, url, Some(body), None, false, headers).await? {
+            Output::Bytes(reply) => Ok(PublicWebLoginReply { body: reply.body, cookies: std::mem::take(&mut *self.state.public_login_cookies.lock().map_err(|_| SourceError::Transport)?) }),
+            Output::Image(_) => unreachable!(),
+        }
+    }
+
+    pub async fn public_catalog_image(&self, context: SourceContext, raw: String, directory: String) -> Result<SourceImageFile, SourceError> {
+        let url = Url::parse(&raw).map_err(|_| SourceError::InvalidRequest)?;
+        if !public_catalog_url(&self.state.context.source_id, &url, true) { return Err(SourceError::InvalidRequest); }
+        match self.dispatch_headers(context, url, None, Some(directory), false, self.public_catalog_headers()?).await? {
+            Output::Image(file) => Ok(file), Output::Bytes(_) => unreachable!(),
+        }
+    }
+
     #[uniffi::constructor]
     pub fn gallery_login(context: SourceContext) -> Result<Self, SourceError> {
         if context.world != SourceWorld::Nsfw || !matches!(context.source_id.as_str(), "ehentai-login" | "exhentai-login") {
@@ -402,6 +516,7 @@ impl SourceHttpSession {
         let parts: Vec<_> = url.path_segments().ok_or(SourceError::InvalidRequest)?.collect();
         let id = |s: &str| s.len() == 24 && s.bytes().all(|b| b.is_ascii_hexdigit());
         let allowed = match parts.as_slice() {
+            ["auth", "sign-in"] => self.state.context.source_id == "picacg-login" && body.is_some() && token.is_empty() && url.query().is_none(),
             ["comics", "advanced-search"] => body.is_some(),
             ["users", "profile" | "favourite"] | ["categories"] | ["collections"] | ["comics"] | ["comics", "leaderboard"] => body.is_none(),
             ["comics", comic] | ["comics", comic, "eps"] => id(comic) && body.is_none(),
@@ -707,6 +822,21 @@ impl SourceHttpSession {
         )
     }
 
+    fn public_catalog_headers(&self) -> Result<header::HeaderMap, SourceError> {
+        let origin = public_catalog_origin(&self.state.context.source_id).ok_or(SourceError::InvalidRequest)?;
+        if self.state.context.world != SourceWorld::Sfw || self.state.context.auth_ref.is_some() {
+            return Err(SourceError::InvalidRequest);
+        }
+        let mut headers = header::HeaderMap::new();
+        headers.insert(header::REFERER, header::HeaderValue::from_static(origin));
+        headers.insert(header::USER_AGENT, header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"));
+        headers.insert(header::ACCEPT_LANGUAGE, header::HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.7"));
+        if self.state.context.source_id == "kuaikan-public-v1" {
+            headers.insert("user-agent-pc", header::HeaderValue::from_static("PCKuaikan/1.0.0/100000(Mac;10.15.7;Chrome;pckuaikan;1800*2880;564)"));
+        }
+        Ok(headers)
+    }
+
     // Fixed anonymous CopyManga profile, scoped to this source client only.
     pub(crate) fn copy_manga(
         context: SourceContext,
@@ -812,16 +942,18 @@ impl SourceHttpSession {
                 headers.insert(name, value);
             }
         }
-        let client = Client::builder()
+        let mut client_builder = Client::builder()
             .use_rustls_tls()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
             .default_headers(headers)
             .connect_timeout(Duration::from_millis(config.timeout_ms.into()))
-            .user_agent("FluxManga/0.0.1")
-            .build()
-            .map_err(transport_error)?;
+            .user_agent("FluxManga/0.0.1");
+        if context.source_id == "manhuagui-public-v1" {
+            client_builder = client_builder.dns_resolver(Arc::new(crate::manhuagui_dns::ManhuaguiDns));
+        }
+        let client = client_builder.build().map_err(transport_error)?;
         // Never reuse API default headers on a CDN, including same-origin cover URLs.
         let anonymous_images = if let Some(user_agent) = image_user_agent {
             Some(
@@ -860,6 +992,7 @@ impl SourceHttpSession {
                 preserve_forbidden: AtomicBool::new(false),
                 jm_cookies: std::sync::Mutex::new(Vec::new()),
                 gallery_login_cookies: std::sync::Mutex::new(Vec::new()),
+                public_login_cookies: std::sync::Mutex::new(Vec::new()),
                 route_hint: std::sync::Mutex::new(None),
             }),
             runtime: Some(runtime),
@@ -1163,6 +1296,21 @@ impl State {
             let mut response = if let Some(limit) = header_timeout {
                 tokio::time::timeout(limit, request.send()).await.map_err(|_| SourceError::Timeout)?.map_err(transport_error)?
             } else { request.send().await.map_err(transport_error)? };
+            if public_catalog_origin(&self.context.source_id).is_some() && body.is_none() {
+                let mut current = url.clone();
+                let mut hops = 0;
+                while response.status().is_redirection() {
+                    if hops >= 3 { return Err(SourceError::InvalidResponse); }
+                    let location = response.headers().get(header::LOCATION).and_then(|v| v.to_str().ok()).ok_or(SourceError::InvalidResponse)?;
+                    let next = current.join(location).map_err(|_| SourceError::InvalidResponse)?;
+                    if headers.contains_key(header::COOKIE) {
+                        if !public_account_url(&self.context.source_id, &next) { return Err(SourceError::AuthenticationRequired); }
+                    } else if !public_catalog_url(&self.context.source_id, &next, directory.is_some()) { return Err(SourceError::InvalidResponse); }
+                    response = client.get(next.clone()).headers(headers.clone()).send().await.map_err(transport_error)?;
+                    current = next;
+                    hops += 1;
+                }
+            }
             // PicACG's image CDN moves static files with 301/302. Follow only this
             // anonymous image operation; API requests and credentials never redirect.
             if self.context.source_id.starts_with("picacg-") && pica_image_url(&url) && body.is_none() {
@@ -1240,6 +1388,9 @@ impl State {
                 continue;
             }
             match status {
+                401 | 403 if self.context.source_id.starts_with("picacg-") && directory.is_none() && !pica_image_url(&url) => {
+                    return Err(SourceError::HttpStatus { status });
+                }
                 403 if self.preserve_forbidden.load(SeqCst) => {
                     return Err(SourceError::HttpStatus { status: 403 })
                 }
@@ -1268,6 +1419,10 @@ impl State {
                 .get(header::CONTENT_TYPE)
                 .and_then(|v| v.to_str().ok())
                 .map(str::to_owned);
+            if self.context.source_id == "manhuagui-public-v1" && body.is_some() && url.path() == "/tools/submit_ajax.ashx" && url.query() == Some("action=user_login") {
+                *self.public_login_cookies.lock().map_err(|_| SourceError::Transport)? = response.headers().get_all(header::SET_COOKIE).iter()
+                    .filter_map(|v| v.to_str().ok().map(str::to_owned)).collect();
+            }
             if self.context.world == SourceWorld::Nsfw && self.context.source_id.starts_with("jmcomic-") && matches!(url.path(), "/login" | "/setting") {
                 let cookies = response.headers().get_all(header::SET_COOKIE).iter()
                     .filter_map(|value| value.to_str().ok().map(str::to_owned)).collect();

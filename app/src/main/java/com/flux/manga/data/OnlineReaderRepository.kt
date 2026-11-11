@@ -16,9 +16,10 @@ import java.io.IOException
 
 internal class OnlineReaderRepository(context: Context, private val session: WorldSession,
     private val sourceId: String, private val mangaId: String, private val offlineEnabled: Boolean = true, private val offlineOnly: Boolean = false, cacheSession: String = java.util.UUID.randomUUID().toString()) : ReaderRepository {
+    private val web = isPublicWebSource(sourceId)
     private val baozi = isBaoziSource(sourceId)
     private val copy = isCopySource(sourceId)
-    private val access = if (copy || baozi) null else KomgaAccess(context, session, sourceId)
+    private val access = if (copy || baozi || web) null else KomgaAccess(context, session, sourceId)
     private val identity = session.identity.value
     private val app = context.applicationContext
     private val data = WorldDataStore(context)
@@ -64,7 +65,8 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
             }
         }
         if(offlineOnly) throw IOException("此章节尚未下载完成，请返回目录选择已下载章节")
-        if (!copy && !baozi) requireNotNull(access).client()
+        if (web) session.publicWebSources.client(sourceId)
+        else if (!copy && !baozi) requireNotNull(access).client()
         else if (copy) copyClient() else session.baoziSources.client(app, sourceId)
         val saved = pageCache.decode(imageOwner, "pages:$chapterId", ::isActive) { readerPages(it, key, identity.sourceContext(sourceId)) }
         if (saved != null) return saved
@@ -72,7 +74,8 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
     }
     private suspend fun fetchPages(chapterId: String): List<SourcePageResource> {
         val result = ContentRequests.run(sourceId, ContentPriority.READER) {
-            if (baozi) withContext(Dispatchers.IO) { session.baoziSources.client(app, sourceId).source.pages(mangaId, chapterId) }
+            if (web) session.publicWebSources.client(sourceId).pages(mangaId, chapterId)
+            else if (baozi) withContext(Dispatchers.IO) { session.baoziSources.client(app, sourceId).source.pages(mangaId, chapterId) }
             else if (copy) copyClient().pages(mangaId, chapterId) else requireNotNull(access).client().pages(key, chapterId)
         }
         active()
@@ -93,7 +96,7 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
             return SourceChapterPage(identity.sourceContext(sourceId),chapters.drop(offset).take(100),
                 if(offset+100>=chapters.size) SourceContinuation.End else SourceContinuation.Next(SourcePageRequest.Page((number+1).toUInt())), chapters.size.toUInt())
         }
-        return (if (baozi) withContext(Dispatchers.IO) { session.baoziSources.client(app, sourceId).source.chapterPage(mangaId, request) } else if (copy) copyClient().allChapters(mangaId, request) else requireNotNull(access).client().chapters(key, request)).also { active() }
+        return (if (web) session.publicWebSources.client(sourceId).chapterPage(mangaId, request) else if (baozi) withContext(Dispatchers.IO) { session.baoziSources.client(app, sourceId).source.chapterPage(mangaId, request) } else if (copy) copyClient().allChapters(mangaId, request) else requireNotNull(access).client().chapters(key, request)).also { active() }
     }
     override suspend fun completeOfflineCatalog(): List<SourceChapter> {
         active()
@@ -115,7 +118,8 @@ internal class OnlineReaderRepository(context: Context, private val session: Wor
     }
     suspend fun downloadFile(page: SourcePageResource, directory: File): SourceImageFile {
         active(); require(page.manga==key)
-        val file=if (baozi) session.baoziSources.client(app, sourceId).pageFile(page, directory.path)
+        val file=if (web) session.publicWebSources.client(sourceId).pageFile(page, directory.path)
+            else if (baozi) session.baoziSources.client(app, sourceId).pageFile(page, directory.path)
             else if (copy) copyClient().pageFile(page, directory.path)
             else requireNotNull(access).client().pageFile(key, page.chapterId, page.ordinal, directory.path)
         try { currentCoroutineContext().ensureActive(); active(); return file }

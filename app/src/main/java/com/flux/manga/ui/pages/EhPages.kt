@@ -297,7 +297,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-    if (webLogin) AccountWebLogin(webSite, close = { webLogin = false }, destination = site.base,
+    if (webLogin) AccountWebLogin(webSite, session = session, passwordScope = site.name, close = { webLogin = false }, destination = site.base,
         autoConnectKey = { page, _, _ ->
             val names = if (site == GallerySite.EX) listOf("ipb_member_id", "ipb_pass_hash", "igneous") else listOf("ipb_member_id", "ipb_pass_hash")
             names.map { page.cookie(site.base, it) }.takeIf { values -> values.all(String::isNotBlank) }?.joinToString(";")

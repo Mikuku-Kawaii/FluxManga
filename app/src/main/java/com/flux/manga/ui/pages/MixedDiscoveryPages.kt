@@ -46,8 +46,8 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
         DiscoverySection.UPDATES -> listOf(JM_SOURCE, PrivateCatalog.PICA, EH_SOURCE, PrivateCatalog.EX)
         else -> emptyList()
     } else when (section) {
-        DiscoverySection.RECOMMENDATIONS -> listOf(CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID)
-        DiscoverySection.UPDATES -> listOfNotNull(komgaId, CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID)
+        DiscoverySection.RECOMMENDATIONS -> listOf(CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID) + PublicWebSite.sources
+        DiscoverySection.UPDATES -> listOfNotNull(komgaId, CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID) + PublicWebSite.sources
         else -> emptyList()
     }).filter(selection::enabled)
     val resultFeeds = sources.mapIndexed { index, id -> ResultFeed(id, if (section == null) tagQueries[index].target.sourceId else id) }
@@ -83,6 +83,9 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                         if (tagQuery?.keyword == true) it.search(id, page)
                         else it.search("", page, tag = BaoziCategories.tags.getValue(id))
                     }
+                    in PublicWebSite.sources -> session.publicWebSources.client(source).let {
+                        if (tagQuery?.keyword == true) it.search(id, page) else it.search("", page, tag = id)
+                    }
                     else -> requireNotNull(komga).client().let {
                         if (tagQuery?.keyword == true) it.search(id, page) else it.tagged(id, page)
                     }
@@ -94,6 +97,9 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                 BaoziEndpoint.SOURCE_ID -> session.baoziSources.client(app).source.let {
                     if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page)
                     else it.search("", page, updates = true)
+                }
+                in PublicWebSite.sources -> session.publicWebSources.client(source).let {
+                    if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page) else it.search("", page, updates = true)
                 }
                 else -> requireNotNull(komga).client().updates(page)
             }
@@ -195,7 +201,7 @@ internal fun MixedTagBooksPage(session: WorldSession, route: UnifiedTagResults, 
     val state by configuration.state.collectAsStateWithLifecycle()
     val komgaId = if (session.identity.value.world == PrototypeWorld.NSFW) null else
         DiscoverySource.KOMGA.id(state) ?: route.targets.firstOrNull {
-            !isCopySource(it.sourceId) && !isBaoziSource(it.sourceId)
+            !isCopySource(it.sourceId) && !isPublicBookSource(it.sourceId)
         }?.sourceId
     MixedBookList(mixedModel(session, komgaId, null, route.targets, route.label), route.label, back, sources, open,
         "汇总当前空间各图源的标签结果；不支持该标签的图源按名称搜索。",

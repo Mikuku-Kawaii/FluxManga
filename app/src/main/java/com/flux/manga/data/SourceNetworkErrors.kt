@@ -8,6 +8,7 @@ internal fun sourceNetworkFailure(error: Exception): String? {
     return when (network.kind) {
         "dns" -> "图源域名解析失败，请检查网络后重试"
         "tls" -> "图源安全连接失败，请检查设备时间或更换可用线路"
+        "tls_eof" -> "图源安全握手被中断，请尝试切换 VPN／代理线路或关闭后重试"
         "reset" -> "图源连接被重置，请重试或更换可用线路"
         "refused" -> "图源拒绝连接，请稍后重试或更换可用线路"
         else -> "无法建立图源连接，请检查网络后重试"

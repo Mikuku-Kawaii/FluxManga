@@ -3,6 +3,8 @@ package com.flux.manga.ui.pages
 import android.app.Application
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,7 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-internal data class PicaUiState(val ready: Boolean = false, val busy: Boolean = false, val account: PicaAccount? = null,
+internal data class PicaUiState(val ready: Boolean = false, val busy: Boolean = false, val account: PicaAccount? = null, val autoLogin: Boolean = false,
     val source: String? = null, val query: String = "", val page: Int = 0, val next: Int? = null,
     val books: List<PicaBook> = emptyList(), val categories: List<String> = emptyList(), val history: List<String> = emptyList(),
     val book: PicaBook? = null, val chapters: List<PicaChapter> = emptyList(), val favorite: Boolean = false,
@@ -42,6 +44,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     private val blacklist = TagBlacklistFilter(app, session)
     private val identity = session.identity.value
     private val store = PicaStore(app, session)
+    val recovery = session.picaAccount(app)
     private val data = WorldDataStore(app)
     val state = MutableStateFlow(PicaUiState())
     private var client: PicaClient? = null
@@ -55,7 +58,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         val account = store.account() ?: throw java.io.IOException("请先在图源管理登录 PicACG")
         if (selectedSource != null && selectedSource != account.source) throw java.io.IOException("请登录此作品所属的 PicACG 账号")
         if (!foreground()) throw CancellationException()
-        client ?: PicaClient(session, account, viewModelScope).also { client = it }
+        client ?: PicaClient(session, account, viewModelScope, recovery).also { client = it }
     }
     private fun work(again: () -> Unit, preserve: Boolean = false, readingDetail: Boolean = false, action: suspend () -> Unit) {
         if (!foreground() || state.value.busy) return
@@ -69,8 +72,8 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         }
     }
     fun refresh(): Unit = work(::refresh, preserve = state.value.ready) {
-        val account = store.account(); val source = selectedSource ?: account?.source
-        if (account != state.value.account || source != state.value.source) {
+        val saved = store.saved(); val account = saved?.account; val source = selectedSource ?: account?.source
+        if (account?.connectionId != state.value.account?.connectionId || source != state.value.source) {
             client?.close(); client = null; retry = null
             state.update { it.copy(books = emptyList(), categories = emptyList(), book = null, chapters = emptyList(), page = 0, next = null, progress = null, message = null, error = false, detailError = null) }
         }
@@ -79,7 +82,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             val sourceId = requireNotNull(source)
             (dao.onlineBook(sourceId, book.id)?.favorite == true) to dao.onlineProgress(sourceId, book.id)
         } }
-        state.update { it.copy(ready = true, account = account, source = source, history = history,
+        state.update { it.copy(ready = true, account = account, autoLogin = saved?.login != null, source = source, history = history,
             favorite = reading?.first ?: it.favorite, progress = if (reading != null) reading.second else it.progress) }
     }
     fun stop() { job?.cancel(); client?.close(); client = null }
@@ -167,18 +170,33 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         val account = PicaClient(session, null, viewModelScope).use { it.verifyToken(token) }
         currentCoroutineContext().ensureActive()
         if (!foreground()) throw CancellationException()
-        store.save(account)
+        recovery.activate(account)
+        val saved = requireNotNull(store.saved())
         currentCoroutineContext().ensureActive()
         if (!foreground()) throw CancellationException()
         client?.close(); client = null; retry = null
         if (foreground()) {
-            state.update { PicaUiState(ready = true, busy = true, account = account, source = account.source,
+            state.update { PicaUiState(ready = true, busy = true, account = saved.account, autoLogin = saved.login != null, source = account.source,
                 message = "网页会话已验证，可读取收藏和浏览作品") }
         }
     }
     fun logout(): Unit = work(::logout) {
-        store.save(null); client?.close(); client = null
+        recovery.forget(logout = true); client?.close(); client = null
         state.update { PicaUiState(ready = true, busy = true, message = "已退出；原有书库和进度保留") }
+    }
+    suspend fun setAutoLogin(username: String, password: String) {
+        if (!foreground()) throw CancellationException()
+        if (state.value.busy) throw java.io.IOException("请等待当前请求完成")
+        state.update { it.copy(busy = true, message = null, error = false) }
+        try {
+            recovery.configure(username, password)
+            val saved = requireNotNull(store.saved())
+            if (foreground()) state.update { it.copy(account = saved.account, autoLogin = true, message = "已开启自动登录") }
+        } finally { if (active()) state.update { it.copy(busy = false) } }
+    }
+    fun disableAutoLogin(): Unit = work(::disableAutoLogin) {
+        recovery.forget(logout = false)
+        state.update { it.copy(autoLogin = false, message = "已关闭自动登录，当前账号会话保留") }
     }
     suspend fun cover(book: PicaBook) = picaCover(data, session, client(), book.id, book)
     override fun onCleared() { stop(); data.clearMemory() }
@@ -204,10 +222,12 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
 }
 @Composable internal fun PicaSettingsPage(session: WorldSession, back: () -> Unit, browse: (String, String) -> Unit) {
     val model = picaModel(session); val state by model.state.collectAsStateWithLifecycle()
+    val recovery by model.recovery.state.collectAsStateWithLifecycle()
     var webLogin by remember { mutableStateOf(false) }
+    var autoLogin by remember { mutableStateOf(false) }
     val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) webLogin = false }
+    LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) { webLogin = false; autoLogin = false } }
     LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsHeading(navigation.title("PicACG"), "", navigation::back) }
         sourceSettingsOverview(navigation,
@@ -223,6 +243,13 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             }, "云收藏", state.account?.name.orEmpty())
             ReferenceButton({ webLogin = true }, enabled = state.ready && !state.busy,
                 modifier = Modifier.fillMaxWidth()) { Text("网页登录 / 注册") }
+            if (state.account != null) {
+                Text(if (recovery.busy) "正在恢复登录…" else if (state.autoLogin) "自动登录已开启" else "自动登录未设置",
+                    style = MaterialTheme.typography.bodySmall)
+                recovery.notice?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                TextButton({ autoLogin = true }, enabled = !state.busy) { Text("设置自动登录") }
+                if (state.autoLogin) TextButton(model::disableAutoLogin, enabled = !state.busy) { Text("关闭自动登录") }
+            }
             if (state.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部云收藏或逐页选择导入；已有书目与阅读进度保留。",
@@ -239,10 +266,42 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         } }
 
     }
-    if (webLogin) AccountWebLogin(PicaWebSite, close = { webLogin = false },
+    if (webLogin) AccountWebLogin(PicaWebSite, session = session, passwordScope = "picacg", close = { webLogin = false },
         autoConnectKey = { page, _, _ -> page.picaToken() },
         connect = { page, _, _ -> model.connectWebAccount(page.picaToken()) },
         afterConnected = { browse("favorites", "") })
+    if (autoLogin) PicaAutoLoginDialog(model) { autoLogin = false }
+}
+
+@Composable private fun PicaAutoLoginDialog(model: PicaModel, close: () -> Unit) {
+    // Credentials are transient Compose state, never SavedStateHandle / rememberSaveable.
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(onDismissRequest = { if (!busy) close() }, title = { Text("设置自动登录") },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        text = {
+            Column(Modifier.imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("填写当前 PicACG 账号。验证成功后加密保存，登录过期时自动重登；退出账号会删除这些凭据。")
+                OutlinedTextField(username, { username = it.take(256) }, label = { Text("账号") }, singleLine = true, enabled = !busy)
+                OutlinedTextField(password, { password = it.take(4096) }, label = { Text("密码") }, singleLine = true, enabled = !busy,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        }, confirmButton = {
+            TextButton(enabled = !busy && username.isNotBlank() && password.isNotEmpty(), onClick = {
+                busy = true; error = null
+                scope.launch {
+                    try { model.setAutoLogin(username, password); password = ""; close() }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (failure: Exception) { error = picaFailure(failure) }
+                    finally { busy = false }
+                }
+            }) { Text(if (busy) "正在验证…" else "验证并保存") }
+        }, dismissButton = { TextButton(close, enabled = !busy) { Text("取消") } })
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -342,6 +401,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
             }) {
                 DetailAuthors(listOf(book.author, book.artist).map { it to it }, searchAuthor)
                 DetailInfoText(if (book.finished) "已完结" else "连载中", style = MaterialTheme.typography.bodySmall)
+                if (book.updatedAt.isNotBlank()) DetailInfoText(updateDate(book.updatedAt, "更新"), style = MaterialTheme.typography.bodySmall)
             }
             val target = state.resume ?: state.chapters.firstOrNull()?.order?.toString()
             DetailActions(state.favorite, state.busy, toggleFavorite = model::favorite, download = download,

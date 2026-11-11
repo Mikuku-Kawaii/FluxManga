@@ -38,7 +38,7 @@ internal class UnifiedTagsModel(app: Application, private val session: WorldSess
     private var copyThemes: List<CopyTheme> = emptyList()
     private val mutable = MutableStateFlow<Map<String, SourceTagsState>>(emptyMap())
     val states = mutable.asStateFlow()
-    private val enabledSources = listOfNotNull(BaoziEndpoint.SOURCE_ID, CopyMangaEndpoint.SOURCE_ID, komgaId)
+    private val enabledSources = (listOfNotNull(BaoziEndpoint.SOURCE_ID, CopyMangaEndpoint.SOURCE_ID, komgaId) + PublicWebSite.sources)
         .filter(SourceSelection(app, identity.world)::enabled)
     private val snapshots = enabledSources
         .associateWith { CatalogPageCache(app, session, "tags:$it", includeBlacklist = false, source = it) }
@@ -68,6 +68,7 @@ internal class UnifiedTagsModel(app: Application, private val session: WorldSess
                     copyThemes = themes
                     SourceTagList(themes.map { it.name }.distinct().filter { it.contains(query, true) }, SourceContinuation.End)
                 }
+                in PublicWebSite.sources -> SourceTagList(PublicWebSite.of(source)!!.tags.keys.filter { it.contains(query, true) }, SourceContinuation.End)
                 else -> requireNotNull(komga).client().tags(query, page)
             }
         }

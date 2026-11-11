@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 
 internal enum class SourceKind(val label: String, val world: PrototypeWorld) {
     KOMGA("Komga", PrototypeWorld.SFW), COPY("拷贝漫画", PrototypeWorld.SFW), BAOZI("包子漫画", PrototypeWorld.SFW),
+    GUAZI("瓜子漫画", PrototypeWorld.SFW), KUAIKAN("快看漫画", PrototypeWorld.SFW), MANHUAGUI("漫画柜", PrototypeWorld.SFW),
     JM("JMComic", PrototypeWorld.NSFW), PICA("PicACG", PrototypeWorld.NSFW),
     EH("E-Hentai", PrototypeWorld.NSFW), EX("ExHentai", PrototypeWorld.NSFW);
 
@@ -17,6 +18,9 @@ internal enum class SourceKind(val label: String, val world: PrototypeWorld) {
             source.startsWith("komga-") -> KOMGA
             isCopySource(source) -> COPY
             isBaoziSource(source) -> BAOZI
+            source == PublicWebSite.GUAZI.sourceId -> GUAZI
+            source == PublicWebSite.KUAIKAN.sourceId -> KUAIKAN
+            source == PublicWebSite.MANHUAGUI.sourceId -> MANHUAGUI
             isJmSource(source) -> JM
             source == PrivateCatalog.PICA || isPicaSource(source) -> PICA
             isEhSource(source) -> EH

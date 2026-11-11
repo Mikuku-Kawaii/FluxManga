@@ -218,7 +218,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
 
     // Metadata belongs to the page model, not a recycled lazy-list cell. Covers render independently.
     fun prepareInformation(book: ShelfBook, refreshMetadata: Boolean = false) {
-        if (!active() || !book.online || !book.available || (!refreshMetadata && book.information?.detailsReady == true) ||
+        if (!active() || !book.online || !book.available || (!refreshMetadata && book.information?.needsMetadataRefresh(book.key.sourceId) == false) ||
             informationWork[book.stableKey]?.isActive == true) return
         informationWork[book.stableKey] = viewModelScope.launch {
             try {

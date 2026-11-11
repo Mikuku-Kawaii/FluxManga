@@ -86,6 +86,15 @@ class WorldSession : ViewModel() {
             com.flux.manga.data.WorldKomgaAccountNetwork(this)).also { komgaAccountOwner = it }
     }
     internal fun invalidateKomgaAccount() { komgaAccountOwner?.configurationChanged() }
+    private var picaAccountOwner: Pair<SessionIdentity, com.flux.manga.data.PicaAccountRecovery>? = null
+    @Synchronized internal fun picaAccount(context: android.content.Context): com.flux.manga.data.PicaAccountRecovery {
+        val owner = identity.value
+        check(owner.world == PrototypeWorld.NSFW && accepts(owner))
+        picaAccountOwner?.takeIf { it.first == owner }?.let { return it.second }
+        picaAccountOwner?.second?.close()
+        return com.flux.manga.data.PicaAccountRecovery(context.applicationContext, this, viewModelScope)
+            .also { picaAccountOwner = owner to it }
+    }
     private var baoziAccountOwner: com.flux.manga.data.BaoziAccountController? = null
     internal fun baoziAccount(context: android.content.Context): com.flux.manga.data.BaoziAccountController {
         val ownerIdentity = identity.value
@@ -97,6 +106,7 @@ class WorldSession : ViewModel() {
             credentialsChanged = { baoziSources.credentialsChanged() },
             clearBrowserSession = { com.flux.manga.data.BaoziBrowserProfile.clear(context.applicationContext) }).also { baoziAccountOwner = it }
     }
+    internal val publicWebSources = com.flux.manga.data.WorldPublicWebSources(this)
     internal val baoziSources = com.flux.manga.data.WorldBaoziSources(this)
     internal fun recoverBaoziAccount(context: android.content.Context, owner: SessionIdentity) {
         viewModelScope.launch {
@@ -116,6 +126,7 @@ class WorldSession : ViewModel() {
     private var restorePrivateOnStart = false
     fun takePrivateStartup(): Boolean = restorePrivateOnStart.also { restorePrivateOnStart = false }
     fun configure(context: android.content.Context) {
+        publicWebSources.configure(context)
         if (startup == null) {
             startup = com.flux.manga.privacy.StartupPreferences(context)
             restorePrivateOnStart = startup!!.restorePrivate()
@@ -148,9 +159,10 @@ class WorldSession : ViewModel() {
         startup?.rememberWorld(world)
         pageCoverOwner?.second?.clear(); pageCoverOwner = null
         jmRouteOwner = null
+        picaAccountOwner?.second?.close(); picaAccountOwner = null
         navigationEpoch++
         downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); baoziAccountOwner = null
-        baoziSources.close(); copyMangaSources.close()
+        publicWebSources.close(); baoziSources.close(); copyMangaSources.close()
         komgaSources.close()
         repository.clearMemory()
         pageOwner.viewModelStore.clear()
@@ -212,6 +224,6 @@ class WorldSession : ViewModel() {
         mutableState.value = state.value.copy(foreground = true, visibilityEpoch = state.value.visibilityEpoch + 1)
     }
 
-    override fun onCleared() { clearPageCovers(); downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); baoziSources.close(); copyMangaSources.close(); komgaSources.close(); pageOwner.viewModelStore.clear(); if (::repository.isInitialized) repository.clearMemory() }
+    override fun onCleared() { picaAccountOwner?.second?.close(); picaAccountOwner = null; clearPageCovers(); downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); publicWebSources.close(); baoziSources.close(); copyMangaSources.close(); komgaSources.close(); pageOwner.viewModelStore.clear(); if (::repository.isInitialized) repository.clearMemory() }
     private fun newPageOwner() = object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() }
 }

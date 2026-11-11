@@ -8,7 +8,7 @@ import kotlinx.coroutines.*
 
 internal fun aggregateSearchSources(world: PrototypeWorld, komgaId: String?) =
     if (world == PrototypeWorld.NSFW) PrivateCatalog.feeds
-    else listOfNotNull(komgaId, CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID)
+    else listOfNotNull(komgaId, CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID) + PublicWebSite.sources
 
 /** Thin adapter over the existing source clients; no global client, credential or database owner. */
 internal class AggregateSearchRepository(private val context: Context, private val session: WorldSession, komgaId: String?) {
@@ -27,7 +27,9 @@ internal class AggregateSearchRepository(private val context: Context, private v
                 "artist:\"${author.replace("\"", "")}\"" else keyword
             return privateCatalog.load(source, privateQuery, page)
         }
-        val result = if (source == BaoziEndpoint.SOURCE_ID) {
+        val result = if (isPublicWebSource(source)) {
+            session.publicWebSources.client(source).search(keyword, page)
+        } else if (source == BaoziEndpoint.SOURCE_ID) {
             val client = withContext(Dispatchers.IO) { session.baoziSources.client(context) }
             client.source.search(keyword, page)
         } else if (source == CopyMangaEndpoint.SOURCE_ID) {

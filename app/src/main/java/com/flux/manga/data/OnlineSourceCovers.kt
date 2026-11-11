@@ -10,7 +10,7 @@ import kotlinx.coroutines.*
 
 /** Lists use the shared memory/disk cache; only the raw transport owns temporary encoded files. */
 internal class OnlineSourceCovers(private val app: Application, private val session: WorldSession, private val sourceId: String = CopyMangaEndpoint.SOURCE_ID) {
-    init { require(isCopySource(sourceId) || isBaoziSource(sourceId)) }
+    init { require(isCopySource(sourceId) || isPublicBookSource(sourceId)) }
     private val baozi get() = isBaoziSource(sourceId)
     private val identity = session.identity.value
     private fun active() { if (!session.accepts(identity)) throw CancellationException("Expired source session") }
@@ -28,7 +28,8 @@ internal class OnlineSourceCovers(private val app: Application, private val sess
                     ensureActive(); active()
                     val directory = File(app.cacheDir, "sfw/${if (baozi) "baozi-covers" else "copy-covers"}/${identity.processSession}-${identity.generation}/$sourceId")
                     if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Image directory unavailable")
-                    val output = if (baozi) session.baoziSources.client(app, sourceId).coverFile(id, directory.path)
+                    val output = if (isPublicWebSource(sourceId)) session.publicWebSources.client(sourceId).coverFile(id, directory.path)
+                        else if (baozi) session.baoziSources.client(app, sourceId).coverFile(id, directory.path)
                         else copyMangaClient(session, sourceId).coverFile(id, directory.path)
                     output.use { file ->
                         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

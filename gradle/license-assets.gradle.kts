@@ -51,6 +51,7 @@ tasks.register("generateLicenseAssets") {
             }
             val name = mapOf("komga-rest" to "Komga 官方协议引用", "copymanga" to "拷贝漫画协议适配",
                 "baozi-anonymous" to "包子漫画匿名协议适配", "baozi-account" to "包子漫画账号协议适配",
+                "public-web-catalogs" to "瓜子 / 快看 / 漫画柜公开图源适配",
                 "jm-image-transform" to "JMComic 协议与图片切片适配",
                 "picacg" to "PicACG 账号与阅读协议适配",
                 "ehentai" to "E-Hentai 账号与画廊协议适配",

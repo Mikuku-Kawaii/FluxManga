@@ -61,8 +61,8 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
                     label = { Text("HTTPS 服务地址") }, placeholder = { Text("https://example.com/komga/") },
                     singleLine = true, shape = MaterialTheme.shapes.small, enabled = !model.busy, modifier = Modifier.fillMaxWidth().testTag("komga-address"),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next))
-                WebAccountEntry(model.address,
-                    "网页登录成功后自动验证并保存账号；注册是否开放由服务器管理员决定。", !model.busy,
+                WebAccountEntry(model.address, session = session, passwordScope = "komga", note =
+                    "网页登录成功后自动验证并保存账号；注册是否开放由服务器管理员决定。", enabled = !model.busy,
                     connect = { page, _, _ -> model.connectWebSession(page.cookie(model.address, "KOMGA-SESSION")) },
                     autoConnectKey = { page, _, _ -> page.cookie(model.address, "KOMGA-SESSION").takeIf(String::isNotBlank) })
                 SettingsDisclosure("连接服务器账号") {

@@ -193,6 +193,9 @@ data object OnlineLibrary : NavKey
 data class BaoziBookRoute(val sourceId: String, val mangaId: String) : NavKey
 
 @Serializable
+data class PublicWebBrowse(val sourceId: String) : NavKey
+
+@Serializable
 data class BaoziReaderRoute(val sourceId: String, val mangaId: String, val chapterId: String? = null) : NavKey
 
 @Serializable
@@ -286,6 +289,10 @@ class PrototypeNavigation(
         if (route.name.isNotEmpty() && currentStack.last() != route) currentStack.add(route)
     }
     fun openDiscovery(section: DiscoverySection) { if (currentStack.last() != DiscoveryList(section)) currentStack.add(DiscoveryList(section)) }
+    fun openPublicCatalog(sourceId: String) {
+        if (world == PrototypeWorld.SFW && com.flux.manga.data.isPublicWebSource(sourceId) && currentStack.last() != PublicWebBrowse(sourceId))
+            currentStack.add(PublicWebBrowse(sourceId))
+    }
     fun submitOnlineSearch(query: String) {
         val term = query.trim().take(200)
         if (currentStack.last() == OnlineSearch && term.isNotEmpty()) currentStack.add(OnlineSearchResults(world, term))
@@ -397,7 +404,7 @@ class PrototypeNavigation(
             if (world == PrototypeWorld.NSFW) currentStack.add(JmBookRoute(sourceId, mangaId))
             return
         }
-        if (com.flux.manga.data.isBaoziSource(sourceId)) {
+        if (com.flux.manga.data.isPublicBookSource(sourceId)) {
             if (world == PrototypeWorld.SFW) currentStack.add(BaoziBookRoute(sourceId, mangaId))
             return
         }
@@ -421,7 +428,7 @@ class PrototypeNavigation(
             if (world == PrototypeWorld.NSFW) currentStack.add(JmReaderRoute(sourceId, mangaId, chapterId))
             return
         }
-        if (com.flux.manga.data.isBaoziSource(sourceId)) {
+        if (com.flux.manga.data.isPublicBookSource(sourceId)) {
             if (world == PrototypeWorld.SFW) currentStack.add(BaoziReaderRoute(sourceId, mangaId, chapterId))
             return
         }
@@ -439,7 +446,7 @@ class PrototypeNavigation(
         back()
         val detail: NavKey = when {
             com.flux.manga.data.isCopySource(sourceId) -> CopyMangaBook(sourceId, mangaId)
-            com.flux.manga.data.isBaoziSource(sourceId) -> BaoziBookRoute(sourceId, mangaId)
+            com.flux.manga.data.isPublicBookSource(sourceId) -> BaoziBookRoute(sourceId, mangaId)
             com.flux.manga.data.isExSource(sourceId) -> ExBookRoute(sourceId, mangaId)
             com.flux.manga.data.isEhSource(sourceId) -> EhBookRoute(sourceId, mangaId)
             com.flux.manga.data.isPicaSource(sourceId) -> PicaBookRoute(sourceId, mangaId)
@@ -547,7 +554,7 @@ private fun supportedChild(route: NavKey) = when (route) {
     PicaSettingsRoute, is PicaBrowseRoute, is PicaBookRoute, is PicaReaderRoute -> true
     JmSettingsRoute, is JmBrowseRoute, is JmBookRoute, is JmReaderRoute -> true
     Search, OnlineSearch, CopyMangaBrowse, AppSettings, LibrarySettings, PrivacyMaintenanceSettings, DataProtection, PrivacySettings, AppearanceSettings, StartupSettings, AboutSettings, OpenSourceLicenses, AppUpdates, ReadingSettings, ReadingStatisticsRoute, RecordExportRoute, PortableBackupRoute, DownloadStorageSettings, SpaceStorageSettings, FfiProbe, GlassLab, LocalLibrary, OnlineLibrary, OnlineSources, KomgaConfiguration, KomgaAccountImport, BaoziAccountSettings, CopyAccountSettings, DownloadQueue -> true
-    is LicenseEntryRoute, is LicenseDocumentRoute, is LibraryGroups, is DownloadedBook, is DownloadedReader, is DownloadChapters, is BaoziReaderRoute, is BaoziBookRoute, is CopyMangaBook, is CopyMangaReader, is DiscoveryList, is UnifiedTagResults, is SourceTagResults, is TagResults, is ShelfList, is LocalBookDetail, is LocalBookReader, is KomgaBrowse, is KomgaBook, is KomgaReader,
+    is PublicWebBrowse, is LicenseEntryRoute, is LicenseDocumentRoute, is LibraryGroups, is DownloadedBook, is DownloadedReader, is DownloadChapters, is BaoziReaderRoute, is BaoziBookRoute, is CopyMangaBook, is CopyMangaReader, is DiscoveryList, is UnifiedTagResults, is SourceTagResults, is TagResults, is ShelfList, is LocalBookDetail, is LocalBookReader, is KomgaBrowse, is KomgaBook, is KomgaReader,
     is MangaDetail, is MangaReader -> true
     else -> false
 }

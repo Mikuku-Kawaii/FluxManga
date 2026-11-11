@@ -53,7 +53,7 @@ internal fun BaoziSessionRecovery(session: WorldSession, restored: () -> Unit) {
         else if (!occupied) opened = true
     }
     if (opened && lifecycle == Lifecycle.State.RESUMED && state.reconnectRequested) {
-        AccountWebLogin(BaoziWebSite, close = model::dismissReconnect,
+        AccountWebLogin(BaoziWebSite, session = session, passwordScope = "baozi", close = model::dismissReconnect,
             connect = { page, _, name ->
                 val (token, browser) = page.baoziSession()
                 model.connectWebSession(name, token, browser, page.baoziAutoLogin, recoveryOnly = true)

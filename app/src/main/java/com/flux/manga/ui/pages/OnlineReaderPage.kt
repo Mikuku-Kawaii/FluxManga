@@ -69,7 +69,7 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     private val baozi = isBaoziSource(sourceId)
     private val copy = isCopySource(sourceId)
     val privateContent = syntheticPrivate || isPrivateComicSource(sourceId)
-    fun failure(error: Exception) = if (syntheticPrivate) "合成图片读取失败，可重试" else if (isEhSource(sourceId) || isExSource(sourceId)) ehFailure(error, GallerySite.forSource(sourceId)) else if (isPicaSource(sourceId)) picaFailure(error) else if (isJmSource(sourceId)) jmFailure(error) else if (baozi) baoziFailure(error) else if (copy) copyMangaFailure(error) else komgaFailure(error)
+    fun failure(error: Exception) = if (syntheticPrivate) "合成图片读取失败，可重试" else if (isEhSource(sourceId) || isExSource(sourceId)) ehFailure(error, GallerySite.forSource(sourceId)) else if (isPicaSource(sourceId)) picaFailure(error) else if (isJmSource(sourceId)) jmFailure(error) else if (isPublicWebSource(sourceId)) publicWebFailure(error, sourceId) else if (baozi) baoziFailure(error) else if (copy) copyMangaFailure(error) else komgaFailure(error)
     private val cacheSession = savedState.get<String>("reader-cache-session") ?: java.util.UUID.randomUUID().toString()
         .also { savedState["reader-cache-session"] = it }
     private val previewFiles = ReaderEncodedCache(data, cacheSession)
@@ -129,9 +129,10 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
         if (repository.isActive() && (!privateContent || session.state.value.foreground)) bitmaps.get(key) else null
     fun cachedPreview(key: OnlineReaderBitmapKey): Bitmap? =
         if (repository.isActive() && (!privateContent || session.state.value.foreground)) previews.get(key) else null
+    private val previewPrefix = if (isJmSource(sourceId)) "preview-jm-v2" else "preview"
     private fun previewKey(key: OnlineReaderBitmapKey) = ResourceKey(
         SampleKey(identity.world, mangaKey.sourceId, mangaKey.mangaId),
-        "preview:${key.chapter.length}:${key.chapter}${key.page.length}:${key.page}:${key.width}:${key.top}:${key.bottom}")
+        "$previewPrefix:${key.chapter.length}:${key.chapter}${key.page.length}:${key.page}:${key.width}:${key.top}:${key.bottom}")
     suspend fun preview(key: OnlineReaderBitmapKey): Bitmap? {
         cachedPreview(key)?.let { return it }
         val epoch = session.state.value.visibilityEpoch

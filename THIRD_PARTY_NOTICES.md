@@ -80,3 +80,7 @@ BZip2 解压新增声明依赖 Apache Commons Compress 1.28.0，沿其 POM 引�
 
 2026-10-24 EH / EX 密码登录增补：同一固定提交的 EhEngine.signIn、EhUrl 与 SignInParser（Apache-2.0 / Copyright 2016 Hippo Seven）适配论坛表单和成功 / 失败解析，SignInScene 仅用于流程参考。复用既有 Rust 传输、Kotlin/jsoup 与平台 HttpCookie；不复制宿主、全局 Cookie 数据库或 WebView。修改记录见 EH / EX NOTICE，固定资料与本地文件哈希见来源索引。
 
+
+## 瓜子 / 快看 / 漫画柜公开图源（2026-11-11）
+
+从 [Keiyoushi 固定提交](https://github.com/keiyoushi/extensions-source/tree/d9420cd1c66ecd3385946b616aacfcf8f6314f70) 的对应图源、LZString 与 Unpacker 提取协议与解析，保留 [Apache-2.0](app/src/main/assets/licenses/public-web-Apache-2.0.txt)、[修改声明](app/src/main/assets/licenses/public-web-NOTICE.txt)及 [上游样本](docs/third-party/public-web/)。不引入扩展宿主、QuickJS 或独立数据库。快看仅解析序列化字面量；漫画柜仅公开目录，不移植成人解锁或后台投票/登录请求。图源、会话、图片文件释放、缓存、阅读与下载适配现有架构；性能未实测，本轮未构建或运行测试。

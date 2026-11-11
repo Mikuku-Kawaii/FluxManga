@@ -43,7 +43,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
             }
             PICA -> {
                 val account = PicaStore(app, session).account() ?: throw IOException("登录后可加载作品，请前往图源管理")
-                PicaClient(session, account, this).use { client ->
+                PicaClient(session, account, this, session.picaAccount(app)).use { client ->
                     val batch = when (mode) {
                         "recommendations" -> client.recommendations()
                         "updates" -> client.catalog("", number)
@@ -80,7 +80,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
         val result = if (isPicaSource(card.key.sourceId)) {
             val account = PicaStore(app, session).account()?.takeIf { it.source == card.key.sourceId }
                 ?: throw IOException("请登录原账号")
-            PicaClient(session, account, this).use { client ->
+            PicaClient(session, account, this, session.picaAccount(app)).use { client ->
                 val book = client.detail(card.key.mangaId)
                 book.updatedAt to (book.chapterCount?.let { "共${it}话" }.orEmpty())
             }
@@ -103,7 +103,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
             }
             PICA -> {
                 val account = PicaStore(app, session).account() ?: throw IOException("登录后可读取分类，请前往图源管理")
-                PicaClient(session, account, this).use { client ->
+                PicaClient(session, account, this, session.picaAccount(app)).use { client ->
                     client.categories().map { PrivateCatalogTag(it, it, category = true) }
                 }
             }
@@ -121,7 +121,7 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
             }
             isPicaSource(source) -> {
                 val account = PicaStore(app, session).account()?.takeIf { it.source == source } ?: throw IOException("请登录原账号")
-                PicaClient(session, account, this).use { picaCover(data, session, it, id) }
+                PicaClient(session, account, this, session.picaAccount(app)).use { picaCover(data, session, it, id) }
             }
             else -> {
                 val site = GallerySite.forSource(source)

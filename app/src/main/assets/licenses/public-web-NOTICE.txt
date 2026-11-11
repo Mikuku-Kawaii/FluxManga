@@ -1,0 +1,26 @@
+FluxManga public web catalog adapters (2026-11-11)
+
+Upstream: https://github.com/keiyoushi/extensions-source
+Commit: d9420cd1c66ecd3385946b616aacfcf8f6314f70
+License: Apache-2.0 (see public-web-Apache-2.0.txt).
+Copyright and other upstream attribution retained under the original license.
+
+Adapted paths:
+- src/zh/guazimanhua (Guazimanhua.kt, Filters.kt, build.gradle.kts)
+- src/zh/kuaikanmanhua (Kuaikanmanhua.kt, KuaikanmanhuaDto.kt, KuaikanmanhuaFilters.kt, build.gradle.kts)
+- src/zh/manhuagui (Manhuagui.kt, Filters.kt, build.gradle.kts)
+- lib/lzstring/src/keiyoushi/lib/lzstring/LZString.kt
+- lib/unpacker/src/keiyoushi/lib/unpacker/Unpacker.kt
+
+Modified for FluxManga: extracted protocol, selectors and category IDs; replaced extension host/model/network with existing Kotlin DTOs, WorldSession and Rust reqwest; static Nuxt literal decoding instead of QuickJS; decompression only with bounded output; source-scoped cancellation, images streamed into owned temporary files; existing Android image decoding/caches/reader/downloads.
+No upstream extension runtime, database or account system bundled. No adult-content unlock cookies or background vote/login probes adopted.
+
+Upstream LZString describes a reimplementation of https://github.com/pieroxy/lz-string.
+Upstream Unpacker describes decoding Dean Edwards packer, https://github.com/evanw/packer.
+
+Local files: PublicBookSource.kt, PublicWebSite.kt, WorldPublicWebSources.kt, PublicWebPayload.kt, PublicLzString.kt, plus integration into existing source/UI/network code.
+
+2026-11-11 metadata follow-up: retain all literal Guazi detail tags; map Kuaikan
+topicInfo.tags and catalog category/author_name/latest_comic_title from public
+website payloads. Native categories retain their IDs; other tag labels use keyword
+search. Existing parsers, source sessions and dependencies remain in use.

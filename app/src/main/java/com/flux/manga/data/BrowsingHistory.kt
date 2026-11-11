@@ -100,7 +100,7 @@ internal class BrowsingHistory(private val context: Context, private val session
                     row.kind == "local" -> dao.localBook(row.sourceId, row.mangaId)?.let {
                         if (File(local.directory, it.archiveName).isFile) VisitAvailability.AVAILABLE else VisitAvailability.MISSING
                     } ?: VisitAvailability.MISSING
-                    isBaoziSource(row.sourceId) || isCopySource(row.sourceId) -> VisitAvailability.AVAILABLE
+                    isPublicBookSource(row.sourceId) || isCopySource(row.sourceId) -> VisitAvailability.AVAILABLE
                     configFailed -> VisitAvailability.SOURCE_UNKNOWN
                     config?.sourceId != row.sourceId -> VisitAvailability.SOURCE_CHANGED
                     else -> VisitAvailability.AVAILABLE

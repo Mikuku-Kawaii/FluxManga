@@ -67,7 +67,7 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
             val progress = dao.onlineProgressRows().associateBy { it.sourceId to it.mangaId }
             val books = dao.onlineBooks().associateBy { it.sourceId to it.mangaId }.toMutableMap()
             progress.forEach { (key, value) -> books.putIfAbsent(key, OnlineBook(value.sourceId, value.mangaId, "", false, value.updatedAt)) }
-            books.map { (key, value) -> OnlineShelfItem(value, progress[key], isBaoziSource(value.sourceId) || isCopySource(value.sourceId) || value.sourceId == config?.sourceId) }
+            books.map { (key, value) -> OnlineShelfItem(value, progress[key], isPublicBookSource(value.sourceId) || isCopySource(value.sourceId) || value.sourceId == config?.sourceId) }
                 .sortedByDescending { it.progress?.updatedAt ?: it.book.updatedAt }
         }
         currentCoroutineContext().ensureActive(); active()
@@ -114,7 +114,7 @@ internal class OnlineLibrary(context: Context, private val session: WorldSession
             return PrivateCatalog(app, session).cover(sourceId, mangaId)
         }
         active()
-        if (isBaoziSource(sourceId)) return OnlineSourceCovers(app as android.app.Application, session, sourceId = sourceId).loadRemote(mangaId)
+        if (isPublicBookSource(sourceId)) return OnlineSourceCovers(app as android.app.Application, session, sourceId = sourceId).loadRemote(mangaId)
         if (isCopySource(sourceId)) return OnlineSourceCovers(app as android.app.Application, session, sourceId).loadRemote(mangaId)
         val access = KomgaAccess(app, session, sourceId)
         val client = access.client()

@@ -12,7 +12,8 @@ import org.json.JSONObject
 
 internal data class FeaturedBookInfo(val info: OnlineBookInformation, val chapters: Long?)
 private fun OnlineBookInformation.featured() = FeaturedBookInfo(this,
-    chapterGroups.values.flatten().distinct().size.toLong().takeIf { chaptersKnown && it > 0 })
+    chapterGroups.values.flatten().distinct().size.toLong().takeIf { chaptersKnown && it > 0 }
+        ?: chapterCount?.toLong()?.takeIf { it > 0 })
 
 /** Visible recommendation metadata, using existing source clients and world-isolated cache. */
 internal class HomeFeaturedMetadata(private val app: Application, private val session: WorldSession) {
@@ -38,14 +39,15 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
             cache.read()?.let { cached ->
                 val tags = cached.getJSONArray("tags")
                 FeaturedBookInfo(OnlineBookInformation(cached.getString("title"), cached.getString("author"),
-                    cached.getString("summary"), List(tags.length()) { tags.getString(it) }, cached.getString("status")),
+                    cached.getString("summary"), List(tags.length()) { tags.getString(it) }, cached.getString("status"),
+                    metadataRevision = cached.optInt("metadataRevision", 1)),
                     if (cached.isNull("chapters")) null else cached.getLong("chapters"))
             }
         } ?: return
         currentCoroutineContext().ensureActive()
         if (!active() || revision != ticket || books[key] != null) return
         books[key] = value
-        if (ticket == 0) loaded += key
+        if (ticket == 0 && !value.info.needsMetadataRefresh(key.sourceId)) loaded += key
     }
 
     suspend fun load(card: MangaCard) {
@@ -83,8 +85,9 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
             loaded += key
             val info = value.info
             cache.write(JSONObject().put("title", info.title).put("author", info.author).put("summary", info.summary)
+                .put("metadataRevision", info.metadataRevision)
                 .put("tags", JSONArray(info.tags)).put("status", info.status).put("chapters", value.chapters ?: JSONObject.NULL))
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { if (active()) { loaded += key; errors[key] = "资料加载失败" } }
+        catch (_: Exception) { if (active()) { loaded += key; errors[key] = "${discoverySourceName(key.sourceId)}资料加载失败" } }
     }
 }

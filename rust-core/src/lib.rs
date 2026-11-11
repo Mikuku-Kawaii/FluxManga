@@ -6,6 +6,7 @@ mod detail_metadata;
 mod image_file;
 mod image_transform;
 mod komga;
+mod manhuagui_dns;
 mod probe;
 mod source;
 mod transport;

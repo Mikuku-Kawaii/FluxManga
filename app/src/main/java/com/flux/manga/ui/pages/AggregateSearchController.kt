@@ -60,6 +60,7 @@ internal class AggregateSearchController(
                         id.startsWith("ehentai-") -> com.flux.manga.data.ehFailure(error, com.flux.manga.data.GallerySite.EH)
                         id.startsWith("exhentai-") -> com.flux.manga.data.ehFailure(error, com.flux.manga.data.GallerySite.EX)
                         id == CopyMangaEndpoint.SOURCE_ID -> copyMangaFailure(error)
+                        com.flux.manga.data.isPublicWebSource(id) -> publicWebFailure(error, id)
                         id == com.flux.manga.data.BaoziEndpoint.SOURCE_ID -> baoziFailure(error)
                         else -> komgaFailure(error)
                     }

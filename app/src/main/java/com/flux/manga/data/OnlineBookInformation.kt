@@ -17,7 +17,22 @@ internal data class OnlineBookInformation(
     val status: String = "", val updated: String = "", val partial: Boolean = false, val coverReady: Boolean = false, val detailsReady: Boolean = true,
     val chapterGroups: Map<String, List<String>> = emptyMap(), val chaptersKnown: Boolean = false,
     val contentUpdated: Boolean = false, val readToEndChapter: String? = null,
+    val metadataRevision: Int = 2,
+    val chapterCount: Int? = null,
 )
+internal fun OnlineBookInformation.needsMetadataRefresh(source: String) = !detailsReady ||
+    (metadataRevision < 2 && (isPublicWebSource(source) || isJmSource(source) || isPicaSource(source) || isEhSource(source) || isExSource(source)))
+
+internal fun JmBook.information() = OnlineBookInformation(title, author, description, tags,
+    updated = updatedAt, contentUpdated = updatedAt.isNotBlank())
+internal fun PicaBook.information() = OnlineBookInformation(title,
+    listOf(author, artist).filter(String::isNotBlank).distinct().joinToString(" / "), description,
+    (tags + categories).distinct(), if (finished) "已完结" else "连载中", updatedAt,
+    contentUpdated = updatedAt.isNotBlank(), chapterCount = chapterCount)
+internal fun EhBook.information() = OnlineBookInformation(title,
+    author = tags.filter { it.startsWith("artist:") }.map { it.substringAfter(':').trim() }.filter(String::isNotBlank).distinct().joinToString(" / "),
+    summary = listOf(subtitle, uploader.takeIf(String::isNotBlank)?.let { "上传者：$it" }.orEmpty()).filter(String::isNotBlank).joinToString("\n"),
+    tags = (listOf(category).filter(String::isNotBlank) + tags).distinct(), status = "${pages} 页")
 internal val OnlineBookInformation.isFinished get() = status.trim().uppercase(java.util.Locale.ROOT) in
     setOf("已完结", "完结", "已完結", "完結", "COMPLETED", "ENDED", "FINISHED")
 internal val OnlineBookInformation.isReadToEnd get() = isFinished && readToEndChapter != null &&
@@ -42,13 +57,16 @@ internal class OnlineBookInformationStore(private val data: WorldDataStore, priv
                     val ids = groups.getJSONArray(group); List(ids.length()) { ids.getString(it) }
                 } }.orEmpty(), j.optBoolean("chaptersKnown"),
                 j.optBoolean("contentUpdated", isCopySource(source) || isBaoziSource(source)),
-                j.optString("readToEndChapter").takeIf { it.isNotBlank() })
+                j.optString("readToEndChapter").takeIf { it.isNotBlank() }, j.optInt("metadataRevision", 1),
+                j.optInt("chapterCount", -1).takeIf { it >= 0 })
         } finally { bytes.fill(0) }
     }
     suspend fun read(source: String, id: String) = db.transaction(::active) { it.readInfo(source, id) }
     suspend fun readTags(keys: List<MangaKey>) = db.transaction(::active) { rows ->
         keys.filter { it.world == identity.world }.mapNotNull { key ->
-            rows.readInfo(key.sourceId, key.mangaId)?.takeIf { it.detailsReady }?.tags?.let { key to it }
+            rows.readInfo(key.sourceId, key.mangaId)?.takeIf {
+                it.detailsReady && (!isPublicWebSource(key.sourceId) || it.metadataRevision >= 2)
+            }?.tags?.let { key to it }
         }.toMap()
     }
     suspend fun readAll(books: List<OnlineBook>) = db.transaction(::active) { rows ->
@@ -63,6 +81,8 @@ internal class OnlineBookInformationStore(private val data: WorldDataStore, priv
             readToEndChapter = value.readToEndChapter ?: old?.readToEndChapter)
         if (old == info) return info
         val j = JSONObject().put("version", 1).put("title", info.title).put("author", info.author).put("summary", info.summary)
+            .put("metadataRevision", info.metadataRevision)
+            .put("chapterCount", info.chapterCount ?: JSONObject.NULL)
             .put("tags", JSONArray(info.tags.distinct())).put("status", info.status).put("updated", info.updated)
             .put("partial", info.partial).put("cover", info.coverReady).put("detailsReady", info.detailsReady)
             .put("chapterGroups", JSONObject().also { groups -> info.chapterGroups.forEach { (group, ids) -> groups.put(group, JSONArray(ids)) } })
@@ -84,7 +104,8 @@ internal class OnlineBookInformationStore(private val data: WorldDataStore, priv
     suspend fun chapters(source: String, id: String, group: String, ids: List<String>) = db.transaction(::active) { rows ->
         val book = rows.book(source, id) ?: return@transaction
         val info = rows.readInfo(source, id) ?: OnlineBookInformation(book.title, detailsReady = false)
-        rows.writeInfo(source, id, info.copy(chapterGroups = info.chapterGroups + (group to ids.distinct()), chaptersKnown = true))
+        val groups = if (source == PublicWebSite.MANHUAGUI.sourceId) publicChapterGroups(source, ids.distinct()) else mapOf(group to ids.distinct())
+        rows.writeInfo(source, id, info.copy(chapterGroups = info.chapterGroups + groups, chaptersKnown = true))
     }
     suspend fun cover(source: String, id: String): Bitmap? {
         val bytes = data.resource(informationCover(identity.world, source, id), ::active)
@@ -134,16 +155,16 @@ internal class OnlineBookInformationLoader(private val app: Application, private
         if (!active()) throw CancellationException()
         var info = store.read(source, id)
         var metadataError: String? = null
-        if (info == null || !info.detailsReady || (loadChapters && !info.chaptersKnown) || force || refreshMetadata) {
+        if (info == null || info.needsMetadataRefresh(source) || (loadChapters && !info.chaptersKnown) || force || refreshMetadata) {
             info = try { ContentRequests.run(source, ContentPriority.DETAIL) { if (identity.world == PrototypeWorld.SFW) when {
                 isCopySource(source) -> copyMangaClient(session, source).let { client ->
                     val details = client.detail(id).info()
                     if (loadChapters) details.copy(chapterGroups = mapOf("default" to chapterIds { client.allChapters(id, it) }), chaptersKnown = true) else details
                 }
-                isBaoziSource(source) -> session.baoziSources.client(app, source).source.detail(id).let {
+                isPublicBookSource(source) -> publicBookSource(app, session, source).detail(id).let {
                     OnlineBookInformation(it.card.title, it.author, it.description, it.tags.orEmpty(),
                         it.metadata.status.orEmpty(), it.metadata.updatedAt.orEmpty(), it.metadata.partial,
-                        chapterGroups = it.chapters?.let { chapters -> mapOf("default" to chapters.map { chapter -> chapter.id }) }.orEmpty(),
+                        chapterGroups = it.chapters?.let { chapters -> publicChapterGroups(source, chapters.map { chapter -> chapter.id }) }.orEmpty(),
                         chaptersKnown = it.chapters != null, contentUpdated = it.metadata.updateKind == SourceUpdateKind.CONTENT)
                 }
                 else -> KomgaAccess(app, session, source).client().let { client ->
@@ -156,15 +177,14 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                     val settings = JmStore(app, session).settings()
                     if (source != JM_SOURCE && source != settings.account?.source) throw IOException("请登录作品所属的 JMComic 账号")
                     JmClient(session, if (source == JM_SOURCE) settings.copy(account = null) else settings, source, this).use { client ->
-                        client.detail(id).let { OnlineBookInformation(it.title, it.author, it.description, it.tags,
+                        client.detail(id).let { it.information().copy(
                             chapterGroups = mapOf("default" to it.chapters.map { chapter -> chapter.id }), chaptersKnown = true) }
                     }
                 }
                 isPicaSource(source) -> {
                     val account = PicaStore(app, session).account()?.takeIf { it.source == source } ?: throw IOException("请登录作品所属的 PicACG 账号")
-                    PicaClient(session, account, this).use { client -> client.detail(id).let {
-                        val details = OnlineBookInformation(it.title, listOf(it.author, it.artist).filter(String::isNotBlank).distinct().joinToString(" / "),
-                            it.description, (it.tags + it.categories).distinct(), if (it.finished) "已完结" else "连载中")
+                    PicaClient(session, account, this, session.picaAccount(app)).use { client -> client.detail(id).let {
+                        val details = it.information()
                         ensureActive(); if (!active()) throw CancellationException()
                         info = store.save(source, id, details)
                         onMetadata(requireNotNull(info))
@@ -175,8 +195,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
                     val site = GallerySite.forSource(source); val settings = EhStore(app, session, site).settings()
                     if (source != EH_SOURCE && (settings.account == null || source != site.source(settings.account))) throw IOException("请登录作品所属的 ${site.label} 账号")
                     EhClient(session, if (source == EH_SOURCE) null else settings.account, this, site).use { client -> client.detail(id).let {
-                        OnlineBookInformation(it.title, summary = listOf(it.subtitle, it.uploader.takeIf(String::isNotBlank)?.let { name -> "上传者：$name" }.orEmpty()).filter(String::isNotBlank).joinToString("\n"),
-                            tags = (listOf(it.category).filter(String::isNotBlank) + it.tags).distinct(), status = "${it.pages} 页", chaptersKnown = true)
+                        it.information().copy(chaptersKnown = true)
                     } }
                 }
             }

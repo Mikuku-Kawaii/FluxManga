@@ -235,6 +235,7 @@ internal fun SourceManagementPage(
     copyAccount: () -> Unit, jm: () -> Unit = {}, pica: () -> Unit = {},
     eh: () -> Unit = {}, ex: () -> Unit = {},
     session: com.flux.manga.session.WorldSession? = null,
+    publicCatalog: (String) -> Unit = {},
 ) {
     val app = LocalContext.current.applicationContext as android.app.Application
     val world = if (available) PrototypeWorld.SFW else PrototypeWorld.NSFW
@@ -246,6 +247,13 @@ internal fun SourceManagementPage(
     val feedback = LocalRequestFeedback.current
     val owner = session?.identity?.value
     var showBlacklist by rememberSaveable(world) { mutableStateOf(false) }
+    var publicSiteId by rememberSaveable(world) { mutableStateOf<String?>(null) }
+    val publicSite = publicSiteId?.let { com.flux.manga.data.PublicWebSite.of(it) }
+    androidx.activity.compose.BackHandler(publicSite != null) { publicSiteId = null }
+    if (publicSite != null && session != null) {
+        PublicWebAccountPage(session, publicSite, { publicSiteId = null }, { publicCatalog(publicSite.sourceId) })
+        return
+    }
     val overviewScroll = androidx.compose.foundation.lazy.rememberLazyListState()
     androidx.activity.compose.BackHandler(showBlacklist) { showBlacklist = false }
     if (showBlacklist && session != null) {
@@ -287,6 +295,12 @@ internal fun SourceManagementPage(
                 Source(SourceKind.COPY, "manage-copy-account", copyAccount)
                 SettingsDivider()
                 Source(SourceKind.BAOZI, "manage-baozi-account", baoziAccount)
+                SettingsDivider()
+                Source(SourceKind.GUAZI, "manage-guazi", { publicSiteId = com.flux.manga.data.PublicWebSite.GUAZI.sourceId })
+                SettingsDivider()
+                Source(SourceKind.KUAIKAN, "manage-kuaikan", { publicSiteId = com.flux.manga.data.PublicWebSite.KUAIKAN.sourceId })
+                SettingsDivider()
+                Source(SourceKind.MANHUAGUI, "manage-manhuagui", { publicSiteId = com.flux.manga.data.PublicWebSite.MANHUAGUI.sourceId })
             } else {
                 Source(SourceKind.JM, "manage-jm-account", jm)
                 SettingsDivider()
