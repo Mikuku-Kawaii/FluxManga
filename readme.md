@@ -82,8 +82,8 @@
 各来源的功能、登录方式和导入范围不同。项目不提供漫画资源、账号或服务镜像。[查看详细图源说明](docs/release/supported-sources.md)。
 
 <p align="center">
-  <img src="assets/readme/sources-outer.jpg" width="300" alt="表世界图源管理" />
-  <img src="assets/readme/sources-inner.jpg" width="300" alt="里世界图源管理" />
+  <img src="assets/readme/sources-outer.jpg" width="300" align="top" alt="表世界图源管理" />
+  <img src="assets/readme/sources-inner.jpg" width="300" align="top" alt="里世界图源管理" />
 </p>
 
 > [!NOTE]
