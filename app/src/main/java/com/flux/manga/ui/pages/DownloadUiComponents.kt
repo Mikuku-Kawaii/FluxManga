@@ -42,7 +42,7 @@ internal fun DownloadStatus.downloadLabel() = when (this) {
 @Composable
 internal fun TransferPanel(modifier: Modifier = Modifier, title: String? = null, content: @Composable ColumnScope.() -> Unit) {
     SettingsGroup(title) {
-        Column(modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        SettingsPanelContent(modifier, content)
     }
 }
 

@@ -44,8 +44,8 @@ internal fun SettingsPage(back: () -> Unit, appearance: () -> Unit,
         listOfNotNull(if (current.lowEffects) "低效果" else if (current.backdropEnabled) "玻璃材质" else "基础材质",
             "减少动画".takeIf { current.reduceMotion }).joinToString(" · ")
     }.orEmpty()
-    LazyColumn(Modifier.fillMaxSize().testTag("settings-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("settings-page"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading("设置", "", back) }
         item("tools") { SettingsGroup("常用工具") {
             SettingsRow("下载管理", "", "settings-downloads", SettingsSymbol.DOWNLOAD, downloads)
@@ -84,9 +84,9 @@ internal fun LibrarySettingsPage(back: () -> Unit, downloads: () -> Unit,
     val information = session?.let { rememberBookInformation(it) }
     if (showInformation && information != null) ReferenceSheet(onDismissRequest = { showInformation = false },
         title = { Text("书目信息") }, text = { Column(Modifier.verticalScroll(rememberScrollState())) { BookInformationPanel(information) } },
-        confirmButton = { TextButton({ showInformation = false }) { Text("关闭") } })
-    LazyColumn(Modifier.fillMaxSize().testTag("library-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        confirmButton = { SettingsTextButton({ showInformation = false }) { Text("关闭") } })
+    LazyColumn(Modifier.fillMaxSize().testTag("library-settings"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("数据管理", "当前空间", back) }
         item { SettingsGroup("记录与备份") {
             SettingsRow("导出本地记录", "书目、书签与阅读进度", "settings-record-export", null, exportRecords)
@@ -102,8 +102,8 @@ internal fun LibrarySettingsPage(back: () -> Unit, downloads: () -> Unit,
 @Composable
 internal fun PrivacyMaintenanceSettingsPage(back: () -> Unit, privacy: () -> Unit,
     protection: () -> Unit, updates: () -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().testTag("privacy-maintenance-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("privacy-maintenance-settings"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("隐私与安全", "", back) }
         item { SettingsGroup {
             SettingsRow("身份验证与隐私入口", "后台保护与应用伪装", "settings-privacy", SettingsSymbol.PRIVACY, privacy)
@@ -122,11 +122,11 @@ private fun SettingsLink(title: String, summary: String, tag: String, open: () -
 
 @Composable
 internal fun AppearanceSettingsPage(effects: DockEffects, change: (DockEffects) -> Unit, back: () -> Unit, enhancementFailure: String? = null) {
-    LazyColumn(Modifier.fillMaxSize().testTag("appearance-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("appearance-settings"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("外观与动效", "即时生效", back,
             backModifier = Modifier.testTag("settings-back")) }
-        item { ReferencePanel { DockEffectControls(effects, change, enhancementFailure) } }
+        item { SettingsPanel { DockEffectControls(effects, change, enhancementFailure) } }
 
     }
 }
@@ -139,15 +139,9 @@ internal fun DockEffectControls(effects: DockEffects, change: (DockEffects) -> U
         Text("底栏样式", style = MaterialTheme.typography.titleSmall)
         Column(Modifier.selectableGroup()) {
             listOf(false to "经典液态玻璃", true to "通透玻璃").forEach { (frosted, label) ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                    .selectable(selected = effects.frostedLens == frosted, role = Role.RadioButton,
-                        onClick = { change(effects.copy(frostedLens = frosted)) })
-                    .testTag(if (frosted) "dock-style-frosted" else "dock-style-classic")
-                    .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = effects.frostedLens == frosted, onClick = null)
-                    Spacer(Modifier.width(10.dp))
-                    Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                }
+                SettingsChoiceRow(label, effects.frostedLens == frosted,
+                    { change(effects.copy(frostedLens = frosted)) },
+                    Modifier.testTag(if (frosted) "dock-style-frosted" else "dock-style-classic"))
             }
         }
         Text("默认使用经典液态玻璃；选择后立即生效并保存，表里世界共用。",
@@ -181,14 +175,16 @@ internal fun AboutSettingsPage(back: () -> Unit, licenses: () -> Unit, updates: 
     }
     val uriHandler = LocalUriHandler.current
     var linkError by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().testTag("about-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("about-settings"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("关于与更新", "", back, backModifier = Modifier.testTag("settings-back")) }
         item { SettingsPanel {
-            Text("FluxManga · 流光漫匣", style = MaterialTheme.typography.titleLarge)
-            Text("版本 $version", modifier = Modifier.testTag("app-version")
+            Text("FluxManga · 流光漫匣", Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleLarge,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("版本 $version", modifier = Modifier.fillMaxWidth().testTag("app-version")
                 .combinedClickable(onClick = {}, onLongClickLabel = "显示开发工具", onLongClick = { developerEnabled = !developerEnabled })
-                .padding(vertical = 12.dp))
+                .padding(vertical = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } }
         if (developerEnabled) item("developer-tools") { SettingsPanel { SettingsDisclosure("开发工具") { developerTools() } } }
         updates?.let { item("updates") { SettingsGroup {
@@ -271,7 +267,7 @@ internal fun SourceManagementPage(
                             selection.set(kind, value, ::active)
                             if (active()) {
                                 enabledSources = selection.snapshot()
-                                session?.let { preloadedPages(app, it).sourceSelectionChanged() }
+                                session?.let { preloadedPages(app, it).sourceEnabledChanged() }
                             }
                         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                         catch (_: java.io.IOException) { if (active()) error = "图源开关保存失败，请重试" }
@@ -280,8 +276,8 @@ internal fun SourceManagementPage(
                 }
             })
     }
-    LazyColumn(Modifier.fillMaxSize().testTag("source-management"), state = overviewScroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("source-management"), state = overviewScroll, contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading("图源管理", if (available) "表世界图源" else "里世界图源", back) }
         if (session != null) item("tag-blacklist") { SettingsGroup {
             SettingsRow("黑名单", "按标签或标题关键词屏蔽作品", "source-tag-blacklist", SettingsSymbol.PRIVACY,
@@ -324,17 +320,17 @@ private fun SourceManagementGroup(title: String, account: String, settingsTag: S
             SettingsRow(title, (if (enabled) "参与发现" else "发现已关闭") + " · " + account, "$settingsTag-entry", SettingsSymbol.SOURCES, settings)
         }
         Switch(checked = enabled, onCheckedChange = toggle, enabled = !saving,
-            modifier = Modifier.padding(end = 12.dp).testTag("$settingsTag-enabled")
+            modifier = Modifier.padding(end = 16.dp).testTag("$settingsTag-enabled")
                 .semantics { contentDescription = "启用$title" })
     }
 }
 
 @Composable
 internal fun DownloadsUnavailablePage(back: () -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().testTag("downloads-unavailable"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("downloads-unavailable"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("下载队列", "", back) }
-        item { ReferencePanel {
+        item { SettingsPanel {
             Text("当前入口不可用", style = MaterialTheme.typography.titleMedium)
             Text("请返回当前空间的下载队列，或从作品详情选择下载。")
         } }

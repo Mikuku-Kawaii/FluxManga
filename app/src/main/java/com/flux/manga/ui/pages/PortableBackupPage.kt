@@ -185,7 +185,7 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
         onDispose { owner.lifecycle.removeObserver(observer); model.cancel() }
     }
     LaunchedEffect(visibility.foreground) { if (!visibility.foreground) confirm = false }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = SettingsPagePadding, verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("加密备份与恢复", if (model.world == PrototypeWorld.SFW) "仅表世界" else "仅里世界", leave) }
         item { SettingsPanel {
             Text("书库与阅读记录", style = MaterialTheme.typography.titleMedium)
@@ -199,7 +199,7 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
         } }
         if (state.busy) item {
             Text(if (state.cancelling) "正在停止并结束当前写入…" else state.stage, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            TextButton(onClick = model::cancel, enabled = !state.cancelling) { Text("停止") }
+            SettingsTextButton(onClick = model::cancel, enabled = !state.cancelling) { Text("停止") }
         }
         state.message?.let { message -> item { RequestFeedback(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite }) } }
         if (state.picking) item { Text("等待系统文件选择返回…") }
@@ -208,8 +208,8 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
             Text("${DateFormat.getDateTimeInstance().format(Date(summary.createdAt))} · ${summary.books} 本 · ${summary.records} 条记录")
             Text("正文 ${android.text.format.Formatter.formatFileSize(app, summary.contentBytes)}")
             Text("已有记录优先保留，重复阅读统计取较长时长。")
-            ReferenceButton(onClick = { confirm = true }, enabled = enabled) { Text("合并恢复") }
-            TextButton(onClick = model::discard, enabled = enabled) { Text("放弃并清理暂存") }
+            SettingsButton(onClick = { confirm = true }, enabled = enabled) { Text("合并恢复") }
+            SettingsTextButton(onClick = model::discard, enabled = enabled) { Text("放弃并清理暂存") }
         } } }
         if (state.summary == null) {
             item { SettingsPanel {
@@ -217,28 +217,26 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
                 if (state.backupCode.isNotEmpty()) {
                     Text("请先保存恢复码")
                     SelectionContainer { Text(state.backupCode.chunked(8).joinToString(" ")) }
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Checkbox(savedCode, onCheckedChange = { savedCode = it }, enabled = enabled)
-                        Text("我已在别处安全保存恢复码", Modifier.weight(1f))
-                    }
+                    SettingsCheckboxRow("我已在别处安全保存恢复码", savedCode,
+                        change = { savedCode = it }, enabled = enabled)
                 }
                 if (state.selected && !state.restoring) {
-                    ReferenceButton(onClick = model::export, enabled = enabled && savedCode) { Text("开始写入加密备份") }
+                    SettingsButton(onClick = model::export, enabled = enabled && savedCode) { Text("开始写入加密备份") }
                 } else {
-                    TextButton(onClick = model::generate, enabled = enabled && !state.selected) { Text(if (state.backupCode.isEmpty()) "生成恢复码" else "重新生成恢复码") }
-                    ReferenceButton(onClick = { picker(model, false) }, enabled = enabled && !state.selected && savedCode && state.backupCode.isNotEmpty()) { Text("选择新备份位置") }
+                    SettingsTextButton(onClick = model::generate, enabled = enabled && !state.selected) { Text(if (state.backupCode.isEmpty()) "生成恢复码" else "重新生成恢复码") }
+                    SettingsButton(onClick = { picker(model, false) }, enabled = enabled && !state.selected && savedCode && state.backupCode.isNotEmpty()) { Text("选择新备份位置") }
                 }
             } }
             item { SettingsPanel { SettingsDisclosure("恢复备份", "选择备份文件并输入恢复码") {
-                OutlinedTextField(state.restoreCode, model::code, Modifier.fillMaxWidth(), enabled = enabled,
+                SettingsTextField(state.restoreCode, model::code, Modifier.fillMaxWidth(), enabled = enabled,
                     label = { Text("恢复码") }, visualTransformation = PasswordVisualTransformation())
                 if (state.selected && state.restoring) {
-                    ReferenceButton(onClick = model::preview, enabled = enabled && state.restoreCode.isNotBlank()) { Text("读取备份并预览") }
-                } else ReferenceButton(onClick = { picker(model, true) }, enabled = enabled && !state.selected) { Text("选择备份文件") }
+                    SettingsButton(onClick = model::preview, enabled = enabled && state.restoreCode.isNotBlank()) { Text("读取备份并预览") }
+                } else SettingsButton(onClick = { picker(model, true) }, enabled = enabled && !state.selected) { Text("选择备份文件") }
             } } }
         }
         item {
-            TextButton(onClick = model::discard, enabled = enabled) { Text(if (state.selected) "放弃所选文件" else "清理备份暂存") }
+            SettingsTextButton(onClick = model::discard, enabled = enabled) { Text(if (state.selected) "放弃所选文件" else "清理备份暂存") }
             SettingsDisclosure("中断与空间需求") {
                 Text("备份时请停留本页。中断可能留下不完整文件，请重新导出。")
                 Text("请预留备份与新增漫画所需空间。中断后可重新选择备份继续合并，原 CBZ 文件保留。")
@@ -248,5 +246,5 @@ internal fun PortableBackupPage(session: WorldSession, back: () -> Unit) {
     if (confirm) ReferenceDialog(onDismissRequest = { confirm = false }, title = { Text("合并到当前空间？") },
         text = { Text("补充缺少的记录与漫画，重复记录保留本机内容，原文件保留。") },
         confirmButton = { ReferenceDialogConfirm("开始恢复", { confirm = false; model.restore() }, enabled = enabled) },
-        dismissButton = { TextButton(onClick = { confirm = false }) { Text("取消") } })
+        dismissButton = { SettingsTextButton(onClick = { confirm = false }) { Text("取消") } })
 }

@@ -30,14 +30,18 @@ internal fun BaoziSessionRecovery(session: WorldSession, restored: () -> Unit) {
     DisposableEffect(model, lifecycle) {
         val manager = context.getSystemService(ConnectivityManager::class.java)
         val resumed = lifecycle == Lifecycle.State.RESUMED
-        var connected = false
+        var validatedNetwork: Network? = null
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
                 val usable = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                if (usable && !connected) model.retryRecovery()
-                connected = usable
+                if (usable && validatedNetwork != network) {
+                    validatedNetwork = network
+                    model.retryRecovery()
+                } else if (!usable && validatedNetwork == network) validatedNetwork = null
             }
-            override fun onLost(network: Network) { connected = false }
+            override fun onLost(network: Network) {
+                if (validatedNetwork == network) validatedNetwork = null
+            }
         }
         if (resumed) {
             model.retryRecovery()
@@ -55,8 +59,9 @@ internal fun BaoziSessionRecovery(session: WorldSession, restored: () -> Unit) {
     if (opened && lifecycle == Lifecycle.State.RESUMED && state.reconnectRequested) {
         AccountWebLogin(BaoziWebSite, session = session, passwordScope = "baozi", close = model::dismissReconnect,
             connect = { page, _, name ->
+                val shelf = page.baoziBookshelf(name)
                 val (token, browser) = page.baoziSession()
-                model.connectWebSession(name, token, browser, page.baoziAutoLogin, recoveryOnly = true)
+                model.connectWebSession(name, token, browser, page.baoziAutoLogin, recoveryOnly = true, browserShelf = shelf)
             },
             autoConnectKey = { page, _, name ->
                 val origin = page.baoziOrigin()

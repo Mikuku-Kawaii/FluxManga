@@ -25,8 +25,17 @@ import androidx.compose.ui.draw.clip
 
 @Composable
 internal fun DetailHeading(back: () -> Unit, modifier: Modifier = Modifier, backModifier: Modifier = Modifier,
-    actions: (@Composable () -> Unit)? = null) {
-    SettingsHeading("漫画详情", "", back, modifier = modifier, backModifier = backModifier, actions = actions)
+    actions: (@Composable () -> Unit)? = null, sourceName: String? = null) {
+    SettingsHeading("漫画详情", "", back, modifier = modifier, backModifier = backModifier, actions = {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            sourceName?.takeIf(String::isNotBlank)?.let {
+                Text(it, Modifier.widthIn(max = 128.dp).testTag("detail-source"),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            }
+            actions?.invoke()
+        }
+    })
 }
 
 @Composable

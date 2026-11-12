@@ -9,6 +9,7 @@ mod komga;
 mod manhuagui_dns;
 mod probe;
 mod source;
+mod source_route;
 mod transport;
 
 /// Minimal DTO for verifying that the packaged Android library can be loaded.

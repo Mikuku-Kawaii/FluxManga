@@ -28,6 +28,7 @@ data class SessionState(
 
 /** Activity-retained, never serialized. A generation owns page stores and requests. */
 class WorldSession : ViewModel() {
+    internal val bookInformationRequests = com.flux.manga.data.BookInformationRequests()
     private var jmRouteOwner: Pair<SessionIdentity, com.flux.manga.data.JmApiRoutes>? = null
     @Synchronized internal fun jmApiRoutes(): com.flux.manga.data.JmApiRoutes {
         val owner = identity.value
@@ -156,6 +157,7 @@ class WorldSession : ViewModel() {
     }
 
     private fun invalidate(world: PrototypeWorld) {
+        bookInformationRequests.clear()
         startup?.rememberWorld(world)
         pageCoverOwner?.second?.clear(); pageCoverOwner = null
         jmRouteOwner = null
@@ -207,6 +209,7 @@ class WorldSession : ViewModel() {
     }
 
     fun pause(now: Long = SystemClock.elapsedRealtime()) {
+        bookInformationRequests.clear()
         pageCoverOwner?.second?.pause(retainImages = identity.value.world == PrototypeWorld.SFW)
         // Resource cache bytes are shared across store instances; revoke them before a new foreground frame.
         if (::repository.isInitialized) repository.clearMemory()
@@ -224,6 +227,6 @@ class WorldSession : ViewModel() {
         mutableState.value = state.value.copy(foreground = true, visibilityEpoch = state.value.visibilityEpoch + 1)
     }
 
-    override fun onCleared() { picaAccountOwner?.second?.close(); picaAccountOwner = null; clearPageCovers(); downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); publicWebSources.close(); baoziSources.close(); copyMangaSources.close(); komgaSources.close(); pageOwner.viewModelStore.clear(); if (::repository.isInitialized) repository.clearMemory() }
+    override fun onCleared() { bookInformationRequests.close(); picaAccountOwner?.second?.close(); picaAccountOwner = null; clearPageCovers(); downloadBackgroundOwner?.stop(null); downloadBackgroundOwner=null; downloadNetworkOwner?.close(); downloadNetworkOwner=null; downloadOwner?.close(); downloadOwner=null; copyAccountOwner?.close(); copyAccountOwner = null; komgaAccountOwner?.close(); komgaAccountOwner = null; baoziAccountOwner?.close(); publicWebSources.close(); baoziSources.close(); copyMangaSources.close(); komgaSources.close(); pageOwner.viewModelStore.clear(); if (::repository.isInitialized) repository.clearMemory() }
     private fun newPageOwner() = object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() }
 }

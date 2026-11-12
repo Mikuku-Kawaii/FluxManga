@@ -70,8 +70,8 @@ internal fun LazyListScope.sourceSettingsOverview(
 
 @Composable
 internal fun DownloadStorageSettingsPage(back: () -> Unit, downloads: () -> Unit, storage: () -> Unit) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("下载与存储", "当前空间", back) }
         item { SettingsGroup {
             SettingsRow("下载管理", "队列、暂停与续办", "storage-downloads", SettingsSymbol.DOWNLOAD, downloads)
@@ -91,5 +91,5 @@ internal fun SourceInformationEntry(model: BookInformationModel, enabled: Boolea
     if (expanded) ReferenceSheet(onDismissRequest = { expanded = false },
         title = { Text("作品资料") },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) { BookInformationPanel(model, enabled) } },
-        confirmButton = { TextButton({ expanded = false }) { Text("关闭") } })
+        confirmButton = { SettingsTextButton({ expanded = false }) { Text("关闭") } })
 }

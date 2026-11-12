@@ -19,7 +19,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.flux.manga.data.MangaCard
 import com.flux.manga.data.isCopySource
-import com.flux.manga.data.isBaoziSource
 import com.flux.manga.data.isPrivateComicSource
 import com.flux.manga.ui.navigation.DiscoverySection
 import java.time.LocalDate
@@ -27,7 +26,12 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-internal data class HomeUpdateInfo(val date: String = "", val chapter: String = "")
+internal data class HomeUpdateInfo(val date: String = "", val chapter: String = "", val chapterCount: Long? = null)
+
+private val homeEpisodePattern = Regex("(?:第\\s*)?(?:[0-9０-９]+(?:[.．][0-9０-９]+)?|[零〇一二两兩三四五六七八九十百千万萬]+)\\s*[话話]")
+internal fun homeEpisodeLabel(raw: String?): String? = homeEpisodePattern.find(raw.orEmpty())?.value?.trim()
+internal fun homeUpdateChapter(raw: String?, count: Long?): String? =
+    homeEpisodeLabel(raw) ?: count?.takeIf { it >= 0 }?.let { "$it 话" }
 
 internal fun updateDate(raw: String?, suffix: String): String {
     val text = raw.orEmpty().trim()
@@ -105,9 +109,8 @@ internal fun HomeUpdateMetadata(model: MixedDiscoveryModel, card: MangaCard) {
     val dateSuffix = if (isCopySource(source) || com.flux.manga.data.isPublicBookSource(source) || isPrivateComicSource(source)) "更新" else "资料更新"
     Text(updateDate(card.updatedAt ?: extra?.date, dateSuffix), style = MaterialTheme.typography.bodySmall,
         fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, color = ReadingSurfaceStyle.muted)
-    val chapter = card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter?.takeIf(String::isNotBlank)
-    // Missing chapter labels (including hidden single-chapter works) are not a failure state.
-    if (chapter != null) Text(if (chapter.startsWith("更新")) chapter else "更新至 $chapter",
+    val chapter = homeUpdateChapter(card.latestChapter?.takeIf(String::isNotBlank) ?: extra?.chapter, extra?.chapterCount)
+    if (chapter != null) Text("更新至 $chapter",
         style = MaterialTheme.typography.bodySmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
         color = ReadingSurfaceStyle.muted,
         maxLines = 2, overflow = TextOverflow.Ellipsis)

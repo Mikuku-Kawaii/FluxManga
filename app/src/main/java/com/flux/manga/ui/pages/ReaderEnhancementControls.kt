@@ -22,7 +22,7 @@ internal fun rememberReaderOptions(world: PrototypeWorld): Pair<ReaderOptions, (
     val app = LocalContext.current.applicationContext
     val prefs = remember(app) { app.getSharedPreferences("reader-controls", 0) }
     fun read() = ReaderOptions(prefs.getBoolean("${world.name}.volume", false), prefs.getBoolean("${world.name}.invert", false),
-        prefs.getBoolean("${world.name}.double-tap", true), prefs.getBoolean("${world.name}.continuous", true), prefs.getBoolean("${world.name}.spread", false))
+        prefs.getBoolean("${world.name}.double-tap", true), prefs.getBoolean("${world.name}.continuous", true), prefs.getBoolean("${world.name}.spread", false), prefs.getBoolean("${world.name}.wifi-chapter", false))
     var value by remember(world) { mutableStateOf(read()) }
     DisposableEffect(prefs, world) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> value = read() }
@@ -33,7 +33,7 @@ internal fun rememberReaderOptions(world: PrototypeWorld): Pair<ReaderOptions, (
         prefs.edit {
             putBoolean("${world.name}.volume", next.volume); putBoolean("${world.name}.invert", next.invertVolume)
             putBoolean("${world.name}.double-tap", next.doubleTap); putBoolean("${world.name}.continuous", next.continuous)
-            putBoolean("${world.name}.spread", next.spread)
+            putBoolean("${world.name}.spread", next.spread); putBoolean("${world.name}.wifi-chapter", next.wifiChapter)
         }
         value = next
     }
@@ -50,6 +50,8 @@ internal fun ReaderOptionControls(options: ReaderOptions, change: (ReaderOptions
             { change(options.copy(doubleTap = it)) }, enabled = enabled)
         if (online) SettingsSwitchRow("跨章节连读", "缺章或加载失败时停留", options.continuous,
             { change(options.copy(continuous = it)) }, enabled = enabled)
+        if (online) SettingsSwitchRow("仅 Wi-Fi 整章预加载", "开启后，移动网络仅预读当前页前后 2 页", options.wifiChapter,
+            { change(options.copy(wifiChapter = it)) }, enabled = enabled)
         SettingsSwitchRow("宽屏双页", "仅横向宽屏的逐页模式可用", options.spread,
             { change(options.copy(spread = it)) }, enabled = enabled)
     }
@@ -67,6 +69,7 @@ internal fun ReaderOptionsSettings(world: PrototypeWorld) {
         Option("反向音量键", if (options.volume) "开启后用音量加向后阅读" else "开启音量键翻页后生效", options.invertVolume) { change(options.copy(invertVolume = it)) }
         Option("双击缩放", "双击切换 1× / 2×", options.doubleTap) { change(options.copy(doubleTap = it)) }
         Option("跨章节连读", "离线缺章时停止，不跨本地书目", options.continuous) { change(options.copy(continuous = it)) }
+        Option("仅 Wi-Fi 整章预加载", "关闭时保持整章缓存；开启后移动网络仅预读前后 2 页", options.wifiChapter) { change(options.copy(wifiChapter = it)) }
         Option("宽屏双页", "横向宽屏的左右翻页模式可用", options.spread) { change(options.copy(spread = it)) }
         SettingsDisclosure("操作说明") {
             Text("阅读操作设置在当前空间共用，即时保存。")
@@ -90,4 +93,30 @@ internal fun ReaderVolumeKeys(enabled: Boolean, inverted: Boolean, move: (Int) -
         if (canHandle) activity?.readerVolumeKeys?.owner = handler
         onDispose { if (activity?.readerVolumeKeys?.owner === handler) activity.readerVolumeKeys.owner = null }
     }
+}
+
+
+/** Observe only while the optional network-aware reader policy is enabled. */
+@Composable
+internal fun readerWifiAvailable(observe: Boolean): Boolean {
+    val context = LocalContext.current.applicationContext
+    val manager = remember(context) { context.getSystemService(android.net.ConnectivityManager::class.java) }
+    fun available(): Boolean = manager.getNetworkCapabilities(manager.activeNetwork)?.let {
+        it.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) &&
+            it.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    } == true
+    var wifi by remember { mutableStateOf(available()) }
+    DisposableEffect(manager, observe) {
+        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) { wifi = available() }
+            override fun onCapabilitiesChanged(network: android.net.Network, caps: android.net.NetworkCapabilities) { wifi = available() }
+            override fun onLost(network: android.net.Network) { wifi = available() }
+        }
+        if (observe) {
+            wifi = available()
+            manager.registerDefaultNetworkCallback(callback, android.os.Handler(android.os.Looper.getMainLooper()))
+        }
+        onDispose { if (observe) manager.unregisterNetworkCallback(callback) }
+    }
+    return wifi
 }

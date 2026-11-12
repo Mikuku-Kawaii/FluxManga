@@ -129,7 +129,7 @@ internal class KomgaAccountController(private val scope: CoroutineScope, private
                 notice = "已停止，重新验证后可继续导入。")
         }
     }
-    fun leave() { revision++; work?.cancel(); work = null; configuration = null; mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false) }
+    fun leave() { revision++; work?.cancel(); work = null; configuration = null; mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false, error = null, notice = null) }
     fun configurationChanged() { leave(); mutable.value = KomgaAccountState() }
     fun close() { leave(); closed = true; mutable.value = KomgaAccountState() }
 }

@@ -3,6 +3,8 @@ package com.flux.manga.data
 import com.flux.manga.core.*
 import com.flux.manga.session.WorldSession
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -62,6 +64,13 @@ internal class WorldCopyMangaClient(private val session: WorldSession, sourceId:
         else if (accountAccess && service == CopyAccountService.OFFICIAL) CopyMangaSource.withOfficialAccount(context, token, config)
         else if (accountAccess) CopyMangaSource.withAccount(context, token, config)
         else CopyMangaSource(context, CopyMangaEndpoint.BASE_URL, config)
+    private val homeChecks = Semaphore(2)
+    private val bookScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private data class BookRequest(val task: Deferred<CopyMangaBook>, var readers: Int = 0)
+    private val bookRequests = mutableMapOf<String, BookRequest>()
+    private val homeDetails = object : LinkedHashMap<String, Pair<Long, CopyMangaBook>>(128, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, CopyMangaBook>>?) = size > 128
+    }
     private val mapper = SourceModelMapper(identity, context, session::accepts)
     private fun active() {
         if (identity.world != com.flux.manga.ui.navigation.PrototypeWorld.SFW || closed.get() || !session.accepts(identity)) throw CancellationException("Expired source session")
@@ -86,12 +95,81 @@ internal class WorldCopyMangaClient(private val session: WorldSession, sourceId:
     suspend fun search(query: String, page: SourcePageRequest): SourceCardPage = request {
         mapper.cards(source.search(context, authorSearchName(query)?.let { "author:$it" } ?: query, page))
     }
+    /** Homepage-only policy. General browsing, search, imported books and reading stay unchanged. */
+    suspend fun homeFeed(page: SourcePageRequest, recommendations: Boolean): SourceCardPage = request {
+        // Only inspect enough accepted candidates for the homepage. The rest keep a
+        // continuation; neither unchecked nor unknown-rating cards may enter display caches.
+        val position = when (page) {
+            SourcePageRequest.Start -> 1u to 0
+            is SourcePageRequest.Page -> page.number to 0
+            is SourcePageRequest.Cursor -> {
+                val parts = page.token.split(':')
+                require(parts.size == 4 && parts[0] == "copy-home" && parts[1] == "v2")
+                parts[2].toUInt() to parts[3].toInt()
+            }
+        }
+        require(position.first > 0u && position.second >= 0)
+        val upstream = if (position.first == 1u) SourcePageRequest.Start else SourcePageRequest.Page(position.first)
+        val batch = mapper.cards(if (recommendations) source.recommendations(context, upstream) else source.homeUpdates(context, upstream))
+        val limit = if (recommendations) 14 else 9
+        val accepted = mutableListOf<MangaCard>()
+        val failures = mutableListOf<Exception>()
+        var inspected = 0
+        var offset = position.second.coerceAtMost(batch.cards.size)
+        while (offset < batch.cards.size && accepted.size < limit) {
+            val candidates = batch.cards.drop(offset).take(minOf(2, limit - accepted.size))
+            val checked = coroutineScope {
+                candidates.map { card -> async {
+                    try { Triple(card, homeBook(card.key.mangaId).contentRating, null as Exception?) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (failure: Exception) { Triple(card, null, failure) }
+                } }.awaitAll()
+            }
+            inspected += checked.size
+            offset += checked.size
+            failures += checked.mapNotNull { it.third }
+            // Only restrict=0 is confirmed general-audience. Price/reclass/tags are not age ratings.
+            accepted += checked.filter { it.second == 0u && it.third == null }.map { it.first }
+        }
+        if (inspected > 0 && failures.size == inspected) throw failures.first()
+        val continuation = if (offset < batch.cards.size) SourceContinuation.Next(
+            SourcePageRequest.Cursor("copy-home:v2:${position.first}:$offset")) else batch.continuation
+        batch.copy(cards = accepted, unfilteredCards = accepted, continuation = continuation,
+            notice = if (failures.isNotEmpty()) "拷贝部分作品分级读取失败，暂未在首页显示，可刷新重试" else batch.notice,
+            filterIncomplete = failures.isNotEmpty())
+    }
+
+    /** Reuse rating lookups for visible recommendation metadata; bounded, session-owned, 10 min. */
+    suspend fun homeBook(id: String): CopyMangaBook = request {
+        fun cached(): CopyMangaBook? = synchronized(homeDetails) {
+            homeDetails[id]?.takeIf { android.os.SystemClock.elapsedRealtime() - it.first < 600_000L }?.second
+        }
+        cached() ?: homeChecks.withPermit {
+            cached() ?: book(id).also { value ->
+                active()
+                synchronized(homeDetails) { homeDetails[id] = android.os.SystemClock.elapsedRealtime() to value }
+            }
+        }
+    }
     suspend fun detail(id: String): SourceDetail = request {
         source.detail(context, SourceMangaKey(context.world, context.sourceId, id)).also {
             check(it.context == context); mapper.key(it.manga.key)
         }
     }
     suspend fun book(id: String): CopyMangaBook = request {
+        val entry = synchronized(bookRequests) {
+            active()
+            bookRequests.getOrPut(id) { BookRequest(bookScope.async(start = CoroutineStart.LAZY) { readBook(id) }) }.also { it.readers++ }
+        }
+        try { entry.task.await() }
+        finally { synchronized(bookRequests) {
+            if (--entry.readers == 0) {
+                if (bookRequests[id] === entry) bookRequests.remove(id)
+                entry.task.cancel()
+            }
+        } }
+    }
+    private suspend fun readBook(id: String): CopyMangaBook = request {
         source.book(context, SourceMangaKey(context.world, context.sourceId, id)).also {
             check(it.detail.context == context); mapper.key(it.detail.manga.key)
             it.groups?.forEach { group -> check(group.manga == it.detail.manga.key) }
@@ -128,7 +206,7 @@ internal class WorldCopyMangaClient(private val session: WorldSession, sourceId:
         catch (failure: Exception) { file.close(); throw failure }
     }
     override fun close() {
-        if (closed.compareAndSet(false, true)) { source.invalidate(); source.destroy() }
+        if (closed.compareAndSet(false, true)) { bookScope.cancel(); synchronized(bookRequests) { bookRequests.clear() }; synchronized(homeDetails) { homeDetails.clear() }; source.invalidate(); source.destroy() }
     }
 }
 

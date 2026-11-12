@@ -85,8 +85,8 @@ internal fun ReadingSettingsPage(session: WorldSession, back: () -> Unit) {
 @Composable
 internal fun ReadingSettingsContent(world: PrototypeWorld, state: ReadingSettingsState,
     select: (ReadingMode) -> Unit, save: () -> Unit, retry: () -> Unit, back: () -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().testTag("reading-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("reading-settings"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("阅读方式", "", back,
             backModifier = Modifier.testTag("settings-back")) }
         item { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -94,7 +94,12 @@ internal fun ReadingSettingsContent(world: PrototypeWorld, state: ReadingSetting
             Text("用于尚未选定阅读方式的作品。", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         } }
-        if (state.loading) item { CircularProgressIndicator(); Text("正在读取默认方式…") }
+        if (state.loading) item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Text("正在读取默认方式…", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
         else if (state.stored != null) item {
             SettingsPanel {
                 Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,17 +110,19 @@ internal fun ReadingSettingsContent(world: PrototypeWorld, state: ReadingSetting
                 }
             }
         }
-        item {
+        if (state.error != null || !state.loading && state.stored == null ||
+            state.stored != null && (state.saving || state.draft != state.stored)) item {
+          Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             state.error?.let { RequestFeedback(it, color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            if (!state.loading && state.stored == null) ReferenceButton(onClick = feedbackAttempt(retry)) { Text("重试读取") }
+            if (!state.loading && state.stored == null) SettingsButton(onClick = feedbackAttempt(retry)) { Text("重试读取") }
             if (state.stored != null) {
                 if (state.saving || state.draft != state.stored) Text(if (state.saving) "正在保存…" else "有未保存的选择",
                     Modifier.testTag("reading-default-status").semantics { liveRegion = LiveRegionMode.Polite })
-                if (state.draft != state.stored || state.saving) ReferenceButton(onClick = save, enabled = !state.loading && !state.saving && state.draft != state.stored,
+                if (state.draft != state.stored || state.saving) SettingsButton(onClick = save, enabled = !state.loading && !state.saving && state.draft != state.stored,
                     modifier = Modifier.fillMaxWidth().testTag("reading-default-save")) { Text("保存默认方式") }
             }
-        }
+        } }
         item { ReaderOptionsSettings(world) }
         item { SettingsPanel { SettingsDisclosure("默认方式如何生效") {
             Text("用于尚未设置阅读方式的作品，也可在阅读器中单独调整。")

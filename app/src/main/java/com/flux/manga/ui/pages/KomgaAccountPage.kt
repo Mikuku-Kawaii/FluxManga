@@ -71,34 +71,37 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
             error = state.error, notice = state.notice,
             summary = state.task?.let { "${if (it.done) "已完成" else "导入进度"} · 新增 ${it.added} · 已存在 ${it.existing}" },
             favorite = favorite, changeFavorite = { favorite = it }, information = informationModel,
-            scope = { TextButton({ preview = false }, enabled = !state.busy) { Text(state.selected!!.name); LucideIcon(R.drawable.lucide_chevron_down, Modifier.size(16.dp)) } },
+            scope = { SettingsTextButton({ preview = false }, enabled = !state.busy) { Text(state.selected!!.name); LucideIcon(R.drawable.lucide_chevron_down, Modifier.size(16.dp)) } },
             pagination = {
-                if (!state.entriesLoaded || state.nextEntry != null) TextButton(model::moreEntries,
+                if (!state.entriesLoaded || state.nextEntry != null) SettingsTextButton(model::moreEntries,
                     enabled = !state.busy && state.entries.size < 1000) { Text("加载更多 / 重试本页") }
             }, options = {
                 state.task?.let { task -> SettingsDisclosure("任务详情", task.list.name) {
                     ImportTaskProgress(task.cursor, task.selection?.size, task.done)
                     Text(task.selection?.let { "未处理 ${it.size - task.cursor} 条" } ?: "下一页 ${task.page + 1}")
-                    if (task.selection == null) TextButton({ confirmation = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
-                    TextButton({ confirmation = "finish" }, enabled = !state.busy) { Text(if (task.done) "收起结果" else "结束任务") }
+                    if (task.selection == null) SettingsTextButton({ confirmation = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
+                    SettingsTextButton({ confirmation = "finish" }, enabled = !state.busy) { Text(if (task.done) "收起结果" else "结束任务") }
                 } }
-                TextButton(library, enabled = !state.busy) { Text("查看书库") }
-            }, footerExtra = { if (state.task?.done == true) TextButton(library) { Text("查看书库") } },
+                SettingsTextButton(library, enabled = !state.busy) { Text("查看书库") }
+            }, footerExtra = { if (state.task?.done == true) SettingsTextButton(library) { Text("查看书库") } },
             cover = { book -> state.source?.let { OnlineCover(coverLibrary, it, book.manga, fillWidth = true) } })
     } else {
-        ReferenceRefreshColumn(state = listsScroll, refreshing = state.busy, refresh = model::start,
-            modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ReferenceRefreshColumn(persistentFeedback = false, state = listsScroll, refreshing = state.busy, refresh = model::start,
+            modifier = Modifier.fillMaxSize(), contentPadding = SettingsPagePadding,
+            verticalArrangement = SettingsSectionSpacing) {
             item("heading") { SettingsHeading("选择收藏列表", "Komga", back,
                 actions = { ReferenceActionsButton("账号设置", settings) }) }
-            if (!state.verified) item("login") {
+            if (!state.verified) item("login") { SettingsPanel {
                 Text(accountStatus(state.loaded, false, state.source != null, state.busy))
-                TextButton(settings, enabled = !state.busy) { Text("连接账号") }
-            }
+                SettingsTextButton(settings, enabled = !state.busy) { Text("连接账号") }
+            } }
             item("status") { AccountRequestStatus(state.busy, state.stage, state.error, state.notice, model::cancel, model::start) }
             if (state.verified) {
                 item("types") { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    KomgaListKind.entries.forEach { kind -> ShelfTextButton(kind.title(), { model.category(kind) }, !state.busy, selected = state.kind == kind) }
+                    KomgaListKind.entries.forEach { kind ->
+                        SettingsFilterChip(state.kind == kind, { model.category(kind) }, enabled = !state.busy,
+                            label = { Text(kind.title(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
+                    }
                 } }
                 if (state.listsLoaded && state.lists.isEmpty()) item("empty") { Text("没有可用的${state.kind.title()}") }
                 items(state.lists, key = { "list:${it.kind}:${it.id}" }) { list ->
@@ -106,18 +109,18 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
                         "komga-import-list-${list.id}", null, { model.select(list); preview = true }, enabled = !state.busy)
                 }
                 if (!state.listsLoaded || state.nextList != null) item("more") {
-                    TextButton(model::moreLists, enabled = !state.busy) { Text("加载更多列表 / 重试") }
+                    SettingsTextButton(model::moreLists, enabled = !state.busy) { Text("加载更多列表 / 重试") }
                 }
-                state.task?.let { task -> item("resume") {
+                state.task?.let { task -> item("resume") { SettingsPanel {
                     Text("${task.list.name} · 新增 ${task.added} · 已存在 ${task.existing}", style = MaterialTheme.typography.bodySmall)
-                    if (!task.done) TextButton({ model.resume() }, enabled = !state.busy) { Text("继续上次导入") }
+                    if (!task.done) SettingsTextButton({ model.resume() }, enabled = !state.busy) { Text("继续上次导入") }
                     AccountMoreActions("任务详情") { close ->
                         ImportTaskProgress(task.cursor, task.selection?.size, task.done)
-                        if (task.selection == null) TextButton({ close(); confirmation = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
-                        TextButton({ close(); confirmation = "finish" }, enabled = !state.busy) { Text(if (task.done) "收起结果" else "结束任务") }
-                        TextButton(library, enabled = !state.busy) { Text("查看书库") }
+                        if (task.selection == null) SettingsTextButton({ close(); confirmation = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
+                        SettingsTextButton({ close(); confirmation = "finish" }, enabled = !state.busy) { Text(if (task.done) "收起结果" else "结束任务") }
+                        SettingsTextButton(library, enabled = !state.busy) { Text("查看书库") }
                     }
-                } }
+                } } }
             }
         }
     }
@@ -132,5 +135,5 @@ internal fun KomgaAccountPage(session: WorldSession, back: () -> Unit, settings:
         }, onClick = {
             val action = confirmation; confirmation = null
             when (action) { "all" -> model.begin(null, favorite); "selected" -> model.begin(selected.toSet(), favorite); "rescan" -> model.resume(true); else -> model.finish() }
-        }) }, dismissButton = { TextButton(onClick = { confirmation = null }) { Text("返回") } })
+        }) }, dismissButton = { SettingsTextButton(onClick = { confirmation = null }) { Text("返回") } })
 }

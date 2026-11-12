@@ -36,10 +36,8 @@ internal class SourceDiscoveryModel(app: Application, private val session: World
             // Keep a mounted result entry (and its query/scroll) while rechecking configuration.
             mutable.value = state.value.copy(refreshing = true)
             try {
-                if (!com.flux.manga.data.SourceSelection(getApplication(), identity.world).enabled(com.flux.manga.data.SourceKind.KOMGA)) {
-                    mutable.value = DiscoveryState(DiscoveryStatus.UNCONFIGURED)
-                    return@launch
-                }
+                // Keep the configured identity stable while its discovery switch is off.
+                // Each feed/search/tag model applies SourceSelection independently.
                 val config = KomgaSettingsStore(WorldDataStore(getApplication())).load()
                 ensureActive()
                 if (session.accepts(identity)) mutable.value = if (config == null)

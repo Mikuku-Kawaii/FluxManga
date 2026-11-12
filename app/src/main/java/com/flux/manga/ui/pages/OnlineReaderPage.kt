@@ -204,11 +204,12 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
         }
     }
     /** Cache only the chapter the reader has entered, without decoding full-size bitmaps. */
-    suspend fun prefetchCurrentChapter() {
+    suspend fun prefetchCurrentChapter(nearbyOnly: Boolean = false) {
         if (offlineOnly) return
         val initial = state.value
         val chapter = initial.pages.getOrNull(initial.index)?.chapterId ?: return
-        val remaining = initial.pages.filter { it.chapterId == chapter }.toMutableList()
+        val nearby = (initial.index - 2)..(initial.index + 2)
+        val remaining = initial.pages.filterIndexed { index, page -> page.chapterId == chapter && (!nearbyOnly || index in nearby) }.toMutableList()
         fun active() {
             repository.active()
             val current = state.value
@@ -581,9 +582,10 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
     val currentChapter = state.pages.getOrNull(state.index)?.chapterId.orEmpty()
     val chapterStart = state.pages.indexOfFirst { it.chapterId == currentChapter }.coerceAtLeast(0)
     val chapterCount = state.pages.count { it.chapterId == currentChapter }
-    LaunchedEffect(model, owner, currentChapter, state.loading, sessionState.foreground) {
+    val nearbyOnly = options.wifiChapter && !readerWifiAvailable(options.wifiChapter)
+    LaunchedEffect(model, owner, currentChapter, state.loading, sessionState.foreground, nearbyOnly, if (nearbyOnly) state.index else -1) {
         if (!state.loading && sessionState.foreground) {
-            owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.prefetchCurrentChapter() }
+            owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.prefetchCurrentChapter(nearbyOnly) }
         }
     }
     LaunchedEffect(state.index, state.pages.size, state.loading, state.chapterBusy, options.continuous, sessionState.foreground) {

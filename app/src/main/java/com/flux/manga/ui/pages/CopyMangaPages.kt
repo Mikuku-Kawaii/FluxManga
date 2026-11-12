@@ -71,7 +71,7 @@ internal fun CopyMangaPage(session: WorldSession, back: () -> Unit, open: (Strin
         ReferenceRefreshColumn(refreshing = feed.busy || detail.busy, refresh = { if (mangaId == null) model.feed.refresh() else model.refreshDetail() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag(if (mangaId == null) "copy-feed" else "copy-detail"), state = scroll,
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("heading") {
-                if (mangaId != null) DetailHeading(back) else SourceBrowseHeading("拷贝漫画", back,
+                if (mangaId != null) DetailHeading(back, sourceName = discoverySourceName(sourceId)) else SourceBrowseHeading("拷贝漫画", back,
                     "查看图源推荐", { changeQuery(""); model.recommendations() }, sources,
                     "搜索当前来源的作品，包含尚未入库的漫画。推荐列表按图源顺序展示，可从菜单返回推荐。刷新使用已提交的搜索词，修改输入后需再次搜索。阅读进度保存在本机。")
             }

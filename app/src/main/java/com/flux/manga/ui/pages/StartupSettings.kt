@@ -28,8 +28,8 @@ internal fun StartupSettingsPage(back: () -> Unit) {
     var returns by remember { mutableStateOf(preferences.returnToPublic) }
     var seconds by remember { mutableIntStateOf(preferences.backgroundSeconds) }
     LazyColumn(Modifier.fillMaxSize().testTag("startup-settings"),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading("启动与返回", "", back) }
         item("start-page") { SettingsGroup("打开时默认页面") {
             startupPages.forEach { (value, label) ->

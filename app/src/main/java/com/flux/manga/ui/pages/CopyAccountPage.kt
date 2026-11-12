@@ -22,6 +22,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.*
 import com.flux.manga.session.WorldSession
 import com.flux.manga.ui.navigation.PrototypeWorld
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -51,6 +54,12 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
     }
     LaunchedEffect(state.verified) { if (state.verified) password = "" }
     val navigation = rememberSourceSettingsNavigation(back)
+    LaunchedEffect(model, navigation.section, lifecycle) {
+        if (navigation.section == SourceSettingsSection.IMPORT && lifecycle == Lifecycle.State.RESUMED) {
+            val ready = model.state.first { it.loaded && !it.busy }
+            if (ready.hasCredential && (!ready.verified || !ready.entriesLoaded)) model.start()
+        }
+    }
     val unfinished = state.task?.done == false
     val readingSource = com.flux.manga.data.CopyMangaEndpoint.SOURCE_ID
     val informationModel = state.source?.let { rememberBookInformation(session, readingSource) }
@@ -67,7 +76,7 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
             summary = state.task?.let { "${if (it.done) "已完成" else "导入进度"} · 新增 ${it.added} · 已存在 ${it.existing}" },
             total = state.reportedTotal,
             favorite = favorite, changeFavorite = { favorite = it }, information = informationModel, librarySource = readingSource,
-            pagination = { if (!state.entriesLoaded || state.nextOffset != null) TextButton(model::moreEntries,
+            pagination = { if (!state.entriesLoaded || state.nextOffset != null) SettingsTextButton(model::moreEntries,
                     enabled = state.loaded && !state.busy && state.entries.size < 1000) { Text("加载更多 / 重试本页") } },
             options = {
                 if (state.task != null) {
@@ -75,22 +84,27 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                         val job = state.task!!
                         ImportTaskProgress(job.cursor, job.selection?.size, job.done)
                         Text(job.selection?.let { "待处理 ${it.size - job.cursor} 条" } ?: "下一页 ${job.offset / 21 + 1}")
-                        if (job.selection == null) TextButton({ confirm = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
-                        TextButton({ confirm = "finish" }, enabled = !state.busy) { Text(if (job.done) "收起结果" else "结束任务") }
+                        if (job.selection == null) SettingsTextButton({ confirm = "rescan" }, enabled = !state.busy) { Text("重新扫描") }
+                        SettingsTextButton({ confirm = "finish" }, enabled = !state.busy) { Text(if (job.done) "收起结果" else "结束任务") }
                     }
                 }
-                TextButton(library, enabled = !state.busy) { Text("查看书库") }
+                SettingsTextButton(library, enabled = !state.busy) { Text("查看书库") }
             },
-            footerExtra = { if (state.task != null && !unfinished) TextButton(library) { Text("查看书库") } },
+            footerExtra = { if (state.task != null && !unfinished) SettingsTextButton(library) { Text("查看书库") } },
             cover = { book -> OnlineCover(coverLibrary, readingSource, book.manga, fillWidth = true) })
     } else {
-    ReferenceRefreshColumn(state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("copy-account-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ReferenceRefreshColumn(persistentFeedback = false, state = navigation.scroll, refreshing = state.busy, refresh = model::start, modifier = Modifier.fillMaxSize().imePadding().testTag("copy-account-page"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading(navigation.title("拷贝漫画"), "", navigation::back) }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item("source-network") { SourceNetworkSettings(session, com.flux.manga.data.SourceKind.COPY) }
         sourceSettingsOverview(navigation,
             account = accountStatus(state.loaded, state.verified, state.hasCredential, state.busy) + state.username.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
             imports = { navigation.open(SourceSettingsSection.IMPORT) },
             importSummary = if (unfinished) "有未完成任务，可继续导入" else "云收藏 · 支持全部或选中导入", connectionSummary = "其他账号连接方式")
+
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item("home-filter") {
+            CopyHomeFilterSetting(session)
+        }
 
         if (navigation.section == SourceSettingsSection.ACCOUNT || navigation.section == SourceSettingsSection.CONNECTION) item("account") { AccountPanel(navigation.section.label) {
             AccountSummary(accountStatus(state.loaded, state.verified, state.hasCredential, state.busy),
@@ -101,8 +115,9 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
                 connect = { page, _, _ -> model.connectWebToken(page.copyToken()) },
                 autoConnectKey = { page, _, _ -> page.copyToken().takeIf(String::isNotBlank) },
                 afterConnected = model::start)
-            if (state.hasCredential) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
-            TextButton({ navigation.open(SourceSettingsSection.CONNECTION) }, enabled = !state.busy) { Text("其他连接方式") }
+            if (state.hasCredential) SettingsTextButton(feedbackAttempt(model::start), enabled = state.loaded && !state.busy) { Text("检查账号状态") }
+            if (state.hasCredential) SettingsTextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
+            SettingsTextButton({ navigation.open(SourceSettingsSection.CONNECTION) }, enabled = !state.busy) { Text("其他连接方式") }
             }
             if (navigation.section == SourceSettingsSection.CONNECTION) {
                 AccountCredentials("copy", username, password, { username = it }, { password = it },
@@ -128,5 +143,45 @@ internal fun CopyAccountPage(session: WorldSession, back: () -> Unit, open: (Str
             val action = confirm; confirm = null
             when (action) { "all" -> model.begin(null, favorite); "import" -> model.begin(selection.toSet(), favorite)
                 "rescan" -> model.resume(true); else -> model.finish() }
-        }) }, dismissButton = { TextButton(onClick = { confirm = null }) { Text("返回") } })
+        }) }, dismissButton = { SettingsTextButton(onClick = { confirm = null }) { Text("返回") } })
+}
+
+@Composable
+private fun CopyHomeFilterSetting(session: WorldSession) {
+    val context = LocalContext.current
+    val identity = session.identity.value
+    val preferences = remember(session, identity) { com.flux.manga.data.SourceSelection(context, identity.world) }
+    var checked by remember(preferences) { mutableStateOf(preferences.copyHomeGeneralOnly()) }
+    var saving by remember(preferences) { mutableStateOf(false) }
+    var error by remember(preferences) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val pages = preloadedPages(session)
+    val feedback = LocalRequestFeedback.current
+    fun active() = session.accepts(identity) && session.state.value.foreground
+    SettingsGroup("首页内容") {
+        SettingsSwitchRow("首页一般向过滤",
+            "首页推荐和最近更新仅显示一般向作品，其他浏览入口不受影响。",
+            checked, { value ->
+                if (!saving && active()) {
+                    val previous = preferences.copyHomeGeneralOnly()
+                    feedback?.beginAttempt(); error = null; saving = true
+                    scope.launch {
+                        try {
+                            preferences.setCopyHomeGeneralOnly(value, ::active)
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: java.io.IOException) { if (active()) error = "首页过滤设置保存失败，请重试" }
+                        finally {
+                            // Also handle leaving the page while the disk commit completes.
+                            // The existing preloader cancels old requests and replaces their models.
+                            if (session.accepts(identity)) {
+                                checked = preferences.copyHomeGeneralOnly()
+                                if (checked != previous) pages.copyHomePolicyChanged()
+                            }
+                            saving = false
+                        }
+                    }
+                }
+            }, Modifier.testTag("copy-home-general-only"), enabled = !saving)
+        error?.let { RequestFeedback(it) }
+    }
 }

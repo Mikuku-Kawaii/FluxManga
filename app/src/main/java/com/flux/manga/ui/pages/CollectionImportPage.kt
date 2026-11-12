@@ -66,6 +66,7 @@ internal fun CollectionImportPage(
     val visible = books.filter { book -> book.title.contains(query.trim(), true) &&
         (saved == null || filter == "ALL" || (book.manga in saved!!) == (filter == "SAVED")) }
     fun cancelSelection() { selecting = false; select(emptyList()) }
+    val retryRead = feedbackAttempt(refresh)
     BackHandler(selecting && !busy) { cancelSelection() }
     Column(Modifier.fillMaxSize().imePadding()) {
         SettingsHeading("收藏导入", listOf(sourceName, account).filter(String::isNotBlank).joinToString(" · "), back,
@@ -73,13 +74,13 @@ internal fun CollectionImportPage(
         BookResultsLayout { columns ->
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                ReferenceRefreshColumn(state = scroll, refreshing = busy, refresh = refresh,
+                ReferenceRefreshColumn(persistentFeedback = false, state = scroll, refreshing = busy, refresh = refresh,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    contentPadding = SettingsPagePadding,
+                    verticalArrangement = SettingsSectionSpacing) {
                     if (!signedIn && !(busy && books.isNotEmpty())) item("login") {
-                        Text("登录后查看收藏")
-                        TextButton(login, enabled = !busy) { Text("连接账号") }
+                        Text(if (busy) "正在检查账号并读取收藏…" else "验证账号后查看收藏")
+                        SettingsTextButton(login, enabled = !busy) { Text("连接账号") }
                     } else {
                         item("search") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             scope()
@@ -127,7 +128,7 @@ internal fun CollectionImportPage(
                         item("pagination") { pagination() }
                     }
                     savedError?.let { item("saved-error") { Text(it, style = MaterialTheme.typography.bodySmall) } }
-                    error?.let { item("error") { RequestFeedback(it); TextButton(refresh, enabled = !busy) { Text("重试读取") } } }
+                    error?.let { item("error") { RequestFeedback(it, busy = busy); SettingsTextButton(retryRead, enabled = !busy) { Text("重试读取") } } }
                 }
                 }
                 Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(horizontal = 20.dp, vertical = 8.dp),
@@ -137,12 +138,12 @@ internal fun CollectionImportPage(
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, itemVerticalAlignment = Alignment.CenterVertically) {
                         if (busy) {
                             Text("正在处理…", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            TextButton(pause) { Text("暂停") }
+                            SettingsTextButton(pause) { Text("暂停") }
                         } else if (!signedIn) {
-                            TextButton(refresh) { Text("验证已保存账号") }
+                            SettingsTextButton(retryRead) { Text("验证已保存账号") }
                         } else {
                             footerExtra()
-                            ReferenceButton(importBooks, enabled = canImport && signedIn && (!selecting || selected.isNotEmpty() || !primaryLabel.startsWith("导入"))) {
+                            SettingsButton(importBooks, enabled = canImport && signedIn && (!selecting || selected.isNotEmpty() || !primaryLabel.startsWith("导入"))) {
                                 Text(if (selecting && primaryLabel.startsWith("导入")) "导入选中（${selected.size}）" else primaryLabel)
                             }
                         }
@@ -155,15 +156,15 @@ internal fun CollectionImportPage(
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (favorite != null) SettingsSwitchRow("导入后加入收藏", "只影响新书目", favorite, changeFavorite, enabled = !busy)
             information?.let { SettingsDisclosure("补齐作品资料") { BookInformationPanel(it, enabled = !busy) } }
-            TextButton({ menu = false; login() }, enabled = !busy) { Text("账号设置") }
+            SettingsTextButton({ menu = false; login() }, enabled = !busy) { Text("账号设置") }
             options()
-        } }, confirmButton = { TextButton({ menu = false }) { Text("完成") } })
+        } }, confirmButton = { SettingsTextButton({ menu = false }) { Text("完成") } })
 }
 
 @Composable
 internal fun ImportScopePicker(current: String, choices: List<Pair<String, String>>, enabled: Boolean, choose: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    TextButton({ expanded = true }, enabled = enabled) {
+    SettingsTextButton({ expanded = true }, enabled = enabled) {
         Text(choices.firstOrNull { it.first == current }?.second ?: "收藏分类")
         LucideIcon(R.drawable.lucide_chevron_down, Modifier.size(16.dp))
     }
@@ -171,5 +172,5 @@ internal fun ImportScopePicker(current: String, choices: List<Pair<String, Strin
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             choices.forEach { (id, label) -> SettingsChoiceRow(label, current == id,
                 { expanded = false; choose(id) }, enabled = enabled) }
-        } }, confirmButton = { TextButton({ expanded = false }) { Text("关闭") } })
+        } }, confirmButton = { SettingsTextButton({ expanded = false }) { Text("关闭") } })
 }

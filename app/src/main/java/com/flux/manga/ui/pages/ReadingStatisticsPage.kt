@@ -94,8 +94,8 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     var help by rememberSaveable { mutableStateOf(false) }
     val scroll = androidx.compose.foundation.lazy.rememberLazyListState()
-    ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = true, state = scroll, modifier = Modifier.fillMaxSize().testTag("reading-statistics"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = true, state = scroll, modifier = Modifier.fillMaxSize().testTag("reading-statistics"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("阅读统计", "", leave, actions = {
             Box {
                 ReferenceActionsButton("统计操作", { menu = true })
@@ -107,20 +107,20 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
         item {
             FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(7 to "近 7 天", 30 to "近 30 天", 0 to "全部").forEach { (days, text) ->
-                    FilterChip(state.range == days, { model.range(days) }, label = { Text(text) })
+                    SettingsFilterChip(state.range == days, { model.range(days) }, label = { Text(text, textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
                 }
             }
         }
         if (selected) item { SettingsPanel {
             state.filter.day?.let { Text(it) }
             state.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-            TextButton(onClick = model::up) { Text("返回上一级统计") }
+            SettingsTextButton(onClick = model::up) { Text("返回上一级统计") }
         } }
         if (state.loading) item { RequestLoading() }
-        state.error?.let { message -> item {
+        state.error?.let { message -> item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RequestFeedback(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            TextButton(onClick = feedbackAttempt({ model.refresh() }), enabled = !state.loading) { Text("重试") }
-        } }
+            SettingsTextButton(onClick = feedbackAttempt({ model.refresh() }), enabled = !state.loading) { Text("重试") }
+        } } }
         snapshot?.let { result ->
             item { SettingsPanel {
                 Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -132,8 +132,8 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
                 }
             } }
             item { FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(!state.works, { model.tab(false) }, label = { Text("每日记录") })
-                FilterChip(state.works, { model.tab(true) }, label = { Text("作品统计") })
+                SettingsFilterChip(!state.works, { model.tab(false) }, label = { Text("每日记录", textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
+                SettingsFilterChip(state.works, { model.tab(true) }, label = { Text("作品统计", textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
             } }
             if (result.total.durationMs == 0L) item { Text("这个范围还没有阅读统计。开始阅读后会自动记录，不从旧进度推算时长。") }
             if (state.works) {
@@ -156,7 +156,7 @@ internal fun ReadingStatisticsPage(session: WorldSession, back: () -> Unit) {
         }
     }
     if (help) ReferenceDialog(onDismissRequest = { help = false }, title = { Text("统计说明") },
-        confirmButton = { TextButton(onClick = { help = false }) { Text("关闭") } },
+        confirmButton = { SettingsTextButton(onClick = { help = false }) { Text("关闭") } },
         text = { Text("仅统计前台阅读时间，加载、弹窗和后台暂停计时。按空间和本地日期统计，同一作品的在线、离线时间合计。移除书目会保留统计；异常退出可能丢失最近未保存的时长。",
             Modifier.verticalScroll(rememberScrollState())) })
 }

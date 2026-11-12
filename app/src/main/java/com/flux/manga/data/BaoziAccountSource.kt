@@ -32,7 +32,18 @@ internal class BaoziAccountSource(private val context: SourceContext, private va
         if (reply.context != context || reply.body.size > 2 * 1024 * 1024 ||
             reply.contentType?.substringBefore(';')?.trim()?.lowercase() !in setOf("text/html", "application/xhtml+xml"))
             throw SourceException.InvalidResponse()
-        val html = reply.body.toString(Charsets.UTF_8)
+        val result = parseBaoziBookshelf(context.sourceId, reply.body.toString(Charsets.UTF_8), accepts)
+        ensureActive(); active()
+        result
+    }
+}
+
+/** Same parser for a native response and an authenticated, same-origin WebView response. */
+internal suspend fun parseBaoziBookshelf(sourceId: String, html: String, accepts: () -> Boolean = { true }): BaoziShelfSnapshot =
+    withContext(Dispatchers.IO) {
+        require(isBaoziAccount(sourceId))
+        ensureActive(); if (!accepts()) throw CancellationException("Expired Baozi account session")
+        if (html.toByteArray(Charsets.UTF_8).size > 2 * 1024 * 1024) throw SourceException.InvalidResponse()
         if (html.contains("cf-chl-", true) || html.contains("challenge-platform", true) ||
             html.contains("__gatekeeper_challenge", true)) throw SourceException.HttpStatus(403u)
         val doc = Jsoup.parse(html, BaoziEndpoint.BASE_URL)
@@ -41,7 +52,7 @@ internal class BaoziAccountSource(private val context: SourceContext, private va
         val rows = doc.select("div.bookshelf-items")
         if (rows.size > 1000) throw SourceException.InvalidResponse()
         val entries = rows.map { row ->
-            ensureActive(); active()
+            ensureActive(); if (!accepts()) throw CancellationException("Expired Baozi account session")
             val link = row.selectFirst("h4 > a") ?: throw SourceException.InvalidResponse()
             val uri = try { URI(BaoziEndpoint.BASE_URL).resolve(link.attr("href")) }
                 catch (_: Exception) { throw SourceException.InvalidResponse() }
@@ -53,9 +64,8 @@ internal class BaoziAccountSource(private val context: SourceContext, private va
             if (title.isEmpty() || title.length > 1024 || title.contains("{{")) throw SourceException.InvalidResponse()
             val image = row.selectFirst("amp-img, img")
             val cover = baoziCoverLocation(image?.attr("data-src")?.takeIf(String::isNotBlank) ?: image?.attr("src"))
-            BaoziShelfEntry(MangaCard(MangaKey(PrototypeWorld.SFW, context.sourceId, id), title, null, true), cover)
+            BaoziShelfEntry(MangaCard(MangaKey(PrototypeWorld.SFW, sourceId, id), title, null, true), cover)
         }.distinctBy { it.card.key }
-        ensureActive(); active()
+        ensureActive(); if (!accepts()) throw CancellationException("Expired Baozi account session")
         BaoziShelfSnapshot(entries, if (entries.isEmpty()) BaoziShelfEvidence.EMPTY_UNCONFIRMED else BaoziShelfEvidence.CONTENT_PRESENT)
     }
-}

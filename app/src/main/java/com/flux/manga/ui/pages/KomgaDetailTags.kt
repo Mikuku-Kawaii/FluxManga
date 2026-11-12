@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
@@ -43,10 +44,17 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
             onClick = { if (dismiss) expanded = false; dismissInformation?.invoke(); open(id, name) }) {
             Text(name, maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
                 onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
-        } else Text(name, Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
-            onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
+        } else {
+            val compactLabel = dense && !dismiss
+            // Non-clickable categories share the button's content geometry and
+            // full-size layout reserve, without gaining a misleading click action.
+            Box(Modifier.heightIn(min = if (compactLabel) compactTagMinHeight else 48.dp)
+                .padding(detailTagPadding(compactLabel)), contentAlignment = Alignment.Center) {
+                Text(name, style = MaterialTheme.typography.labelLarge,
+                    maxLines = if (dismiss || full) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { if (!dismiss && !full) truncated[id] = it.hasVisualOverflow })
+            }
+        }
     }
     if (full) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -104,6 +112,10 @@ internal fun WorkTags(tags: List<Pair<String, String>>?, canOpen: (String) -> Bo
         }, confirmButton = { TextButton({ expanded = false }) { Text("关闭") } })
 }
 
+private fun detailTagPadding(compact: Boolean) = PaddingValues(
+    horizontal = if (compact) 9.dp else 10.dp,
+    vertical = if (compact) compactTagVerticalPadding else 6.dp)
+
 /** Compact inline tags omit Material's extra layout reserve; the full popup keeps regular targets. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +124,7 @@ private fun DetailTagButton(compact: Boolean, onClick: () -> Unit, modifier: Mod
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides if (compact) 0.dp else 48.dp) {
         OutlinedButton(onClick, modifier.heightIn(min = if (compact) compactTagMinHeight else 40.dp).widthIn(min = 1.dp),
             shape = RoundedCornerShape(6.dp),
-            contentPadding = PaddingValues(horizontal = if (compact) 9.dp else 10.dp, vertical = if (compact) compactTagVerticalPadding else 6.dp)) {
+            contentPadding = detailTagPadding(compact)) {
             ProvideTextStyle(MaterialTheme.typography.labelLarge) { label() }
         }
     }

@@ -65,7 +65,7 @@ internal class HomeFeaturedMetadata(private val app: Application, private val se
             }
             val value = if (isCopySource(key.sourceId)) {
                 // The detail response already carries group totals; do not download every chapter to count them.
-                val book = ContentRequests.run(key.sourceId, ContentPriority.DETAIL) { copyMangaClient(session, key.sourceId).book(key.mangaId) }
+                val book = ContentRequests.run(key.sourceId, ContentPriority.DETAIL) { copyMangaClient(session, key.sourceId).homeBook(key.mangaId) }
                 val groups = book.groups
                 val count = groups?.takeIf { it.isNotEmpty() && it.all { group -> group.chapterCount != null } }
                     ?.sumOf { it.chapterCount!!.toLong() }

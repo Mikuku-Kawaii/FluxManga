@@ -228,8 +228,9 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) { webLogin = false; autoLogin = false } }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = SettingsPagePadding, verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading(navigation.title("PicACG"), "", navigation::back) }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item("source-network") { SourceNetworkSettings(session, com.flux.manga.data.SourceKind.PICA) }
         sourceSettingsOverview(navigation,
             account = if (!state.ready) "账号状态待读取" else state.account?.let { "已保存会话 · ${it.name}" } ?: "未登录",
             imports = { browse("favorites", "") }, importSummary = "全部收藏或逐页选择导入",
@@ -241,16 +242,16 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
                 state.account != null -> "已保存登录会话"
                 else -> "未登录 · 请先连接账号"
             }, "云收藏", state.account?.name.orEmpty())
-            ReferenceButton({ webLogin = true }, enabled = state.ready && !state.busy,
+            SettingsButton({ webLogin = true }, enabled = state.ready && !state.busy,
                 modifier = Modifier.fillMaxWidth()) { Text("网页登录 / 注册") }
             if (state.account != null) {
                 Text(if (recovery.busy) "正在恢复登录…" else if (state.autoLogin) "自动登录已开启" else "自动登录未设置",
                     style = MaterialTheme.typography.bodySmall)
                 recovery.notice?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                TextButton({ autoLogin = true }, enabled = !state.busy) { Text("设置自动登录") }
-                if (state.autoLogin) TextButton(model::disableAutoLogin, enabled = !state.busy) { Text("关闭自动登录") }
+                SettingsTextButton({ autoLogin = true }, enabled = !state.busy) { Text("设置自动登录") }
+                if (state.autoLogin) SettingsTextButton(model::disableAutoLogin, enabled = !state.busy) { Text("关闭自动登录") }
             }
-            if (state.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
+            if (state.account != null) SettingsTextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部云收藏或逐页选择导入；已有书目与阅读进度保留。",
             state.ready && state.account != null, state.busy, "import-pica-library", { browse("favorites", "") }) }
@@ -285,14 +286,14 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
         text = {
             Column(Modifier.imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("填写当前 PicACG 账号。验证成功后加密保存，登录过期时自动重登；退出账号会删除这些凭据。")
-                OutlinedTextField(username, { username = it.take(256) }, label = { Text("账号") }, singleLine = true, enabled = !busy)
-                OutlinedTextField(password, { password = it.take(4096) }, label = { Text("密码") }, singleLine = true, enabled = !busy,
+                SettingsTextField(username, { username = it.take(256) }, label = { Text("账号") }, singleLine = true, enabled = !busy)
+                SettingsTextField(password, { password = it.take(4096) }, label = { Text("密码") }, singleLine = true, enabled = !busy,
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         }, confirmButton = {
-            TextButton(enabled = !busy && username.isNotBlank() && password.isNotEmpty(), onClick = {
+            SettingsTextButton(enabled = !busy && username.isNotBlank() && password.isNotEmpty(), onClick = {
                 busy = true; error = null
                 scope.launch {
                     try { model.setAutoLogin(username, password); password = ""; close() }
@@ -301,7 +302,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
                     finally { busy = false }
                 }
             }) { Text(if (busy) "正在验证…" else "验证并保存") }
-        }, dismissButton = { TextButton(close, enabled = !busy) { Text("取消") } })
+        }, dismissButton = { SettingsTextButton(close, enabled = !busy) { Text("取消") } })
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -387,7 +388,7 @@ internal class PicaModel(app: Application, private val session: WorldSession, pr
     }
     ReferenceRefreshColumn(modifier = Modifier.fillMaxSize(), refreshing = state.busy, refresh = { model.detail(id) },
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { DetailHeading(back) }
+        item { DetailHeading(back, sourceName = discoverySourceName(source)) }
         if (!readContentLayout(state.book != null, state.busy, state.detailError ?: state.message.takeIf { state.error && state.book == null }, { model.detail(id) }, detail = true, cancel = model::stop)) {
             item("offline-entry") { TextButton(download) { Text("加密下载与离线章节") } }
             return@ReferenceRefreshColumn

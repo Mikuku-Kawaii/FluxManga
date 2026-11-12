@@ -77,12 +77,30 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
         mutable.value = state.value.copy(verified = true, entries = result.entries,
             snapshotRevision = state.value.snapshotRevision + 1)
     }
-    fun start() = run("正在读取并验证账号") { ticket ->
+    /** Opening source settings must not trigger a remote shelf check or automatic login. */
+    fun reopen() = run("正在读取已保存账号") { ticket ->
         val account = store.current { allowed(ticket) }
         currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
         publish(account)
         mutable.value = state.value.copy(verified = false)
-        if (account?.token != null) showSnapshot(snapshot(account, ticket))
+    }
+    fun start() {
+        if (recovery != null) return
+        run("正在读取并验证账号") { ticket ->
+            val account = store.current { allowed(ticket) }
+            currentCoroutineContext().ensureActive(); if (!allowed(ticket)) return@run
+            publish(account)
+            mutable.value = state.value.copy(verified = false)
+            if (account?.token != null) {
+                if (account.browserSession != null) {
+                    // Explicit refresh uses the saved browser profile too, rather than
+                    // repeating the native request that the website rejects with 403.
+                    nextRecoveryAt = 0L
+                    mutable.value = state.value.copy(recoveryNeedsUser = false)
+                    requestReconnect()
+                } else showSnapshot(snapshot(account, ticket))
+            }
+        }
     }
     fun signIn(username: String, password: String) {
         if (state.value.busy) return
@@ -108,7 +126,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
         }
     }
     suspend fun connectWebSession(username: String, token: String, browserSession: BaoziBrowserSession? = null,
-        autoLogin: BaoziAutoLogin? = null, recoveryOnly: Boolean = false) {
+        autoLogin: BaoziAutoLogin? = null, recoveryOnly: Boolean = false, browserShelf: BaoziShelfSnapshot? = null) {
         val name = username.trim()
         if (state.value.busy || closed || !active()) throw java.io.IOException("请等待账号读取完成")
         if (name.isEmpty()) throw java.io.IOException("尚未取得官网登录标识，请在官网完成邮箱登录后重试")
@@ -122,7 +140,16 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
                 if (existing == null || existing.sourceId != source || existing.token == null) throw BaoziLoginRejected()
             }
             browserSession?.validate(token)
-            val result = snapshot(BaoziSavedAccount(source, name, token, browserSession = browserSession), ticket)
+            // A verified browser response must not be re-requested through a different TLS stack.
+            // Keep the same shelf evidence and source-identity checks before persisting anything.
+            val result = if (browserShelf != null) {
+                require(browserSession != null)
+                if (browserShelf.evidence != BaoziShelfEvidence.CONTENT_PRESENT || browserShelf.entries.isEmpty()) throw UnverifiedShelf()
+                require(browserShelf.entries.all { it.card.key.sourceId == source })
+                currentCoroutineContext().ensureActive()
+                if (!allowed(ticket)) throw CancellationException()
+                browserShelf
+            } else snapshot(BaoziSavedAccount(source, name, token, browserSession = browserSession), ticket)
             val saved = store.activate(source, name, token, browserSession, autoLogin) { allowed(ticket) }
             credentialsChanged()
             currentCoroutineContext().ensureActive()
@@ -263,6 +290,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
         }
     }
     fun cancel() {
+        pauseRecovery()
         leave()
         run("正在核对已提交进度") { ticket ->
             val saved = store.current { allowed(ticket) }
@@ -274,7 +302,7 @@ internal class BaoziAccountController(private val scope: CoroutineScope, private
     fun leave() {
         revision++; work?.cancel(); work = null
         mutable.value = state.value.copy(busy = false, stage = null, verified = false, loaded = false,
-            notice = "已停止，可重新读取并继续导入。")
+            error = null, notice = null)
     }
     fun close() {
         retrySignal?.cancel(); recoveryCheck?.cancel(); recovery?.complete(false); recovery = null

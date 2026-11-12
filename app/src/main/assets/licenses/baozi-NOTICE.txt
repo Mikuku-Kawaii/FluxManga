@@ -23,3 +23,15 @@ Adapted fixed Baozi.kt detail publication status and explicitly labelled update-
 retained author text without inventing delimiters or roles. LocalDate validates calendar dates;
 no assumed timezone, directory-based latest-chapter inference, extra requests or mirror changes.
 Implementation: app/src/main/java/com/flux/manga/data/BaoziWorkMetadata.kt.
+
+2026-11-12 project transport adjustment:
+Public catalog requests and parsing use the existing canonical cn.bzmgcn.com origin,
+independent of a saved account's retired origin. Verification cookies stay host-scoped;
+account identity, reader/CDN routes and upstream parsers remain unchanged.
+
+2026-11-12 reader parsing: prefer explicit comic-contain__item panels and restrict
+legacy selectors to reader containers. Exclude the site's ad ribbon instead of
+treating its embedded data image as a comic page; retain original page URLs/IDs.
+
+2026-11-12 follow-up: latest-chapter ad ribbons also use comic-contain__item.
+Apply the ad-container exclusion to both explicit and legacy panel selections.

@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 internal fun accountStatus(loaded: Boolean, verified: Boolean, saved: Boolean, busy: Boolean): String = when {
     !loaded -> if (busy) "正在读取账号" else "账号状态待核对"
     verified -> "已登录 · 会话已验证"
-    saved -> "已保存账号，需验证当前会话"
+    saved -> "已保存账号 · 会话未检查"
     else -> "未登录"
 }
 
@@ -53,7 +53,7 @@ internal fun importFraction(processed: Int, total: Int?): Float? =
 @Composable
 internal fun AccountPanel(title: String, content: @Composable ColumnScope.() -> Unit) {
     SettingsGroup(title.takeIf { it.isNotBlank() }) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        SettingsPanelContent(content = content)
     }
 }
 
@@ -64,7 +64,7 @@ internal fun SourceLibraryImportCard(scope: String, available: Boolean, busy: Bo
     AccountPanel("书库导入") {
         Text(scope, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (!available) Text("请先完成上方账号连接。", style = MaterialTheme.typography.bodyMedium)
-        ReferenceButton(open, enabled = available && !busy, modifier = Modifier.fillMaxWidth().testTag(tag)) {
+        SettingsButton(open, enabled = available && !busy, modifier = Modifier.fillMaxWidth().testTag(tag)) {
             Text("选择书目并导入")
         }
     }
@@ -74,13 +74,13 @@ internal fun SourceLibraryImportCard(scope: String, available: Boolean, busy: Bo
 @Composable
 internal fun AccountMoreActions(title: String, content: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    TextButton(onClick = { expanded = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+    SettingsTextButton(onClick = { expanded = true }, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(title); Spacer(Modifier.width(4.dp)); SettingsChevron()
     }
     if (expanded) ReferenceSheet(onDismissRequest = { expanded = false }, title = { Text(title) },
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             content { expanded = false }
-        } }, confirmButton = { TextButton(onClick = { expanded = false }) { Text("关闭") } })
+        } }, confirmButton = { SettingsTextButton(onClick = { expanded = false }) { Text("关闭") } })
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -98,27 +98,27 @@ internal fun AccountCredentials(prefix: String, username: String, password: Stri
     LaunchedEffect(verified) { if (verified) editing = false }
     LaunchedEffect(password) { if (password.isEmpty()) visible = false }
     if (!verified || editing) {
-        OutlinedTextField(username, changeUsername, label = { Text(accountLabel) }, singleLine = true,
-            shape = MaterialTheme.shapes.small, enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("$prefix-account-name"),
+        SettingsTextField(username, changeUsername, label = { Text(accountLabel) }, singleLine = true,
+            enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("$prefix-account-name"),
             keyboardOptions = KeyboardOptions(keyboardType = accountKeyboard, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Next) }))
-        OutlinedTextField(password, changePassword, label = { Text("密码") }, singleLine = true,
-            shape = MaterialTheme.shapes.small, visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        SettingsTextField(password, changePassword, label = { Text("密码") }, singleLine = true,
+            visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done), enabled = enabled,
             keyboardActions = KeyboardActions(onDone = { submit() }),
             modifier = Modifier.fillMaxWidth().testTag("$prefix-account-password"),
-            trailingIcon = { TextButton(onClick = { visible = !visible }, enabled = enabled,
+            trailingIcon = { SettingsTextButton(onClick = { visible = !visible }, enabled = enabled,
                 modifier = Modifier.semantics { contentDescription = if (visible) "隐藏密码" else "显示密码" }) { Text(if (visible) "隐藏" else "显示") } })
-        ReferenceButton(onClick = feedbackAttempt(submit), enabled = canLogin, modifier = Modifier.fillMaxWidth()) { Text("登录并验证") }
+        SettingsButton(onClick = feedbackAttempt(submit), enabled = canLogin, modifier = Modifier.fillMaxWidth()) { Text("登录并验证") }
     }
     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (verified && editing) TextButton(onClick = { editing = false; visible = false; changePassword("") }, enabled = enabled) { Text("收起账号输入") }
+        if (verified && editing) SettingsTextButton(onClick = { editing = false; visible = false; changePassword("") }, enabled = enabled) { Text("收起账号输入") }
         AccountMoreActions("账号管理") { close ->
-            if (!verified) TextButton(onClick = feedbackAttempt({ close(); reload() }), enabled = !busy) { Text("验证已保存账号") }
+            if (!verified) SettingsTextButton(onClick = feedbackAttempt({ close(); reload() }), enabled = !busy) { Text("验证已保存账号") }
             if (verified) {
-                TextButton(onClick = { close(); editing = true; visible = false; changePassword("") }, enabled = enabled) { Text("切换账号") }
+                SettingsTextButton(onClick = { close(); editing = true; visible = false; changePassword("") }, enabled = enabled) { Text("切换账号") }
             }
-            if (logout != null) TextButton(onClick = { close(); visible = false; changePassword(""); logout() }, enabled = enabled) { Text("退出登录") }
+            if (logout != null) SettingsTextButton(onClick = { close(); visible = false; changePassword(""); logout() }, enabled = enabled) { Text("退出登录") }
             Text("登录会话加密保存，不保存密码。退出后书库和进度保留。")
         }
     }
@@ -129,12 +129,14 @@ internal fun AccountRequestStatus(busy: Boolean, stage: String?, error: String?,
     retry: (() -> Unit)? = null) {
     if (busy || error != null || notice != null) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (busy) {
-            Text(stage?.takeIf { it.isNotBlank() } ?: "正在处理…", Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            TextButton(onClick = cancel) { Text("停止并核对进度") }
+            Text(stage?.takeIf { it.isNotBlank() } ?: "正在处理…", Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SettingsTextButton(onClick = cancel) { Text("停止并核对进度") }
         }
-        error?.let { RequestFeedback(it, busy = busy, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-        if (error != null && retry != null) TextButton(onClick = feedbackAttempt(retry), enabled = !busy) { Text("验证已保存账号") }
-        notice?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+        error?.let { RequestFeedback(it, busy = busy, persistent = false, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+        if (error != null && retry != null) SettingsTextButton(onClick = feedbackAttempt(retry), enabled = !busy) { Text("重试读取") }
+        notice?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
     }
 }
 
@@ -150,7 +152,7 @@ internal fun ImportPreviewFilter(query: String, changeQuery: (String) -> Unit, l
     visible: Int, selected: Int, hiddenSelected: Int, enabled: Boolean, selectVisible: () -> Unit) {
     ReferenceSearchField(query, changeQuery, "筛选已读取书目", enabled = enabled,
         modifier = Modifier.testTag("import-preview-query"),
-        trailingIcon = if (query.isNotEmpty()) ({ TextButton(onClick = { changeQuery("") }, enabled = enabled) { Text("清空") } }) else null)
+        trailingIcon = if (query.isNotEmpty()) ({ SettingsTextButton(onClick = { changeQuery("") }, enabled = enabled) { Text("清空") } }) else null)
     Text((if (query.isBlank()) "已读取 $loaded 条" else "匹配 $visible / $loaded 条") + " · 已选 $selected 条" +
         if (hiddenSelected > 0) "（含筛选外 $hiddenSelected 条）" else "",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -158,7 +160,7 @@ internal fun ImportPreviewFilter(query: String, changeQuery: (String) -> Unit, l
         if (hiddenSelected > 0) Text("筛选外已选条目仍会导入。", style = MaterialTheme.typography.bodySmall)
         if (visible == 0) Text("暂无匹配书目，可清除筛选或继续读取。")
         FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = selectVisible, enabled = enabled && visible > 0) { Text("选择筛选结果") }
+            SettingsTextButton(onClick = selectVisible, enabled = enabled && visible > 0) { Text("选择筛选结果") }
         }
     }
 }
@@ -194,14 +196,14 @@ internal fun AccountLibraryImportPanel(
         if (!ready) Text("正在读取账号状态", style = MaterialTheme.typography.bodySmall)
         else if (!signedIn) {
             Text("先登录原有账号，返回本页后读取云端收藏。")
-            ReferenceButton(feedbackAttempt(login), enabled = !busy) { Text("登录账号") }
+            SettingsButton(feedbackAttempt(login), enabled = !busy) { Text("登录账号") }
         } else {
             Text("新书目加入本机收藏，已有记录保持。仅导入书目，不下载正文。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ReferenceButton(importPage, enabled = !busy && count > 0) {
+            SettingsButton(importPage, enabled = !busy && count > 0) {
                 Text("导入当前${if (batch) "批" else "页"} $count 本")
             }
         }
-        library?.let { TextButton(it, enabled = !busy) { Text("查看本机书库") } }
+        library?.let { SettingsTextButton(it, enabled = !busy) { Text("查看本机书库") } }
     }
 }

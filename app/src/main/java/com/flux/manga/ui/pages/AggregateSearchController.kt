@@ -22,7 +22,7 @@ internal data class AggregateSearchState(
  * Owned and called by the entry's main-thread scope; each source has one independent request job. */
 internal class AggregateSearchController(
     private val scope: CoroutineScope,
-    val sources: List<String>,
+    sources: List<String>,
     private val accepts: () -> Boolean,
     private val sourceIds: Map<String, String> = emptyMap(),
     private val restore: suspend (String, String) -> DiscoveryFeedState? = { _, _ -> null },
@@ -31,11 +31,12 @@ internal class AggregateSearchController(
     private val alwaysRefreshRestored: Boolean = false,
     private val load: suspend (String, String, SourcePageRequest) -> SourceCardPage,
 ) {
+    var sources: List<String> = sources; private set
     private val mutable = MutableStateFlow(AggregateSearchState())
     val state = mutable.asStateFlow()
     private var revision = 0L
     private val feeds = linkedMapOf<String, DiscoveryFeedController>()
-    private val observers = mutableListOf<Job>()
+    private val observers = mutableMapOf<String, Job>()
 
     fun submit(input: String, allowEmpty: Boolean = false): Boolean {
         val query = input.trim().take(200)
@@ -47,36 +48,51 @@ internal class AggregateSearchController(
         }
         ++revision
         feeds.values.forEach { it.leave() }
-        observers.forEach { it.cancel() }; observers.clear(); feeds.clear()
-        val ticket = revision
+        observers.values.forEach { it.cancel() }; observers.clear(); feeds.clear()
         mutable.value = AggregateSearchState(query, sources.associateWith { DiscoveryFeedState() })
-        sources.forEach { source ->
-            val feed = DiscoveryFeedController(scope, accepts,
-                { error ->
-                    val id = sourceIds[source] ?: source
-                    when {
-                        id.startsWith("jmcomic-") -> com.flux.manga.data.jmFailure(error)
-                        id.startsWith("picacg-") -> com.flux.manga.data.picaFailure(error)
-                        id.startsWith("ehentai-") -> com.flux.manga.data.ehFailure(error, com.flux.manga.data.GallerySite.EH)
-                        id.startsWith("exhentai-") -> com.flux.manga.data.ehFailure(error, com.flux.manga.data.GallerySite.EX)
-                        id == CopyMangaEndpoint.SOURCE_ID -> copyMangaFailure(error)
-                        com.flux.manga.data.isPublicWebSource(id) -> publicWebFailure(error, id)
-                        id == com.flux.manga.data.BaoziEndpoint.SOURCE_ID -> baoziFailure(error)
-                        else -> komgaFailure(error)
-                    }
-                }, restore = { restore(source, query) }, save = { save(source, query, it) },
-                refreshRestored = refreshRestored, alwaysRefreshRestored = alwaysRefreshRestored) { page ->
-                load(source, query, page)
-            }
-            feeds[source] = feed
-            observers += scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                feed.state.collect { result ->
-                    if (ticket == revision && accepts()) mutable.value = state.value.copy(results = state.value.results + (source to result))
-                }
-            }
-            feed.start()
-        }
+        sources.forEach { attach(it, query) }
         return true
+    }
+
+    /** Change only affected sources; other jobs, pages and timestamps remain intact. */
+    fun selectSources(selected: List<String>, invalidate: Set<String> = emptySet()) {
+        if (!accepts()) return
+        val removed = feeds.keys.filter { it !in selected || it in invalidate }
+        removed.forEach { source ->
+            observers.remove(source)?.cancel()
+            feeds.remove(source)?.leave()
+        }
+        sources = selected
+        mutable.value = state.value.copy(results = state.value.results.filterKeys { it in selected && it !in invalidate })
+        selected.filter { it !in feeds }.forEach { attach(it, state.value.query) }
+    }
+
+    private fun attach(source: String, query: String) {
+        val ticket = revision
+        val feed = DiscoveryFeedController(scope, accepts,
+            { error ->
+                val id = sourceIds[source] ?: source
+                when {
+                    id.startsWith("jmcomic-") -> com.flux.manga.data.jmFailure(error)
+                    id.startsWith("picacg-") -> com.flux.manga.data.picaFailure(error)
+                    id.startsWith("ehentai-") -> com.flux.manga.data.ehFailure(error, com.flux.manga.data.GallerySite.EH)
+                    id.startsWith("exhentai-") -> com.flux.manga.data.ehFailure(error, com.flux.manga.data.GallerySite.EX)
+                    id == CopyMangaEndpoint.SOURCE_ID -> copyMangaFailure(error)
+                    com.flux.manga.data.isPublicWebSource(id) -> publicWebFailure(error, id)
+                    id == com.flux.manga.data.BaoziEndpoint.SOURCE_ID -> baoziFailure(error)
+                    else -> komgaFailure(error)
+                }
+            }, restore = { restore(source, query) }, save = { save(source, query, it) },
+            refreshRestored = refreshRestored, alwaysRefreshRestored = alwaysRefreshRestored) { page ->
+            load(source, query, page)
+        }
+        feeds[source] = feed
+        observers[source] = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            feed.state.collect { result ->
+                if (ticket == revision && feeds[source] === feed && accepts()) mutable.value = state.value.copy(results = state.value.results + (source to result))
+            }
+        }
+        feed.start()
     }
 
     fun more(source: String) { if (accepts()) feeds[source]?.more() }

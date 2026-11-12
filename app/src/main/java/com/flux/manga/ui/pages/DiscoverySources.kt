@@ -40,8 +40,8 @@ internal fun discoverySourceName(sourceId: String?) = when {
     sourceId?.startsWith("ehentai-") == true -> "E-Hentai"
     sourceId?.startsWith("exhentai-") == true -> "ExHentai"
     sourceId != null && com.flux.manga.data.isPublicWebSource(sourceId) -> com.flux.manga.data.PublicWebSite.of(sourceId)!!.label
-    sourceId == com.flux.manga.data.BaoziEndpoint.SOURCE_ID -> "包子漫画"
-    sourceId == CopyMangaEndpoint.SOURCE_ID -> "拷贝漫画"
+    sourceId != null && com.flux.manga.data.isBaoziSource(sourceId) -> "包子漫画"
+    sourceId != null && com.flux.manga.data.isCopySource(sourceId) -> "拷贝漫画"
     sourceId?.startsWith("komga") == true -> "Komga"
     else -> "图源"
 }

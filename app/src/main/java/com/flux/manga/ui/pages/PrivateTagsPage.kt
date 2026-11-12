@@ -39,9 +39,11 @@ internal class PrivateTagsModel(app: Application, private val session: WorldSess
     private val entries = mutableMapOf<String, List<PrivateCatalogTag>>()
     val states = MutableStateFlow<Map<String, SourceTagsState>>(emptyMap())
     private fun active() = session.accepts(identity) && session.state.value.foreground
-    private val enabledSources = listOf(JM_SOURCE, PrivateCatalog.PICA).filter(selection::enabled)
-    private val snapshots = enabledSources.associateWith { CatalogPageCache(app, session, "tags:$it", includeBlacklist = false, source = it) }
-    val directories = enabledSources.associateWith { source ->
+    private val availableSources = listOf(JM_SOURCE, PrivateCatalog.PICA)
+    private var enabledSources = availableSources.filter(selection::enabled)
+    private val snapshots = availableSources.associateWith { CatalogPageCache(app, session, "tags:$it", includeBlacklist = false, source = it) }
+    val directories get() = allDirectories.filterKeys { it in enabledSources }
+    private val allDirectories = availableSources.associateWith { source ->
         SourceTagsController(viewModelScope, ::active,
             failureMessage = if (source == JM_SOURCE) ::jmFailure else ::picaFailure,
             restore = { query -> snapshots.getValue(source).decode(query) { json ->
@@ -63,11 +65,21 @@ internal class PrivateTagsModel(app: Application, private val session: WorldSess
         }
     }
     init {
-        directories.forEach { (source, directory) -> viewModelScope.launch {
+        allDirectories.forEach { (source, directory) -> viewModelScope.launch {
             directory.state.collect { result ->
-                if (session.accepts(identity)) states.update { it + (source to result) }
+                if (session.accepts(identity) && source in enabledSources) states.update { it + (source to result) }
             }
         } }
+    }
+    fun selectionChanged() {
+        val previous = enabledSources
+        enabledSources = availableSources.filter(selection::enabled)
+        (previous - enabledSources.toSet()).forEach { allDirectories.getValue(it).leave() }
+        states.value = states.value.filterKeys { it in enabledSources }
+        (enabledSources - previous.toSet()).forEach { source ->
+            allDirectories.getValue(source).start()
+            states.value = states.value + (source to allDirectories.getValue(source).state.value)
+        }
     }
     fun start() = directories.values.forEach { it.start() }
     fun refresh() = directories.values.forEach { it.refresh() }
@@ -84,7 +96,7 @@ internal fun PrivateTagsPage(session: WorldSession, bottom: Dp, settings: () -> 
     search: () -> Unit, reportScroll: (LazyListState) -> Unit, openTag: (String, List<TagTarget>) -> Unit) {
     val app = LocalContext.current.applicationContext as Application
     val model = preloadedPages(session).privateTags()
-    val gallerySources = remember(model) { listOf(EH_SOURCE, PrivateCatalog.EX).filter(model.selection::enabled) }
+    val gallerySources = listOf(EH_SOURCE, PrivateCatalog.EX).filter(model.selection::enabled)
     val dictionary = galleryTagsModel(session, enabled = gallerySources.isNotEmpty())
     val words by dictionary.state.collectAsStateWithLifecycle()
     val states by model.states.collectAsStateWithLifecycle()

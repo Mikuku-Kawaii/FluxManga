@@ -3,6 +3,9 @@ package com.flux.manga.ui.pages
 import com.flux.manga.R
 import com.flux.manga.ui.LucideIcon
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectable
@@ -20,10 +23,116 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.flux.manga.ui.glass.WorldColors
 import com.flux.manga.ui.navigation.PrototypeWorld
+
+internal val SettingsPagePadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp)
+internal val SettingsSectionSpacing = Arrangement.spacedBy(12.dp)
+internal object SettingsStyle {
+    val actionShape = RoundedCornerShape(20.dp)
+    val fieldShape = RoundedCornerShape(16.dp)
+    val optionShape = RoundedCornerShape(16.dp)
+    val actionPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+}
+// Bare groups own the row inset; padded panels reset it to avoid double indentation.
+private val LocalSettingsRowInset = compositionLocalOf<Dp?> { null }
+
+@Composable
+internal fun SettingsPanelContent(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    CompositionLocalProvider(LocalSettingsRowInset provides 0.dp) {
+        Column(modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+/** Center wrapped action labels too, without changing alignment of setting descriptions. */
+@Composable
+internal fun SettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    Button(onClick, modifier.heightIn(min = referenceActionHeight()), enabled = enabled,
+        shape = SettingsStyle.actionShape, contentPadding = SettingsStyle.actionPadding,
+        interactionSource = interaction) {
+      Row(Modifier.referencePressFeedback(interaction, enabled), verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Center) {
+        ProvideTextStyle(LocalTextStyle.current.copy(textAlign = TextAlign.Center)) { content() }
+      }
+    }
+}
+
+@Composable
+internal fun SettingsTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    shape: Shape = SettingsStyle.actionShape, colors: ButtonColors = ButtonDefaults.textButtonColors(),
+    contentPadding: PaddingValues = SettingsStyle.actionPadding,
+    content: @Composable RowScope.() -> Unit) {
+    TextButton(onClick, modifier.heightIn(min = referenceActionHeight()), enabled = enabled,
+        shape = shape, colors = colors, contentPadding = contentPadding) {
+        ProvideTextStyle(LocalTextStyle.current.copy(textAlign = TextAlign.Center)) { content() }
+    }
+}
+
+@Composable
+internal fun SettingsOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit) {
+    OutlinedButton(onClick, modifier.heightIn(min = referenceActionHeight()), enabled = enabled,
+        shape = SettingsStyle.actionShape, contentPadding = SettingsStyle.actionPadding,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (enabled) 1f else .38f))) {
+        ProvideTextStyle(LocalTextStyle.current.copy(textAlign = TextAlign.Center)) { content() }
+    }
+}
+
+@Composable
+internal fun SettingsTextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier,
+    enabled: Boolean = true, label: (@Composable () -> Unit)? = null, placeholder: (@Composable () -> Unit)? = null,
+    supportingText: (@Composable () -> Unit)? = null, trailingIcon: (@Composable () -> Unit)? = null,
+    singleLine: Boolean = false, visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default, keyboardActions: KeyboardActions = KeyboardActions.Default) {
+    OutlinedTextField(value, onValueChange, modifier.fillMaxWidth(), enabled = enabled,
+        label = label, placeholder = placeholder, supportingText = supportingText, trailingIcon = trailingIcon,
+        singleLine = singleLine, visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
+        textStyle = MaterialTheme.typography.bodyLarge, shape = SettingsStyle.fieldShape,
+        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant))
+}
+
+@Composable
+internal fun SettingsFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Unit,
+    modifier: Modifier = Modifier, enabled: Boolean = true, trailingIcon: (@Composable () -> Unit)? = null) {
+    FilterChip(selected, onClick, label = {
+        ProvideTextStyle(MaterialTheme.typography.labelLarge.copy(textAlign = TextAlign.Center)) { label() }
+    }, modifier = modifier.heightIn(min = referenceActionHeight()), enabled = enabled,
+        shape = SettingsStyle.optionShape, trailingIcon = trailingIcon,
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = ReadingSurfaceStyle.action, labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer),
+        border = FilterChipDefaults.filterChipBorder(enabled, selected,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
+            selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = .2f)))
+}
+
+@Composable
+internal fun SettingsCheckboxRow(title: String, checked: Boolean, change: (Boolean) -> Unit,
+    description: String = "", enabled: Boolean = true, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().heightIn(min = 56.dp)
+        .toggleable(checked, enabled = enabled, role = Role.Checkbox, onValueChange = change)
+        .padding(horizontal = LocalSettingsRowInset.current ?: 0.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Checkbox(checked, onCheckedChange = null, enabled = enabled)
+    }
+}
 
 /** Compact left-aligned toolbar shared by child pages, with one accessible back action. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -47,7 +156,7 @@ internal fun SettingsHeading(title: String, subtitle: String, back: () -> Unit,
                 style = MaterialTheme.typography.titleLarge)
             if (actions != null) actions()
         }
-        if (subtitle.isNotBlank()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (subtitle.isNotBlank()) Text(subtitle, Modifier.padding(start = 36.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -61,27 +170,29 @@ internal fun Modifier.compactBackTarget() = layout { measurable, constraints ->
 
 @Composable
 internal fun SettingsGroup(title: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (title != null) Text(title, Modifier.padding(horizontal = 4.dp).semantics { heading() },
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!title.isNullOrBlank()) Text(title, Modifier.padding(horizontal = 16.dp).semantics { heading() },
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Surface(Modifier.fillMaxWidth().readingCardShadow(), shape = ReadingSurfaceStyle.cardShape,
             color = ReadingSurfaceStyle.card, border = ReadingSurfaceStyle.border,
             contentColor = MaterialTheme.colorScheme.onSurface) {
-            Column(content = content)
+            CompositionLocalProvider(LocalSettingsRowInset provides 16.dp) {
+                Column(content = content)
+            }
         }
     }
 }
 
 @Composable
 internal fun SettingsDivider() {
-    HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
+    HorizontalDivider(Modifier.padding(horizontal = LocalSettingsRowInset.current ?: 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable
 internal fun SettingsPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Box(modifier) {
         SettingsGroup {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+            SettingsPanelContent(content = content)
         }
     }
 }
@@ -117,7 +228,7 @@ internal fun SettingsRow(title: String, summary: String, tag: String, symbol: Se
         val showSymbol = symbol != null && maxWidth >= 280.dp && LocalDensity.current.fontScale < 1.5f
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (showSymbol) SettingsGlyph(symbol!!, Modifier.size(24.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 if (summary.isNotBlank()) Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!enabled) Text("暂不可用", style = MaterialTheme.typography.labelMedium,
@@ -138,7 +249,8 @@ internal fun SettingsChevron(back: Boolean = false, modifier: Modifier = Modifie
 internal fun SettingsSwitchRow(title: String, description: String, checked: Boolean, change: (Boolean) -> Unit,
     modifier: Modifier = Modifier, enabled: Boolean = true) {
     BoxWithConstraints(modifier.fillMaxWidth().heightIn(min = 56.dp)
-        .toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = change).padding(vertical = 10.dp),
+        .toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = change)
+        .padding(horizontal = LocalSettingsRowInset.current ?: 0.dp, vertical = 10.dp),
         contentAlignment = Alignment.CenterStart) {
         @Composable fun Label(modifier: Modifier = Modifier) {
             Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -146,7 +258,7 @@ internal fun SettingsSwitchRow(title: String, description: String, checked: Bool
                 if (description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (maxWidth < 220.dp && LocalDensity.current.fontScale >= 1.5f) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (maxWidth < 240.dp || LocalDensity.current.fontScale >= 1.5f) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Label()
             Switch(checked, onCheckedChange = null, enabled = enabled, modifier = Modifier.align(Alignment.End))
         } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -160,11 +272,12 @@ internal fun SettingsSwitchRow(title: String, description: String, checked: Bool
 internal fun SettingsChoiceRow(title: String, selected: Boolean, select: () -> Unit,
     modifier: Modifier = Modifier, description: String? = null, enabled: Boolean = true) {
     val background = referenceStateColor(if (selected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = background,
+    Surface(modifier.fillMaxWidth().padding(horizontal = LocalSettingsRowInset.current ?: 0.dp),
+        shape = SettingsStyle.optionShape, color = background,
         contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface) {
-        Row(modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = select)
-            .padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = select)
+            .padding(horizontal = if (LocalSettingsRowInset.current == null) 8.dp else 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }

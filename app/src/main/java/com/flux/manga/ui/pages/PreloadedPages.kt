@@ -31,7 +31,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     private var watching: Job? = null
     private var secondary: Job? = null
     private var configuration: SourceDiscoveryModel? = null
-    private val feeds = mutableMapOf<Pair<String?, DiscoverySection>, MixedDiscoveryModel>()
+    private val feeds = mutableMapOf<Triple<String?, DiscoverySection, Boolean>, MixedDiscoveryModel>()
     private val directories = mutableMapOf<String?, UnifiedTagsModel>()
     private var privateDirectory: PrivateTagsModel? = null
     private var dictionary: GalleryTagsModel? = null
@@ -39,6 +39,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     val visibleSearches = mutableSetOf<AggregateSearchModel>()
     private val coverWarmers = mutableMapOf<MixedDiscoveryModel, Job>()
     private var running = false
+    private var selectionFingerprint = com.flux.manga.data.SourceSelection(app, identity.world).fingerprint()
     private var configurationFingerprint: String? = null
     private var configurationCheck: Job? = null
 
@@ -49,11 +50,12 @@ internal class PreloadedPages(private val app: Application, private val session:
     fun discovery(): SourceDiscoveryModel = configuration ?: obtain(networkStore, "configuration") {
         SourceDiscoveryModel(app, session)
     }.also { configuration = it }
-    fun mixed(komga: String?, section: DiscoverySection): MixedDiscoveryModel {
+    fun mixed(komga: String?, section: DiscoverySection, home: Boolean = true): MixedDiscoveryModel {
+        val homeScope = home && identity.world == PrototypeWorld.SFW
         // Recommendations never depend on Komga configuration: start them immediately at launch.
         val source = if (section == DiscoverySection.RECOMMENDATIONS) null else komga
-        val model = feeds.getOrPut(source to section) {
-            obtain(networkStore, "feed:$source:$section") { MixedDiscoveryModel(app, session, source, section) }
+        val model = feeds.getOrPut(Triple(source, section, homeScope)) {
+            obtain(networkStore, "feed:$source:$section:$homeScope") { MixedDiscoveryModel(app, session, source, section, home = homeScope) }
         }
         if (running && model !in coverWarmers) coverWarmers[model] = viewModelScope.launch {
             model.feed.state.map { mixedCards(model.feed.sources, it.results).take(3).map { it.key } }
@@ -109,7 +111,7 @@ internal class PreloadedPages(private val app: Application, private val session:
         // Returning to the foreground keeps yesterday's cards visible while each source updates.
         feeds.values.forEach { it.start() }
         if (configurationFingerprint == null && configurationCheck?.isActive != true) configurationCheck = viewModelScope.launch {
-            try { configurationFingerprint = catalogConfiguration(com.flux.manga.data.WorldDataStore(app), session) }
+            try { configurationFingerprint = catalogConfiguration(com.flux.manga.data.WorldDataStore(app), session, includeSelection = false) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* Discovery/settings retain their own visible storage error. */ }
         }
@@ -121,25 +123,12 @@ internal class PreloadedPages(private val app: Application, private val session:
                 if (!running || !session.accepts(identity)) return@collect
                 mixed(config.sourceId, DiscoverySection.RECOMMENDATIONS).start()
                 mixed(config.sourceId, DiscoverySection.UPDATES).start()
-                if (identity.world == PrototypeWorld.SFW) tags(config.sourceId).start()
-                else {
-                    privateTags().start()
-                    val selection = com.flux.manga.data.SourceSelection(app, identity.world)
-                    if (selection.enabled(com.flux.manga.data.SourceKind.EH) || selection.enabled(com.flux.manga.data.SourceKind.EX)) galleryTags().start()
-                }
+
             }
         }
         // Local reads run independently; a slow/unconfigured source never delays the app shell.
-        shelf(); visits().refresh(silent = true); searchHistory(); reading()
-        secondary = viewModelScope.launch {
-            val config = discovery().state.first { it.status != DiscoveryStatus.LOADING }
-            // Defer disk inventory/statistics until the home request has settled, including failure.
-            val recommendations = mixed(config.sourceId, DiscoverySection.RECOMMENDATIONS)
-            recommendations.feed.state.first {
-                recommendations.feed.sources.isEmpty() || (it.results.isNotEmpty() && !it.busy)
-            }
-            if (running && session.accepts(identity)) { statistics().start(); storage() }
-        }
+        shelf(); visits().refresh(silent = true)
+        // Tags, statistics, storage and search history load on their own visible pages.
     }
 
     fun pause() {
@@ -186,13 +175,39 @@ internal class PreloadedPages(private val app: Application, private val session:
         val previousCheck = configurationCheck
         configurationCheck = viewModelScope.launch {
             previousCheck?.join()
-            val fingerprint = try { catalogConfiguration(com.flux.manga.data.WorldDataStore(app), session) }
+            val fingerprint = try { catalogConfiguration(com.flux.manga.data.WorldDataStore(app), session, includeSelection = false) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { null }
-            if (fingerprint != null && fingerprint == configurationFingerprint) return@launch
+            if (fingerprint != null && fingerprint == configurationFingerprint) {
+                if (selectionFingerprint != com.flux.manga.data.SourceSelection(app, identity.world).fingerprint()) sourceEnabledChanged()
+                return@launch
+            }
             configurationFingerprint = fingerprint
             resetNetwork()
         }
+    }
+
+    /** A source switch is not a credential or blacklist change. */
+    fun sourceEnabledChanged() {
+        if (!session.accepts(identity)) return
+        feeds.values.forEach { it.selectionChanged() }
+        directories.values.forEach { it.selectionChanged() }
+        privateDirectory?.selectionChanged()
+        if (identity.world == PrototypeWorld.NSFW) {
+            val selection = com.flux.manga.data.SourceSelection(app, identity.world)
+            if (selection.enabled(com.flux.manga.data.SourceKind.EH) || selection.enabled(com.flux.manga.data.SourceKind.EX)) {
+                if (running) galleryTags().start()
+            } else dictionary?.stop()
+        }
+        selectionFingerprint = com.flux.manga.data.SourceSelection(app, identity.world).fingerprint()
+        // Rebind entry-owned search/tag results to the new source set; homepage models stay alive.
+        revision.value++
+    }
+
+    fun copyHomePolicyChanged() {
+        if (!session.accepts(identity)) return
+        feeds.filterKeys { it.third }.values.forEach { it.selectionChanged(homePolicyOnly = true) }
+        selectionFingerprint = com.flux.manga.data.SourceSelection(app, identity.world).fingerprint()
     }
 
     fun sourceSelectionChanged() {
@@ -202,6 +217,7 @@ internal class PreloadedPages(private val app: Application, private val session:
     }
 
     private fun resetNetwork() {
+        selectionFingerprint = com.flux.manga.data.SourceSelection(app, identity.world).fingerprint()
         val resume = running
         pause()
         networkStore.clear(); networkStore = ViewModelStore()

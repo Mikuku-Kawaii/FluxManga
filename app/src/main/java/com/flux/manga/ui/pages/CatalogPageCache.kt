@@ -75,14 +75,14 @@ internal class CatalogPageCache(private val context: Context, private val sessio
 }
 
 /** Compare decrypted configuration, not randomized ciphertext; merely visiting settings is unchanged. */
-internal suspend fun catalogConfiguration(data: WorldDataStore, session: WorldSession, includeBlacklist: Boolean = true): String {
+internal suspend fun catalogConfiguration(data: WorldDataStore, session: WorldSession, includeBlacklist: Boolean = true, includeSelection: Boolean = true): String {
     val identity = session.identity.value
     val slots = if (identity.world == PrototypeWorld.SFW)
         listOf("komga-user-configuration-v1", "copy-account-v1", "baozi-active-account-v1")
     else listOf("jm-settings-v1", "picacg-account-v1", "ehentai-settings-v1", "exhentai-settings-v1")
     return data.accountImportDatabase(identity.world).transaction({ session.accepts(identity) }) { rows ->
         val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(data.sourceSelection(identity.world).fingerprint().toByteArray())
+        if (includeSelection) digest.update(data.sourceSelection(identity.world).fingerprint().toByteArray())
         if (includeBlacklist) digest.update("known-tags-only-v2".toByteArray())
         (slots + if (includeBlacklist) listOf(TagBlacklist.SLOT, TagBlacklist.TITLE_SLOT) else emptyList()).forEach { slot ->
             digest.update(slot.toByteArray())

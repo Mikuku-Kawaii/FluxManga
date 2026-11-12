@@ -129,8 +129,8 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
         if (lifecycle.foreground) model.inspect() else requestedDiagnostic = null
     }
     DisposableEffect(model) { onDispose { model.cancelDiagnostic() } }
-    LazyColumn(Modifier.fillMaxSize().testTag("data-protection-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("data-protection-page"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("数据保护与恢复", "", back) }
         item { SettingsPanel {
             Text("文件与密钥检查", style = MaterialTheme.typography.titleMedium)
@@ -139,7 +139,7 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
             if (state.busy) { RequestLoading(); Text("正在检查") }
             state.report?.let { Text(it.detail, modifier = Modifier.testTag("protection-result").semantics { liveRegion = LiveRegionMode.Polite }) }
             state.error?.let { RequestFeedback(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            OutlinedButton(onClick = model::inspect, enabled = !state.busy && !state.diagnosticBusy, modifier = Modifier.testTag("protection-retry")) { Text("重新检查") }
+            SettingsOutlinedButton(onClick = model::inspect, enabled = !state.busy && !state.diagnosticBusy, modifier = Modifier.testTag("protection-retry")) { Text("重新检查") }
         } }
         item { SettingsPanel { SettingsDisclosure("数据库结构检查", if (state.diagnosticBusy) "正在检查副本" else if (state.cleanupRequired) "有待清理副本" else "高级工具 · 在临时副本上检查") {
             Text("在临时副本上检查，保留原库与密钥。", style = MaterialTheme.typography.bodySmall,
@@ -147,7 +147,7 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
             if (state.diagnosticBusy) {
                 Text(if (state.cancelling) "正在停止检查并清理副本…" else state.diagnosticStage?.label.orEmpty(),
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                OutlinedButton(onClick = model::cancelDiagnostic, enabled = !state.cancelling,
+                SettingsOutlinedButton(onClick = model::cancelDiagnostic, enabled = !state.cancelling,
                     modifier = Modifier.testTag("protection-diagnostic-cancel")) { Text("取消检查") }
             }
             state.diagnostic?.let { report ->
@@ -176,15 +176,15 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
             state.diagnosticMessage?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
             if (state.cleanupRequired) RequestFeedback("仍有有临时检查副本待清理。", color = MaterialTheme.colorScheme.error)
             if (!state.diagnosticBusy) {
-                ReferenceButton(onClick = { requestedDiagnostic = false }, enabled = !state.busy,
+                SettingsButton(onClick = { requestedDiagnostic = false }, enabled = !state.busy,
                     modifier = Modifier.testTag("protection-diagnostic-start")) { Text("检查数据库副本") }
-                if (state.cleanupRequired) OutlinedButton(onClick = model::clearCopy, enabled = !state.busy,
+                if (state.cleanupRequired) SettingsOutlinedButton(onClick = model::clearCopy, enabled = !state.busy,
                     modifier = Modifier.testTag("protection-diagnostic-cleanup")) { Text("清理检查副本") }
             }
             SettingsDisclosure("更多检查与副本管理") {
-                TextButton(onClick = { requestedDiagnostic = true }, enabled = !state.busy && !state.diagnosticBusy,
+                SettingsTextButton(onClick = { requestedDiagnostic = true }, enabled = !state.busy && !state.diagnosticBusy,
                     modifier = Modifier.testTag("protection-migration-start")) { Text("检查副本迁移") }
-                if (!state.cleanupRequired) TextButton(onClick = model::clearCopy, enabled = !state.busy && !state.diagnosticBusy,
+                if (!state.cleanupRequired) SettingsTextButton(onClick = model::clearCopy, enabled = !state.busy && !state.diagnosticBusy,
                     modifier = Modifier.testTag("protection-diagnostic-cleanup")) { Text("清理检查副本") }
                 Text("在临时副本上检查数据结构与版本兼容性，需要额外空间。原数据库保持不变。")
                 Text("结束后清理临时副本；异常退出留下的副本可手动清理。里世界副本保持加密。")
@@ -196,7 +196,7 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
             Text("仅检查文件与密钥状态，数据内容请使用副本检查。")
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        TextButton(onClick = backup, enabled = !state.busy && !state.diagnosticBusy) { Text("加密备份与恢复") }
+        SettingsTextButton(onClick = backup, enabled = !state.busy && !state.diagnosticBusy) { Text("加密备份与恢复") }
         SettingsDisclosure("备份与换机", "按空间备份，使用单独保存的恢复码") {
             Text("记录导出生成明文 JSON，包含书目、书签和进度，仅供查看，不能用于恢复。")
             Text("换设备请使用加密备份，可合并恢复书库记录和本地 CBZ。账号、设备密钥、全局设置和离线下载需另行配置。")
@@ -216,6 +216,6 @@ internal fun DataProtectionPage(session: WorldSession, back: () -> Unit, backup:
             Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm("开始检查", onClick = { requestedDiagnostic = null; model.diagnose(migration) },
             enabled = !state.busy && !state.diagnosticBusy) },
-        dismissButton = { TextButton(onClick = { requestedDiagnostic = null }) { Text("暂不检查") } },
+        dismissButton = { SettingsTextButton(onClick = { requestedDiagnostic = null }) { Text("暂不检查") } },
     ) }
 }

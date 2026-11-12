@@ -100,6 +100,11 @@ internal fun ReferenceShelfPage(
     }
     val recent = remember(state.books) { recentReadable(state.books) }
     val scroll = rememberLazyGridState()
+    LaunchedEffect(model, scroll) {
+        snapshotFlow { scroll.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String }.toSet() }
+            .collect { model.visibleBooks(it) }
+    }
+    DisposableEffect(model, lifecycle) { onDispose { if (lifecycle == Lifecycle.State.RESUMED) model.pauseInformation() } }
     val loadingScroll = rememberLazyGridState()
     // The short initial loading/empty frame must not clamp a restored content anchor.
     val shownScroll = if (state.loading && state.books.isEmpty()) loadingScroll else scroll
@@ -157,10 +162,18 @@ internal fun ReferenceShelfPage(
                 if (!selecting) TextButton(model::cancelBatch) { Text("停止处理") }
             }
             state.batchMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+            state.informationMessage?.let { message ->
+                Text(message, style = MaterialTheme.typography.bodySmall, color = ReadingSurfaceStyle.muted)
+                if (!state.informationBusy && state.informationFailed.isNotEmpty()) {
+                    RequestFeedback(message, persistent = false)
+                    TextButton(onClick = feedbackAttempt(model::retryInformation)) { Text("重试失败或未完成的作品") }
+                }
+            }
+
 
         }
     }
-    ReferenceRefreshBox(state.loading && state.showLoading, { model.refresh() }, Modifier.fillMaxSize(),
+    ReferenceRefreshBox((state.loading && state.showLoading) || state.informationBusy, feedbackAttempt { model.refresh() }, Modifier.fillMaxSize(),
         enabled = canEdit && !selecting) { BoxWithConstraints(Modifier.fillMaxSize()) {
         val columns = shelfColumns(maxWidth.value, fontScale, state.layout)
         Column(Modifier.fillMaxSize()) {

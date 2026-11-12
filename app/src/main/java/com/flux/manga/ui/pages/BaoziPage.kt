@@ -57,7 +57,7 @@ internal fun BaoziPage(session: WorldSession, back: () -> Unit, open: (String, S
     BookResultsLayout(enabled = mangaId == null) { columns ->
         ReferenceRefreshColumn(refreshing = feed.busy || detail.busy, refresh = { if (mangaId == null) model.feed.refresh() else model.refreshDetail() }, refreshEnabled = mangaId != null || model.submitted != null, modifier = Modifier.fillMaxSize().testTag(if (mangaId == null) "baozi-search" else "baozi-detail"), state = scroll,
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("heading") { if (mangaId == null) ReferenceHeading("${discoverySourceName(sourceId)}搜索", "", back) else DetailHeading(back) }
+            item("heading") { if (mangaId == null) ReferenceHeading("${discoverySourceName(sourceId)}搜索", "", back) else DetailHeading(back, sourceName = discoverySourceName(sourceId)) }
             if (mangaId == null && history != null) {
                 item("query") { ReferencePanel {
                     ReferenceSubmitSearchField(history.query, history::query, "搜索作品", { submit(history.query) },

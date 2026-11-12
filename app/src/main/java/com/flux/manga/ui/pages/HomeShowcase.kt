@@ -35,11 +35,11 @@ import kotlinx.coroutines.launch
 internal fun DiscoveryHomeShowcase(session: WorldSession, configuration: SourceDiscoveryModel, state: DiscoveryState,
     bottom: Dp, search: () -> Unit, sources: () -> Unit, settings: () -> Unit, switchError: String?,
     section: (DiscoverySection) -> Unit, open: (String, String) -> Unit, reportScroll: (LazyListState) -> Unit) {
-    val recommendations = mixedModel(session, null, DiscoverySection.RECOMMENDATIONS)
+    val recommendations = mixedModel(session, null, DiscoverySection.RECOMMENDATIONS, home = true)
     val recommendationState by recommendations.feed.state.collectAsStateWithLifecycle()
     val scroll = rememberLazyListState()
     val incomingRecommended = mixedCards(recommendations.feed.sources, recommendationState.results)
-    val updates = if (state.status != DiscoveryStatus.LOADING) mixedModel(session, state.sourceId, DiscoverySection.UPDATES) else null
+    val updates = if (state.status != DiscoveryStatus.LOADING) mixedModel(session, state.sourceId, DiscoverySection.UPDATES, home = true) else null
     val updateState = updates?.feed?.state?.collectAsStateWithLifecycle()?.value
     val incomingUpdated = if (updates != null && updateState != null) mixedCards(updates.feed.sources, updateState.results) else emptyList()
     val recommended = stableHomeCards(recommendations, incomingRecommended, scroll.isScrollInProgress)

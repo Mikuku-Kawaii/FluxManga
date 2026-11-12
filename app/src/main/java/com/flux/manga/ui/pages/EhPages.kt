@@ -234,8 +234,9 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) { uid = ""; hash = ""; igneous = ""; username = ""; password = "" } }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = SettingsPagePadding, verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading(navigation.title(site.label), "", navigation::back) }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item("source-network") { SourceNetworkSettings(session, if (site == GallerySite.EX) com.flux.manga.data.SourceKind.EX else com.flux.manga.data.SourceKind.EH) }
         sourceSettingsOverview(navigation,
             account = if (!state.ready) "账号状态待读取" else state.settings.account?.let { "已保存本站会话 · ${it.name}" }
                 ?: if (site == GallerySite.EX) "未登录 · 需要独立确认 EX 权限" else "未登录 · 可匿名浏览",
@@ -249,35 +250,35 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
                 site == GallerySite.EX -> "未登录 · 需确认 EX 访问权限"
                 else -> "未登录 · 可匿名浏览"
             }, "${site.label} 收藏分类与画廊", state.settings.account?.name.orEmpty())
-            ReferenceButton({ webLogin = true }, enabled = state.ready && !state.busy, modifier = Modifier.fillMaxWidth()) {
+            SettingsButton({ webLogin = true }, enabled = state.ready && !state.busy, modifier = Modifier.fillMaxWidth()) {
                 Text("应用内网页登录 / 注册")
             }
             Text("在论坛登录后打开 ${site.label} 本站，再连接账号与收藏。", style = MaterialTheme.typography.bodySmall)
-            if (site == GallerySite.EX) TextButton({ context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(site.base))) }) { Text("登录后打开 EX 确认权限") }
+            if (site == GallerySite.EX) SettingsTextButton({ context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(site.base))) }) { Text("登录后打开 EX 确认权限") }
             SettingsDisclosure("连接网页会话 / 备用账号登录") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(passwordMode, { passwordMode = true; uid = ""; hash = "" }, enabled = !state.busy,
-                        modifier = Modifier.weight(1f), label = { Text("账号密码") })
-                    FilterChip(!passwordMode, { passwordMode = false; password = "" }, enabled = !state.busy,
-                        modifier = Modifier.weight(1f), label = { Text("手动 Cookie") })
+                    SettingsFilterChip(passwordMode, { passwordMode = true; uid = ""; hash = "" }, enabled = !state.busy,
+                        modifier = Modifier.weight(1f), label = { Text("账号密码", textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
+                    SettingsFilterChip(!passwordMode, { passwordMode = false; password = "" }, enabled = !state.busy,
+                        modifier = Modifier.weight(1f), label = { Text("手动 Cookie", textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
                 }
                 if (passwordMode) {
-                    OutlinedTextField(username, { username = it.take(200) }, Modifier.fillMaxWidth(), label = { Text("论坛用户名") }, enabled = !state.busy, singleLine = true)
-                    OutlinedTextField(password, { password = it.take(1000) }, Modifier.fillMaxWidth(), label = { Text("密码") }, enabled = !state.busy,
+                    SettingsTextField(username, { username = it.take(200) }, Modifier.fillMaxWidth(), label = { Text("论坛用户名") }, enabled = !state.busy, singleLine = true)
+                    SettingsTextField(password, { password = it.take(1000) }, Modifier.fillMaxWidth(), label = { Text("密码") }, enabled = !state.busy,
                         singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
                     Text("密码仅用于本次登录，不保存。失败后原账号与书库保留。", style = MaterialTheme.typography.bodySmall)
                 } else {
-                    OutlinedTextField(uid, { uid = it }, Modifier.fillMaxWidth(), label = { Text("ipb_member_id") }, enabled = !state.busy, singleLine = true)
-                    OutlinedTextField(hash, { hash = it }, Modifier.fillMaxWidth(), label = { Text("ipb_pass_hash") }, enabled = !state.busy, singleLine = true, visualTransformation = PasswordVisualTransformation())
+                    SettingsTextField(uid, { uid = it }, Modifier.fillMaxWidth(), label = { Text("ipb_member_id") }, enabled = !state.busy, singleLine = true)
+                    SettingsTextField(hash, { hash = it }, Modifier.fillMaxWidth(), label = { Text("ipb_pass_hash") }, enabled = !state.busy, singleLine = true, visualTransformation = PasswordVisualTransformation())
                 }
-                if (site == GallerySite.EX) OutlinedTextField(igneous, { igneous = it }, Modifier.fillMaxWidth(), label = { Text("EX 域 igneous") }, enabled = !state.busy, singleLine = true, visualTransformation = PasswordVisualTransformation())
-                if (passwordMode) ReferenceButton(feedbackAttempt({ model.loginPassword(username, password, igneous); password = ""; igneous = "" }),
+                if (site == GallerySite.EX) SettingsTextField(igneous, { igneous = it }, Modifier.fillMaxWidth(), label = { Text("EX 域 igneous") }, enabled = !state.busy, singleLine = true, visualTransformation = PasswordVisualTransformation())
+                if (passwordMode) SettingsButton(feedbackAttempt({ model.loginPassword(username, password, igneous); password = ""; igneous = "" }),
                     enabled = state.ready && !state.busy && username.isNotBlank() && password.isNotEmpty() && (site == GallerySite.EH || igneous.isNotBlank())) { Text("登录并确认本站权限") }
                 else
-                ReferenceButton(feedbackAttempt({ model.login(uid, hash, igneous); hash = ""; uid = ""; igneous = "" }), enabled = state.ready && !state.busy && uid.isNotBlank() && hash.isNotBlank() && (site == GallerySite.EH || igneous.isNotBlank())) { Text("验证本站权限并保存") }
+                SettingsButton(feedbackAttempt({ model.login(uid, hash, igneous); hash = ""; uid = ""; igneous = "" }), enabled = state.ready && !state.busy && uid.isNotBlank() && hash.isNotBlank() && (site == GallerySite.EH || igneous.isNotBlank())) { Text("验证本站权限并保存") }
             }
-            if (state.settings.account != null) TextButton(feedbackAttempt(model::verifyAccess), enabled = !state.busy) { Text("重新确认本站访问权限") }
-            if (state.settings.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
+            if (state.settings.account != null) SettingsTextButton(feedbackAttempt(model::verifyAccess), enabled = !state.busy) { Text("重新确认本站访问权限") }
+            if (state.settings.account != null) SettingsTextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("${site.label} 全部收藏或按分类导入；各站账号和书库独立。",
             state.ready && state.settings.account != null, state.busy,
@@ -389,7 +390,7 @@ internal class EhModel(app: Application, private val session: WorldSession, priv
     LaunchedEffect(state.ready, state.settings.account) { if (state.ready && state.book == null) model.detail(id) }
     ReferenceRefreshColumn(modifier = Modifier.fillMaxSize(), refreshing = state.busy, refresh = { model.detail(id) },
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { DetailHeading(back) }
+        item { DetailHeading(back, sourceName = discoverySourceName(source)) }
         if (!readContentLayout(state.book != null, state.busy, state.detailError ?: state.message.takeIf { state.error && state.book == null }, { model.detail(id) }, detail = true, cancel = model::stop)) {
             item("offline-entry") { TextButton(download) { Text("加密下载与离线章节") } }
             return@ReferenceRefreshColumn

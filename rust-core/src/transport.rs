@@ -1,7 +1,7 @@
 //! Session-scoped transport with explicit source-specific POST operations. No cookie jar, credential persistence or source parsing.
 use crate::image_file::{ImageSink, SourceImageFile, MAX_IMAGE_BYTES};
 use crate::source::{SourceContext, SourceError, SourceWorld};
-use reqwest::{header, Client, Url};
+use reqwest::{header, Url};
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering::SeqCst},
     Arc,
@@ -75,8 +75,7 @@ enum Output {
 struct State {
     context: SourceContext,
     base: Url,
-    client: Client,
-    anonymous_images: Option<Client>,
+    clients: crate::source_route::SourceClients,
     config: SourceHttpConfig,
     permits: Semaphore,
     next_start: Mutex<Instant>,
@@ -942,34 +941,9 @@ impl SourceHttpSession {
                 headers.insert(name, value);
             }
         }
-        let mut client_builder = Client::builder()
-            .use_rustls_tls()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .retry(reqwest::retry::never())
-            .default_headers(headers)
-            .connect_timeout(Duration::from_millis(config.timeout_ms.into()))
-            .user_agent("FluxManga/0.0.1");
-        if context.source_id == "manhuagui-public-v1" {
-            client_builder = client_builder.dns_resolver(Arc::new(crate::manhuagui_dns::ManhuaguiDns));
-        }
-        let client = client_builder.build().map_err(transport_error)?;
-        // Never reuse API default headers on a CDN, including same-origin cover URLs.
-        let anonymous_images = if let Some(user_agent) = image_user_agent {
-            Some(
-                Client::builder()
-                    .use_rustls_tls()
-                    .no_proxy()
-                    .redirect(reqwest::redirect::Policy::none())
-                    .retry(reqwest::retry::never())
-                    .connect_timeout(Duration::from_millis(config.timeout_ms.into()))
-                    .user_agent(user_agent)
-                    .build()
-                    .map_err(transport_error)?,
-            )
-        } else {
-            None
-        };
+        let clients = crate::source_route::SourceClients::new(headers, image_user_agent,
+            config.timeout_ms, context.source_id == "manhuagui-public-v1");
+        clients.client(&context.source_id, false)?;
         let runtime = Builder::new_multi_thread()
             .worker_threads(1)
             .thread_name("flux-source-http")
@@ -980,8 +954,7 @@ impl SourceHttpSession {
             state: Arc::new(State {
                 context,
                 base,
-                client,
-                anonymous_images,
+                clients,
                 permits: Semaphore::new(config.max_in_flight as usize),
                 config,
                 next_start: Mutex::new(Instant::now()),
@@ -1122,7 +1095,7 @@ impl SourceHttpSession {
         url: Url,
         directory: String,
     ) -> Result<SourceImageFile, SourceError> {
-        if self.state.anonymous_images.is_none() {
+        if !self.state.clients.has_images() {
             return Err(SourceError::InvalidRequest);
         }
         match self
@@ -1261,12 +1234,11 @@ impl State {
             self.attempts.fetch_add(1, SeqCst);
             // Retry explicit transient statuses on GET / read-only Komga list POST. Transport,
             // TLS, auth, decoding and body-read failures are not blindly retried.
-            let client = if anonymous {
-                self.anonymous_images
-                    .as_ref()
-                    .ok_or(SourceError::InvalidRequest)?
-            } else {
-                &self.client
+            let (client, bypass) = self.clients.client(&self.context.source_id, anonymous)?;
+            let request_error = |error: reqwest::Error| {
+                if bypass && (error.is_connect() || error.is_timeout()) {
+                    SourceError::Network { kind: "vpn_bypass".into() }
+                } else { transport_error(error) }
             };
             let request = if let Some(body) = &body {
                 client
@@ -1294,8 +1266,8 @@ impl State {
                     .header("x-auth-timestamp", timestamp).header("x-auth-signature", signature);
             }
             let mut response = if let Some(limit) = header_timeout {
-                tokio::time::timeout(limit, request.send()).await.map_err(|_| SourceError::Timeout)?.map_err(transport_error)?
-            } else { request.send().await.map_err(transport_error)? };
+                tokio::time::timeout(limit, request.send()).await.map_err(|_| SourceError::Timeout)?.map_err(request_error)?
+            } else { request.send().await.map_err(request_error)? };
             if public_catalog_origin(&self.context.source_id).is_some() && body.is_none() {
                 let mut current = url.clone();
                 let mut hops = 0;
@@ -1306,7 +1278,7 @@ impl State {
                     if headers.contains_key(header::COOKIE) {
                         if !public_account_url(&self.context.source_id, &next) { return Err(SourceError::AuthenticationRequired); }
                     } else if !public_catalog_url(&self.context.source_id, &next, directory.is_some()) { return Err(SourceError::InvalidResponse); }
-                    response = client.get(next.clone()).headers(headers.clone()).send().await.map_err(transport_error)?;
+                    response = client.get(next.clone()).headers(headers.clone()).send().await.map_err(request_error)?;
                     current = next;
                     hops += 1;
                 }
@@ -1333,7 +1305,7 @@ impl State {
                     self.attempts.fetch_add(1, SeqCst);
                     response = client.get(next.clone())
                         .header(header::USER_AGENT, "okhttp/3.8.1")
-                        .send().await.map_err(transport_error)?;
+                        .send().await.map_err(request_error)?;
                     current = next;
                     hops += 1;
                 }
@@ -1360,7 +1332,7 @@ impl State {
                         *start = Instant::now() + Duration::from_millis(self.config.min_interval_ms.into());
                     }
                     self.attempts.fetch_add(1, SeqCst);
-                    response = client.get(next.clone()).headers(redirected_headers.clone()).send().await.map_err(transport_error)?;
+                    response = client.get(next.clone()).headers(redirected_headers.clone()).send().await.map_err(request_error)?;
                     current = next; hops += 1;
                 }
             }
@@ -1446,14 +1418,14 @@ impl State {
                     return Err(SourceError::InvalidResponse);
                 }
                 let mut sink = ImageSink::create(directory)?;
-                while let Some(chunk) = response.chunk().await.map_err(transport_error)? {
+                while let Some(chunk) = response.chunk().await.map_err(request_error)? {
                     // Bounded chunks go straight to the private output, never a full-image Vec.
                     sink.write(&chunk)?;
                 }
                 return Ok(Output::Image(sink.finish()?));
             }
             let mut body = Vec::new();
-            while let Some(chunk) = response.chunk().await.map_err(transport_error)? {
+            while let Some(chunk) = response.chunk().await.map_err(request_error)? {
                 if chunk.len() > limit - body.len() {
                     return Err(SourceError::InvalidResponse);
                 }

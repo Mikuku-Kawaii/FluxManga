@@ -146,8 +146,8 @@ internal fun RecordExportContent(model: RecordExportModel, session: WorldSession
     val writing = state.phase in setOf(RecordExportPhase.WRITING, RecordExportPhase.CANCELLING)
     val leave: () -> Unit = { model.cancel(); back() }
     BackHandler(writing, leave)
-    ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = enabled && state.phase == RecordExportPhase.IDLE, modifier = Modifier.fillMaxSize().testTag("record-export"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ReferenceRefreshColumn(refreshing = state.loading, refresh = { model.refresh() }, refreshEnabled = enabled && state.phase == RecordExportPhase.IDLE, modifier = Modifier.fillMaxSize().testTag("record-export"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("导出本地记录", if (model.world == PrototypeWorld.SFW) "仅表世界" else "仅里世界", leave) }
         item { SettingsPanel {
             Text("书目 · 书签与备注 · 阅读进度", style = MaterialTheme.typography.titleMedium)
@@ -171,27 +171,24 @@ internal fun RecordExportContent(model: RecordExportModel, session: WorldSession
         } } }
         if (state.loading || writing) item { RequestLoading() }
         state.message?.let { message -> item { RequestFeedback(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite }) } }
-        if (writing) item {
+        if (writing) item { Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("正在导出，已处理 ${state.written} 条。")
-            TextButton(onClick = model::cancel, enabled = state.phase == RecordExportPhase.WRITING) {
+            SettingsTextButton(onClick = model::cancel, enabled = state.phase == RecordExportPhase.WRITING) {
                 Text(if (state.phase == RecordExportPhase.CANCELLING) "正在停止…" else "停止导出")
             }
-        } else if (state.phase == RecordExportPhase.READY) item {
-            ReferenceButton(onClick = feedbackAttempt(model::start), enabled = enabled && acknowledged, modifier = Modifier.fillMaxWidth()) { Text("开始导出当前空间记录") }
-            TextButton(onClick = model::abandonSelection) { Text("放弃此文件") }
-        } else if (state.phase == RecordExportPhase.PICKING) item { Text("请选择保存位置。") }
-        else item {
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(acknowledged, role = Role.Checkbox,
-                onValueChange = { acknowledged = it }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(acknowledged, null)
-                Text("我了解导出文件是明文，仅包含当前空间记录", Modifier.weight(1f))
-            }
-            ReferenceButton(onClick = { pick(model) }, modifier = Modifier.fillMaxWidth(),
+        } } else if (state.phase == RecordExportPhase.READY) item { Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsButton(onClick = feedbackAttempt(model::start), enabled = enabled && acknowledged, modifier = Modifier.fillMaxWidth()) { Text("开始导出当前空间记录") }
+            SettingsTextButton(onClick = model::abandonSelection) { Text("放弃此文件") }
+        } } else if (state.phase == RecordExportPhase.PICKING) item { Text("请选择保存位置。") }
+        else item { Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsCheckboxRow("我了解导出文件是明文，仅包含当前空间记录", acknowledged,
+                change = { acknowledged = it })
+            SettingsButton(onClick = { pick(model) }, modifier = Modifier.fillMaxWidth(),
                 enabled = enabled && acknowledged && state.counts != null && !state.loading) {
                 Text(if (state.phase == RecordExportPhase.COMPLETE) "另存一份" else "选择保存位置")
             }
             if (state.phase == RecordExportPhase.COMPLETE) Text("已导出 ${state.written} 条记录。")
-        }
+        } }
         item { SettingsDisclosure("中断与失败处理", "离开或进入后台会停止写入") {
             Text("导出时请停留本页。中断可能留下不完整文件，请删除后重新导出。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

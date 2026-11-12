@@ -79,6 +79,8 @@ struct Page<T> {
 }
 #[derive(Deserialize)]
 struct DetailComic {
+    #[serde(default)]
+    restrict: serde_json::Value,
     #[serde(flatten)]
     base: Comic,
     #[serde(default)]
@@ -185,6 +187,8 @@ pub struct CopyChapterGroup {
 }
 #[derive(uniffi::Record)]
 pub struct CopyMangaBook {
+    /// Raw upstream age/content classification; unrelated to reclass or pricing.
+    pub content_rating: Option<u32>,
     pub detail: SourceDetail,
     pub groups: Option<Vec<CopyChapterGroup>>,
     pub themes: Option<Vec<CopyTheme>>,
@@ -332,6 +336,30 @@ pub struct CopyMangaSource {
     authenticated: bool,
 }
 impl CopyMangaSource {
+    async fn updates_catalog(
+        &self,
+        context: SourceContext,
+        page: SourcePageRequest,
+        home: bool,
+    ) -> Result<SourceSearchPage, SourceError> {
+        self.check(&context)?;
+        let expected = offset(page)?;
+        // Use the reading API's update ordering; the separate website feed may be blocked.
+        let page: Page<UpdateComic> = parse(
+            self.http.get(context.clone(), format!(
+                "api/v3/comics?limit={LIMIT}&offset={expected}&ordering=-datetime_updated&platform={}{}",
+                self.platform(), if home { "&free_type=1" } else { "" }
+            )).await?
+        )?;
+        let continuation = continuation(&page, expected)?;
+        let items = page.list.into_iter().map(|entry| {
+            let mut manga = self.manga(entry.base)?;
+            manga.updated_at = update_text(&entry.datetime_updated);
+            Ok(manga)
+        }).collect::<Result<Vec<_>, SourceError>>()?;
+        self.check(&context)?;
+        Ok(SourceSearchPage { context, items, continuation })
+    }
     fn platform(&self) -> u8 {
         if self.base.host_str() == Some("api.copy4000.com") { 1 } else { 3 }
     }
@@ -485,28 +513,12 @@ impl CopyMangaSource {
             expected,
         )
     }
-    pub async fn updates(
-        &self,
-        context: SourceContext,
-        page: SourcePageRequest,
-    ) -> Result<SourceSearchPage, SourceError> {
-        self.check(&context)?;
-        let expected = offset(page)?;
-        // Use the reading API's update ordering; the separate website feed may be blocked.
-        let page: Page<UpdateComic> = parse(
-            self.http.get(context.clone(), format!(
-                "api/v3/comics?limit={LIMIT}&offset={expected}&ordering=-datetime_updated&platform={}",
-                self.platform()
-            )).await?
-        )?;
-        let continuation = continuation(&page, expected)?;
-        let items = page.list.into_iter().map(|entry| {
-            let mut manga = self.manga(entry.base)?;
-            manga.updated_at = update_text(&entry.datetime_updated);
-            Ok(manga)
-        }).collect::<Result<Vec<_>, SourceError>>()?;
-        self.check(&context)?;
-        Ok(SourceSearchPage { context, items, continuation })
+    pub async fn updates(&self, context: SourceContext, page: SourcePageRequest) -> Result<SourceSearchPage, SourceError> {
+        self.updates_catalog(context, page, false).await
+    }
+    /// Price-directory prefilter only. Kotlin still checks each comic's content rating.
+    pub async fn home_updates(&self, context: SourceContext, page: SourcePageRequest) -> Result<SourceSearchPage, SourceError> {
+        self.updates_catalog(context, page, true).await
     }
     pub async fn search(
         &self,
@@ -626,6 +638,7 @@ impl CopyMangaSource {
         let manga = self.manga(detail.comic.base)?;
         self.check(&context)?;
         Ok(CopyMangaBook {
+            content_rating: detail.comic.restrict.get("value").and_then(|v| v.as_u64()).and_then(|v| u32::try_from(v).ok()),
             detail: SourceDetail {
                 context,
                 manga,

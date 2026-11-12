@@ -56,7 +56,7 @@ internal fun AppUpdatePrompt(model: AppUpdateModel, enabled: () -> Boolean, open
                 openUpdates()
             })
         },
-        dismissButton = { TextButton(onClick = { dismissedVersion = target.version }) { Text("稍后") } })
+        dismissButton = { SettingsTextButton(onClick = { dismissedVersion = target.version }) { Text("稍后") } })
 }
 
 @Composable
@@ -70,8 +70,8 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
         state.phase in setOf(UpdatePhase.ERROR, UpdatePhase.INCOMPATIBLE, UpdatePhase.PAUSED, UpdatePhase.READY, UpdatePhase.INSTALLING) ||
             it == "正在暂停并保存下载字节…"
     }
-    LazyColumn(Modifier.fillMaxSize().testTag("app-update-page"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("app-update-page"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("应用更新", "", back) }
         item { Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
           Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.Start,
@@ -102,7 +102,7 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
             state.installationMessage?.let { RequestFeedback(it) }
             primaryMessage?.let { RequestFeedback(it, color = if(state.phase == UpdatePhase.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, failure = state.phase == UpdatePhase.ERROR) }
             if (state.phase in setOf(UpdatePhase.CHECKING, UpdatePhase.VERIFYING)) RequestLoading()
-            if (model.configured && (state.artifact == null || state.phase == UpdatePhase.ERROR)) ReferenceButton(onClick = feedbackAttempt(model::check), enabled = model.configured && !state.busy,
+            if (model.configured && (state.artifact == null || state.phase == UpdatePhase.ERROR)) SettingsButton(onClick = feedbackAttempt(model::check), enabled = model.configured && !state.busy,
                 modifier = Modifier.fillMaxWidth().testTag("update-check")) { Text(if (state.phase == UpdatePhase.ERROR) "重新检查" else "检查更新") }
             state.artifact?.let { a ->
                 Text("${a.name} (${a.version})")
@@ -116,10 +116,10 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
                         "已接收 ${sizeLabel(state.bytes)} / ${sizeLabel(state.transferSize)}")
                 }
                 if (state.phase in setOf(UpdatePhase.DOWNLOADING, UpdatePhase.APPLYING, UpdatePhase.VERIFYING)) {
-                    OutlinedButton(onClick = model::pause) { Text("暂停更新") }
+                    SettingsOutlinedButton(onClick = model::pause) { Text("暂停更新") }
                 }
                 if (!state.busy && state.phase != UpdatePhase.READY) {
-                    ReferenceButton(onClick = model::download, modifier = Modifier.fillMaxWidth().testTag("update-download")) { Text(when {
+                    SettingsButton(onClick = model::download, modifier = Modifier.fillMaxWidth().testTag("update-download")) { Text(when {
                         state.phase == UpdatePhase.ERROR -> "重试下载"
                         state.bytes > 0 -> "继续下载"
                         else -> "下载更新"
@@ -129,10 +129,10 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
                 if (state.phase == UpdatePhase.READY) {
                     if (!allowed) {
                         Text("请允许此来源安装，返回后点击立即安装。")
-                        OutlinedButton(onClick = permission) { Text("允许此来源安装") }
+                        SettingsOutlinedButton(onClick = permission) { Text("允许此来源安装") }
                     }
-                    ReferenceButton(onClick = install, enabled = allowed, modifier = Modifier.fillMaxWidth().testTag("update-install")) { Text("立即安装") }
-                    OutlinedButton(onClick = back) { Text("稍后") }
+                    SettingsButton(onClick = install, enabled = allowed, modifier = Modifier.fillMaxWidth().testTag("update-install")) { Text("立即安装") }
+                    SettingsOutlinedButton(onClick = back) { Text("稍后") }
                 }
             }
         } }
@@ -153,14 +153,14 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
                         Text("增量包 · ${sizeLabel(patch.payload.size)}，少下载 ${sizeLabel(a.size - patch.payload.size)}")
                         Text("增量包合成失败会改为下载完整包。", style = MaterialTheme.typography.bodySmall)
                         if (!state.busy && state.phase != UpdatePhase.READY)
-                            TextButton(onClick = model::downloadFull) { Text("改用完整包") }
+                            SettingsTextButton(onClick = model::downloadFull) { Text("改用完整包") }
                     }
                     if (state.phase == UpdatePhase.APPLYING)
                         Text("已合成 ${sizeLabel(state.assembledBytes)} / ${sizeLabel(a.size)}")
-                    if (state.phase != UpdatePhase.ERROR) TextButton(onClick = model::check, enabled = model.configured && !state.busy,
+                    if (state.phase != UpdatePhase.ERROR) SettingsTextButton(onClick = model::check, enabled = model.configured && !state.busy,
                         modifier = Modifier.testTag("update-check")) { Text("重新检查更新") }
                     if (!state.busy && (state.bytes > 0 || state.phase == UpdatePhase.READY))
-                        TextButton(onClick = { confirmClear = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("取消并清理此更新包") }
+                        SettingsTextButton(onClick = { confirmClear = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("取消并清理此更新包") }
                 }
                 Text("清理更新包会保留应用和阅读数据。",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -170,6 +170,6 @@ internal fun AppUpdatePage(model: AppUpdateModel, back: () -> Unit, install: () 
     if (confirmClear) ReferenceDialog(onDismissRequest = { confirmClear = false }, title = { Text("清理此更新包？") },
         text = { Text("删除此版本的更新文件，保留已安装应用和阅读数据。") },
         confirmButton = { ReferenceDialogConfirm("清理更新包", onClick = { confirmClear = false; model.clearDownload() }, destructive = true) },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("保留") } })
+        dismissButton = { SettingsTextButton(onClick = { confirmClear = false }) { Text("保留") } })
 }
 private fun sizeLabel(bytes: Long) = String.format(java.util.Locale.ROOT, "%.1f MiB", bytes / 1048576.0)

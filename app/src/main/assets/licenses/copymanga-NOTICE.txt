@@ -90,3 +90,10 @@ mapi.hotmangasg.com and mapi.elfgjfghkk.club. Bounded anonymous reading fallback
 reuses the current Rust client and protocol. Account login/import endpoints,
 source keys and stored credentials are unchanged. No additional upstream
 implementation or dependency is imported.
+
+2026-11-11 homepage classification:
+Exposed the optional upstream comic.restrict.value as content_rating. Added a
+homepage-only free_type=1 updates prefilter; price is not an age classification.
+Kotlin homepage checks confirmed general-audience ratings through existing detail
+requests with bounded session reuse. General browsing and account imports retain
+their existing behavior. No additional upstream code or dependency imported.

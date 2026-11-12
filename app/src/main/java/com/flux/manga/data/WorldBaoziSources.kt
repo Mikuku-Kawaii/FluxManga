@@ -25,7 +25,9 @@ internal class WorldBaoziSources(private val session: WorldSession) : Closeable 
         val account = BaoziAccountStore(WorldDataStore(app).accountImportDatabase()).current {
             ticket == revision && session.accepts(identity)
         }
-        val browser = account?.browserSession?.let {
+        // Public browsing must not inherit the account's retired origin. Website
+        // verification cookies are host-bound and cannot move with a 302.
+        val browser = account?.browserSession?.takeIf { it.origin == BaoziEndpoint.PUBLIC_URL }?.let {
             BaoziPublicBrowser(it.origin, it.cookie.split(';').map(String::trim)
                 .filter { part -> part.substringBefore('=').startsWith("__Host-gk_") }.joinToString("; "), it.userAgent)
         }
@@ -34,7 +36,7 @@ internal class WorldBaoziSources(private val session: WorldSession) : Closeable 
             transport?.takeIf { it.browser == browser } ?: run {
                 resetTransport()
                 val context = identity.sourceContext(BaoziEndpoint.SOURCE_ID)
-                BaoziTransport(SourceHttpSession.baozi(context, browser?.origin ?: BaoziEndpoint.PUBLIC_URL,
+                BaoziTransport(SourceHttpSession.baozi(context, BaoziEndpoint.PUBLIC_URL,
                     SourceHttpConfig(15_000u, 2u, 500u, 2u, 2u * 1024u * 1024u)), context, browser).also { transport = it }
             }
         }
@@ -44,11 +46,11 @@ internal class WorldBaoziSources(private val session: WorldSession) : Closeable 
         require(isBaoziSource(sourceId))
         val application = app.applicationContext
         val identity = session.identity.value
-        val initial = transport(application)
+        transport(application)
         return synchronized(this) {
             if (!session.accepts(identity)) throw CancellationException()
             clients.getOrPut(sourceId) {
-                WorldBaoziClient(session, sourceId, initial.browser?.origin ?: BaoziEndpoint.PUBLIC_URL,
+                WorldBaoziClient(session, sourceId, BaoziEndpoint.PUBLIC_URL,
                     { transport(application) }, { path ->
                         suspend fun fetch(): SourceHttpReply {
                             val current = transport(application)

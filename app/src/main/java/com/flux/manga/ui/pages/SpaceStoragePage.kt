@@ -87,7 +87,7 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
     var readerPages by rememberSaveable { mutableStateOf(false) }
     val choice = CleanupChoice(covers && public, searches, visits, privateResources && !public, catalogPages && public, readerPages && public)
     val editable = state.ready && !state.busy
-    ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag("space-storage"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag("space-storage"), contentPadding = SettingsPagePadding, verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("存储与清理", "", back) }
         item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("仅清理所选缓存与记录，保留书目和阅读进度。", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -118,7 +118,7 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
             SettingsDivider()
             CleanupOption("最近观看记录", state.usage?.let { "${it.visits} 条 · 保留续读进度" } ?: "尚未读取", visits, editable) { visits = it }
         } }
-        if (choice.any) item { ReferenceButton(onClick = { confirm = true }, enabled = editable && choice.any, modifier = Modifier.fillMaxWidth()) { Text("查看清理确认") } }
+        if (choice.any) item { SettingsButton(onClick = { confirm = true }, enabled = editable && choice.any, modifier = Modifier.fillMaxWidth()) { Text("查看清理确认") } }
         if (public) item {
             SettingsPanel {
                 val stored = state.usage?.coverPolicy
@@ -139,7 +139,7 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
                             }
                         }
                         if (draft != stored) Text("有未保存的选择")
-                        ReferenceButton(onClick = { confirmPolicyName = draft?.name },
+                        SettingsButton(onClick = { confirmPolicyName = draft?.name },
                             enabled = editable && draft != null && (draft != stored || overLimit)) {
                             Text(if (draft != stored) "保存并应用上限" else "再次整理至上限")
                         }
@@ -172,7 +172,7 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
             append("\n\n仅影响表世界本地封面；下载、CBZ 应用副本、原文件、书库和进度保留。")
         }, Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm("确认应用", onClick = { confirmPolicyName = null; model.applyCoverPolicy(confirmedPolicy) }, enabled = editable) },
-        dismissButton = { TextButton(onClick = { confirmPolicyName = null }) { Text("取消") } })
+        dismissButton = { SettingsTextButton(onClick = { confirmPolicyName = null }) { Text("取消") } })
     if (confirm) ReferenceDialog(onDismissRequest = { confirm = false }, title = { Text("确认清理当前空间") },
         text = { Text(buildString {
             append(if (public) "表世界：" else "里世界：")
@@ -184,19 +184,10 @@ internal fun SpaceStoragePage(session: WorldSession, back: () -> Unit, downloads
             if (choice.privateResources) append("\n里世界资源缓存 ${state.usage?.privateResources?.files ?: 0} 个文件")
             append("\n\n记录清理不可撤销；书目、阅读进度、分组、下载、凭据和原文件保持。")
         }, modifier = Modifier.verticalScroll(rememberScrollState())) }, confirmButton = { ReferenceDialogConfirm("清理所选项目", onClick = { confirm = false; model.clear(choice) }, enabled = editable && choice.any, destructive = true) },
-        dismissButton = { TextButton(onClick = { confirm = false }) { Text("取消") } })
+        dismissButton = { SettingsTextButton(onClick = { confirm = false }) { Text("取消") } })
 }
 
 @Composable
 private fun CleanupOption(title: String, detail: String, checked: Boolean, enabled: Boolean, change: (Boolean) -> Unit) {
-    Box(Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(checked, enabled = enabled, role = Role.Checkbox, onValueChange = change)
-        .padding(horizontal = 16.dp, vertical = 10.dp), contentAlignment = Alignment.CenterStart) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Checkbox(checked, null, enabled = enabled)
-        }
-    }
+    SettingsCheckboxRow(title, checked, change, description = detail, enabled = enabled)
 }

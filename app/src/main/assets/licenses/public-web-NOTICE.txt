@@ -24,3 +24,8 @@ Local files: PublicBookSource.kt, PublicWebSite.kt, WorldPublicWebSources.kt, Pu
 topicInfo.tags and catalog category/author_name/latest_comic_title from public
 website payloads. Native categories retain their IDs; other tag labels use keyword
 search. Existing parsers, source sessions and dependencies remain in use.
+
+2026-11-12 reader routing: use the official Manhuagui reader configuration's
+eu/us/i.hamreus.com hosts with bounded source-session fallback. Signed paths,
+page identities, certificate checks and anonymous image ownership are retained.
+No third-party downloader code or additional dependency was imported.

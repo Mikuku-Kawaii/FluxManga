@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 internal data class ShelfState(val books: List<ShelfBook> = emptyList(), val loading: Boolean = true,
     val showLoading: Boolean = true,
+    val informationBusy: Boolean = false, val informationMessage: String? = null,
+    val informationFailed: Set<String> = emptySet(),
     val errors: List<String> = emptyList(), val saving: Set<String> = emptySet(),
     val layout: ShelfLayout = ShelfLayout.GRID, val sort: ShelfSort = ShelfSort.RECENT,
     val batchBusy: Boolean = false, val batchProcessed: Int = 0, val batchTotal: Int = 0,
@@ -84,7 +86,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
     fun filter(value: ShelfFilter) { if (active()) saved["shelf-filter"] = value.name }
     fun refresh() = refresh(silent = false)
     fun refresh(silent: Boolean) {
-        if (work?.isActive == true || state.value.batchBusy || !active()) return
+        if (work?.isActive == true || state.value.batchBusy || (!silent && state.value.informationBusy) || !active()) return
         // A child list may have changed the same world's preference while this entry was stopped.
         readPresentation()
         work = viewModelScope.launch {
@@ -121,7 +123,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
                         title = info[row.key.sourceId to row.key.mangaId]?.title?.takeIf(String::isNotBlank) ?: row.title) }
                     if (active()) {
                         onlineRows = enriched; mutable.value = state.value.copy(books = enriched, loading = false, errors = errors)
-                        if (!silent) enriched.forEach { prepareInformation(it, refreshMetadata = true) }
+                        if (!silent) refreshInformation(enriched)
                     }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { if (active()) mutable.value = state.value.copy(loading = false, errors = listOf("私有书库读取失败，请重试")) }
@@ -138,7 +140,7 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { errors += "下载状态读取失败，请重试。" }
             if (active()) mutable.value = state.value.copy(books = withShelfDownloads(localRows + onlineRows,downloadRows), loading = false, errors = errors)
-            if (active() && !silent) onlineRows.forEach { prepareInformation(it, refreshMetadata = true) }
+            if (active() && !silent) refreshInformation(onlineRows)
         }
     }
     fun favorite(book: ShelfBook) {
@@ -215,15 +217,71 @@ internal class ShelfViewModel(app: Application, val session: WorldSession,
     }
     fun cancelBatch() { batchWork?.cancel() }
     private val informationWork = mutableMapOf<String, Job>()
+    private var informationRefresh: Job? = null
+    private var visibleBooks: Set<String> = emptySet()
+    fun visibleBooks(keys: Set<String>) { visibleBooks = keys }
+    fun retryInformation() = refreshInformation(state.value.books.filter { it.stableKey in state.value.informationFailed })
+    fun pauseInformation() {
+        informationRefresh?.cancel()
+        informationWork.values.toList().forEach { it.cancel() }
+    }
+    private fun refreshInformation(rows: List<ShelfBook>) {
+        if (!active() || state.value.informationBusy) return
+        val selected = rows.filter { it.online && it.available }.sortedWith(
+            compareByDescending<ShelfBook> { it.stableKey in visibleBooks }
+                .thenByDescending { it.readAt ?: 0L }.thenBy { it.information?.isFinished == true })
+        if (selected.isEmpty()) return
+        mutable.value = state.value.copy(informationBusy = true, informationMessage = "正在更新 ${selected.size} 部作品资料…", informationFailed = emptySet())
+        informationRefresh = viewModelScope.launch {
+            val remaining = selected.mapTo(mutableSetOf()) { it.stableKey }
+            val failed = mutableSetOf<String>()
+            var succeeded = 0
+            val permits = kotlinx.coroutines.sync.Semaphore(2)
+            try {
+                for (batch in selected.chunked(8)) {
+                    val results = coroutineScope { batch.map { book -> async {
+                        permits.acquire()
+                        try {
+                            informationWork[book.stableKey]?.join()
+                            val result = informationLoader.load(book.key.sourceId, book.key.mangaId,
+                                refreshMetadata = true, loadCover = false, loadChapters = false)
+                            book to result
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { book to null }
+                        finally { permits.release() }
+                    } }.awaitAll() }
+                    ensureActive(); if (!active()) throw CancellationException()
+                    val values = results.mapNotNull { (book, result) ->
+                        remaining.remove(book.stableKey)
+                        if (result == null || result.metadataError != null) failed += book.stableKey else succeeded++
+                        result?.let { book.stableKey to it.info }
+                    }.toMap()
+                    fun ShelfBook.enriched(): ShelfBook {
+                        val value = values[stableKey] ?: return this
+                        return copy(title = value.title.takeIf(String::isNotBlank) ?: title, remote = remote?.copy(information = value))
+                    }
+                    onlineRows = onlineRows.map { it.enriched() }
+                    mutable.value = state.value.copy(books = state.value.books.map { it.enriched() },
+                        informationMessage = "已更新 $succeeded 部 · 失败 ${failed.size} 部 · 待处理 ${remaining.size} 部")
+                }
+            } finally {
+                if (active()) mutable.value = state.value.copy(informationBusy = false,
+                    informationFailed = failed + remaining,
+                    informationMessage = "资料更新成功 $succeeded 部 · 失败 ${failed.size} 部" +
+                        if (remaining.isNotEmpty()) " · 未完成 ${remaining.size} 部" else "")
+            }
+        }
+    }
+
 
     // Metadata belongs to the page model, not a recycled lazy-list cell. Covers render independently.
     fun prepareInformation(book: ShelfBook, refreshMetadata: Boolean = false) {
-        if (!active() || !book.online || !book.available || (!refreshMetadata && book.information?.needsMetadataRefresh(book.key.sourceId) == false) ||
+        if (!active() || state.value.informationBusy || !book.online || !book.available || (!refreshMetadata && book.information?.needsMetadataRefresh(book.key.sourceId) == false) ||
             informationWork[book.stableKey]?.isActive == true) return
         informationWork[book.stableKey] = viewModelScope.launch {
             try {
                 val result = informationLoader.load(book.key.sourceId, book.key.mangaId, refreshMetadata = refreshMetadata,
-                    loadCover = false, loadChapters = refreshMetadata)
+                    loadCover = false, loadChapters = false)
                 if (active()) {
                     fun ShelfBook.enriched() = if (stableKey != book.stableKey) this else copy(
                         title = result.info.title.takeIf(String::isNotBlank) ?: title,

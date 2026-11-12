@@ -40,6 +40,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
     val state = mutable.asStateFlow()
     private var operation: Job? = null
     @Volatile private var foreground = false
+    private val background = UpdateBackgroundConnection(app, this)
     val configured get() = BuildConfig.UPDATE_MANIFEST_URL.isNotBlank() && BuildConfig.UPDATE_PUBLIC_KEY.isNotBlank()
     val currentVersion get() = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
     val channel get() = BuildConfig.UPDATE_CHANNEL
@@ -62,7 +63,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
     }
     fun foreground(value: Boolean) {
         foreground = value
-        if (!value && mutable.value.phase in setOf(UpdatePhase.DOWNLOADING, UpdatePhase.VERIFYING, UpdatePhase.APPLYING)) pause()
+        if (!value && !background.running && mutable.value.phase in setOf(UpdatePhase.DOWNLOADING, UpdatePhase.VERIFYING, UpdatePhase.APPLYING)) pause()
     }
     fun automatic(value: Boolean) {
         prefs.edit { putBoolean("automatic", value) }
@@ -142,11 +143,14 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         autoTransfer = automatic
         mutable.update { it.copy(phase = UpdatePhase.DOWNLOADING, message = null, assembledBytes = 0) }
         try {
+            if (!automatic && foreground && !background.start()) mutable.update {
+                it.copy(message = "后台更新未启用，请允许通知；本次保持应用在前台可继续下载")
+            }
             withContext(Dispatchers.IO) {
                 val job = currentCoroutineContext()
                 fun checkpoint() {
                     job.ensureActive()
-                    if (!foreground) throw CancellationException("Update left foreground")
+                    if (!foreground && !background.running) throw CancellationException("Update left foreground")
                     require(manifest?.let { it.expires > now() && a in it.artifacts } == true) { "清单已过期，请重新检查" }
                     if (automatic && !unmetered()) throw CancellationException("Update network changed")
                 }
@@ -210,6 +214,7 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
             mutable.update { it.copy(phase = UpdatePhase.ERROR, bytes = (it.patch?.let(::patchFile) ?: partFile(a)).length(), message = message(e, "下载或校验失败，可重试或清理")) }
         } finally {
             withContext(NonCancellable + Dispatchers.IO) { mergingFile(a).delete() }
+            background.stop()
             autoTransfer = false
         }
     }
@@ -320,6 +325,6 @@ internal class AppUpdateModel(app: Application) : AndroidViewModel(app) {
         else -> "$fallback（${e.javaClass.simpleName}）"
     }
     private fun now() = System.currentTimeMillis() / 1000
-    override fun onCleared() { operation?.cancel(); transport.cancel(); super.onCleared() }
+    override fun onCleared() { operation?.cancel(); transport.cancel(); background.stop(); super.onCleared() }
     companion object { private val coldCheck = AtomicBoolean(false) }
 }

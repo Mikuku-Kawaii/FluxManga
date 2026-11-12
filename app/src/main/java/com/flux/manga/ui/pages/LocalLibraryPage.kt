@@ -305,7 +305,7 @@ fun LocalLibraryPage(session: WorldSession, mangaId: String? = null, back: () ->
         modifier = Modifier.fillMaxSize().testTag("local-list"), state = if (state.loading && state.cards.isEmpty()) loadingScroll else contentScroll,
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (mangaId != null) DetailHeading(back, backModifier = Modifier.testTag("local-back"),
+            if (mangaId != null) DetailHeading(back, backModifier = Modifier.testTag("local-back"), sourceName = "本地 CBZ",
                 actions = { ReferenceActionsButton("书目管理", { showManagement = true }, Modifier.testTag("local-actions")) }) else SettingsHeading(if (searchMode) "搜索" else "本地书库",
                 "",
                 back, Modifier.testTag("local-title"), Modifier.testTag("local-back"), actions = {

@@ -21,26 +21,26 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
     val startup = remember { com.flux.manga.privacy.StartupPreferences(context) }
     var pending by remember { mutableStateOf<LauncherStyle?>(null) }
     LaunchedEffect(Unit) { privacy.refresh() }
-    LazyColumn(Modifier.fillMaxSize().testTag("privacy-settings"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("privacy-settings"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("隐私入口", "", back) }
         item { SettingsPanel {
             Text("当前空间保护", style = MaterialTheme.typography.titleMedium)
             Text(if (privacy.privateSpace) if (startup.returnToPublic) "里世界 · 自动返回表世界已开启" else "里世界 · 保留上次空间" else "当前位于表世界",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (privacy.privateSpace) ReferenceButton(onClick = privacy::leavePrivateSpace,
+            if (privacy.privateSpace) SettingsButton(onClick = privacy::leavePrivateSpace,
                 modifier = Modifier.testTag("privacy-exit-now")) { Text("立即退出里世界") }
         } }
         item { SettingsPanel {
             PrivacyToggle("长按进入里世界", "按住右侧切换键 1.5 秒进入，单击切换键返回",
                 privacy.longPress, !privacy.busy, "privacy-long-press", privacy::changeLongPress)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            SettingsDivider()
             PrivacyToggle("生物识别验证", "进入与后台返回时验证；开关此项也需验证",
                 privacy.biometric, !privacy.busy, "privacy-biometric", privacy::changeBiometric)
             if (privacy.busy) RequestLoading()
             Text(privacy.availability, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SettingsDisclosure("验证帮助与系统设置") {
-                TextButton(onClick = privacy::enroll, enabled = !privacy.busy) { Text("系统生物识别设置") }
+                SettingsTextButton(onClick = privacy::enroll, enabled = !privacy.busy) { Text("系统生物识别设置") }
                 Text("无法验证时可继续使用表世界。关闭此功能需先恢复系统生物识别。")
                 Text("无障碍可使用切换键的长按动作。长按与生物识别设置即时生效，默认均关闭。")
             }
@@ -51,7 +51,7 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
         } }
         item { SettingsPanel { SettingsDisclosure("桌面图标与名称", "当前：${privacy.launcher}") {
             LauncherStyle.entries.forEach { style ->
-                OutlinedButton(onClick = { pending = style }, enabled = !privacy.busy,
+                SettingsOutlinedButton(onClick = { pending = style }, enabled = !privacy.busy,
                     modifier = Modifier.fillMaxWidth().testTag("launcher-${style.name}")) {
                     Text(if (style == LauncherStyle.STANDARD) "恢复 FluxManga" else "使用随手记图标与名称")
                 }
@@ -70,7 +70,7 @@ internal fun PrivacySettingsPage(privacy: PrivacyController, back: () -> Unit) {
         text = { Text("改为${style.title}，桌面可能稍后刷新或关闭应用。仅更换桌面入口，系统其他位置仍可能显示 FluxManga。",
             Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { ReferenceDialogConfirm("更改桌面入口", onClick = { pending = null; privacy.setLauncher(style) }, enabled = !privacy.busy) },
-        dismissButton = { TextButton(onClick = { pending = null }) { Text("取消") } }) }
+        dismissButton = { SettingsTextButton(onClick = { pending = null }) { Text("取消") } }) }
 }
 
 @Composable

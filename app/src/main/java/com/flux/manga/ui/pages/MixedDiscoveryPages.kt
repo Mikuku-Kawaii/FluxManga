@@ -27,12 +27,13 @@ import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
 
 internal class MixedDiscoveryModel(private val app: Application, private val session: WorldSession, komgaId: String?,
-    section: DiscoverySection?, targets: List<TagTarget> = emptyList(), tagLabel: String = "") : ViewModel() {
+    private val section: DiscoverySection?, targets: List<TagTarget> = emptyList(), tagLabel: String = "", private val home: Boolean = false) : ViewModel() {
     private val identity = session.identity.value
     private val komga = komgaId?.let { KomgaAccess(app, session, it) }
     private val privateCatalog = if (identity.world == PrototypeWorld.NSFW) PrivateCatalog(app, session) else null
     val library = com.flux.manga.data.OnlineLibrary(app, session)
     private val selection = SourceSelection(app, identity.world)
+    private var restrictHome = home && selection.copyHomeGeneralOnly()
     val featured = HomeFeaturedMetadata(app, session)
     private val blacklist = TagBlacklistFilter(app, session)
     val updateInfo = mutableStateMapOf<MangaKey, HomeUpdateInfo>()
@@ -41,7 +42,7 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
     private val updateRequests = Semaphore(2)
     private val tagQueries = if (section == null) mixedTagQueries(
         aggregateSearchSources(identity.world, komgaId).filter(selection::enabled), tagLabel, targets) else emptyList()
-    private val sources = if (section == null) tagQueries.indices.map { "tag:$it" } else (if (privateCatalog != null) when (section) {
+    private val availableSources = if (section == null) tagQueries.indices.map { "tag:$it" } else (if (privateCatalog != null) when (section) {
         DiscoverySection.RECOMMENDATIONS -> listOf(JM_SOURCE, PrivateCatalog.PICA)
         DiscoverySection.UPDATES -> listOf(JM_SOURCE, PrivateCatalog.PICA, EH_SOURCE, PrivateCatalog.EX)
         else -> emptyList()
@@ -49,10 +50,14 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
         DiscoverySection.RECOMMENDATIONS -> listOf(CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID) + PublicWebSite.sources
         DiscoverySection.UPDATES -> listOfNotNull(komgaId, CopyMangaEndpoint.SOURCE_ID, BaoziEndpoint.SOURCE_ID) + PublicWebSite.sources
         else -> emptyList()
-    }).filter(selection::enabled)
-    val resultFeeds = sources.mapIndexed { index, id -> ResultFeed(id, if (section == null) tagQueries[index].target.sourceId else id) }
+    })
+    private val sources get() = if (section == null) availableSources else availableSources.filter(selection::enabled)
+    val resultFeeds get() = sources.mapIndexed { index, id -> ResultFeed(id, if (section == null) tagQueries[index].target.sourceId else id) }
     // A bounded last-result slot per feed; query/target identity is checked inside its envelope.
-    private val snapshots = sources.associateWith { CatalogPageCache(app, session, "mixed:${section?.name ?: "tag"}:$it", source = resultFeeds.first { feed -> feed.id == it }.sourceId) }
+    private fun snapshot(source: String) = CatalogPageCache(app, session,
+        "${if (restrictHome && source == CopyMangaEndpoint.SOURCE_ID) "home-general-v2" else "mixed"}:${section?.name ?: "tag"}:$source",
+        source = if (section == null) tagQueries[source.removePrefix("tag:").toInt()].target.sourceId else source)
+    private val snapshots = availableSources.associateWith(::snapshot).toMutableMap()
     private val snapshotQuery = if (section != null) "" else tagQueries.joinToString("|", prefix = "mixed-tags-v2:") {
         val target = it.target
         "${target.sourceId.length}:${target.sourceId}${target.id.length}:${target.id}:${target.category}:${it.keyword}"
@@ -92,7 +97,8 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                 }
             } else when (source) {
                 CopyMangaEndpoint.SOURCE_ID -> session.copyMangaSources.client().let {
-                    if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page) else it.updates(page)
+                    if (restrictHome) it.homeFeed(page, section == DiscoverySection.RECOMMENDATIONS)
+                    else if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page) else it.updates(page)
                 }
                 BaoziEndpoint.SOURCE_ID -> session.baoziSources.client(app).source.let {
                     if (section == DiscoverySection.RECOMMENDATIONS) it.recommendations(page)
@@ -112,34 +118,70 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
                 updateVersions[it] = (updateVersions[it] ?: 0) + 1
             }
         }
-        blacklist.apply(result)
+        val filtered = blacklist.apply(result)
+        filtered.copy(filterIncomplete = result.filterIncomplete || filtered.filterIncomplete)
     }
+    fun selectionChanged(homePolicyOnly: Boolean = false) {
+        if (section == null) return
+        val previousPolicy = restrictHome
+        restrictHome = home && selection.copyHomeGeneralOnly()
+        if (homePolicyOnly && previousPolicy == restrictHome) return
+        val changed = if (previousPolicy != restrictHome) setOf(CopyMangaEndpoint.SOURCE_ID) else emptySet()
+        changed.forEach { snapshots[it] = snapshot(it) }
+        feed.selectSources(sources, invalidate = changed)
+    }
+
     /** Fill missing list metadata only for visible cards, using existing detail/directory contracts. */
     suspend fun loadUpdate(card: MangaCard, version: Int) {
         val source = card.key.sourceId
-        if ((!isBaoziSource(source) && !isPicaSource(source) && !isJmSource(source)) || updateLoaded[card.key] == version) return
+        if (updateLoaded[card.key] == version) return
+        if (!isBaoziSource(source) && !isPicaSource(source) && !isJmSource(source) &&
+            homeEpisodeLabel(card.latestChapter) != null && !card.updatedAt.isNullOrBlank()) return
         updateRequests.withPermit {
             if (!session.accepts(identity) || !session.state.value.foreground) return@withPermit
             val cache = CatalogPageCache(app, session, "home-update:${card.key.sourceId}:${card.key.mangaId}", includeBlacklist = false, source = card.key.sourceId)
             try {
                 if (updateInfo[card.key] == null) cache.read()?.let {
-                    updateInfo[card.key] = HomeUpdateInfo(it.optString("date"), it.optString("chapter"))
+                    updateInfo[card.key] = HomeUpdateInfo(it.optString("date"), it.optString("chapter"),
+                        it.optLong("chapterCount", -1).takeIf { count -> count >= 0 })
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* A missing cache must not block the source read. */ }
             try {
-                val value = ContentRequests.run(source, ContentPriority.REFRESH) { if (isBaoziSource(source)) {
-                    val book = session.baoziSources.client(app, source).source.detail(card.key.mangaId)
-                    HomeUpdateInfo(book.metadata.updatedAt.orEmpty(), book.chapters?.lastOrNull()?.title.orEmpty())
-                } else {
-                    val (date, chapter) = requireNotNull(privateCatalog).update(card)
-                    HomeUpdateInfo(date, chapter)
+                val value = ContentRequests.run(source, ContentPriority.REFRESH) { when {
+                    isPublicBookSource(source) -> {
+                        val book = publicBookSource(app, session, source).detail(card.key.mangaId)
+                        HomeUpdateInfo(book.metadata.updatedAt.orEmpty(), book.chapters?.lastOrNull()?.title.orEmpty(),
+                            book.chapters?.distinctBy { it.id }?.size?.toLong())
+                    }
+                    isPicaSource(source) || isJmSource(source) -> {
+                        val result = requireNotNull(privateCatalog).update(card)
+                        HomeUpdateInfo(result.date, result.chapter, result.chapterCount)
+                    }
+                    isEhSource(source) || isExSource(source) -> {
+                        // The existing gallery reader exposes one chapter, regardless of image page count.
+                        HomeUpdateInfo(card.updatedAt.orEmpty(), chapterCount = 1)
+                    }
+                    isCopySource(source) -> {
+                        val client = copyMangaClient(session, source)
+                        val book = client.homeBook(card.key.mangaId)
+                        val count = book.groups?.takeIf { it.isNotEmpty() && it.all { group -> group.chapterCount != null } }
+                            ?.sumOf { it.chapterCount!!.toLong() }
+                            ?: homeChapterCount { client.allChapters(card.key.mangaId, it) }
+                        HomeUpdateInfo(book.detail.metadata.updatedAt.orEmpty(), chapterCount = count)
+                    }
+                    else -> {
+                        val client = KomgaAccess(app, session, source).client()
+                        val key = SourceMangaKey(SourceWorld.SFW, source, card.key.mangaId)
+                        HomeUpdateInfo(card.updatedAt.orEmpty(), chapterCount = homeChapterCount { client.chapters(key, it) })
+                    }
                 } }
                 currentCoroutineContext().ensureActive()
                 if (!session.accepts(identity) || !session.state.value.foreground || (updateVersions[card.key.sourceId] ?: 0) != version) return@withPermit
                 updateInfo[card.key] = value
                 updateLoaded[card.key] = version
-                cache.write(JSONObject().put("date", value.date).put("chapter", value.chapter))
+                cache.write(JSONObject().put("date", value.date).put("chapter", value.chapter)
+                    .put("chapterCount", value.chapterCount ?: JSONObject.NULL))
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
                 // Keep the readable card and any cached metadata; a feed refresh permits another attempt.
@@ -147,15 +189,26 @@ internal class MixedDiscoveryModel(private val app: Application, private val ses
             }
         }
     }
+    private suspend fun homeChapterCount(load: suspend (SourcePageRequest) -> SourceChapterPage): Long {
+        var request: SourcePageRequest = SourcePageRequest.Start
+        val ids = mutableSetOf<String>()
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val page = load(request)
+            page.total?.let { return it.toLong() }
+            ids += page.items.map { it.id }
+            request = (page.continuation as? SourceContinuation.Next)?.request ?: return ids.size.toLong()
+        }
+    }
     fun start() { if (feed.state.value.results.isEmpty()) feed.submit("", allowEmpty = true) else feed.resume() }
 }
 
 @Composable
-internal fun mixedModel(session: WorldSession, komgaId: String?, section: DiscoverySection?, targets: List<TagTarget> = emptyList(), tagLabel: String = ""): MixedDiscoveryModel {
+internal fun mixedModel(session: WorldSession, komgaId: String?, section: DiscoverySection?, targets: List<TagTarget> = emptyList(), tagLabel: String = "", home: Boolean = false): MixedDiscoveryModel {
     val app = LocalContext.current.applicationContext as Application
     val selection = SourceSelection(app, session.identity.value.world).fingerprint()
     val pages = preloadedPages(session)
-    val model: MixedDiscoveryModel = if (section != null) preloadedPages(session).mixed(komgaId, section)
+    val model: MixedDiscoveryModel = if (section != null) preloadedPages(session).mixed(komgaId, section, home)
     else viewModel(key = "mixed:$komgaId:$section:$targets:$tagLabel:$selection:${pages.revision.value}", factory = viewModelFactory {
         initializer { MixedDiscoveryModel(app, session, komgaId, section, targets, tagLabel) }
     })

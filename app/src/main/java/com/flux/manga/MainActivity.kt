@@ -146,6 +146,7 @@ class MainActivity : ComponentActivity() {
     internal val isCovered get() = privacyCover?.visibility == View.VISIBLE
     private val instance = UUID.randomUUID().toString()
     private var pendingDownloadQueue by mutableStateOf(false)
+    private var pendingAppUpdate by mutableStateOf(false)
     private var waitingForCbz = false
     private val cbzSelection: CbzPickerSelection by viewModels()
     private var pendingCbzUris: List<Uri>
@@ -226,6 +227,7 @@ class MainActivity : ComponentActivity() {
             worldSession.restorePublicNavigation(savedInstanceState?.getLong("public-navigation-epoch") ?: 0L)
         }
         if (intent?.action == com.flux.manga.data.ChapterDownloadService.OPEN_QUEUE) { pendingDownloadQueue = true; intent.action = null }
+        if (intent?.action == com.flux.manga.update.UpdateDownloadService.OPEN_UPDATES) { pendingAppUpdate = true; intent.action = null }
         worldSession.configure(applicationContext)
         fixtureStore = FixtureWorldStore(applicationContext)
         Log.d("FluxNavActivity", "created $instance restored=${savedInstanceState != null}")
@@ -304,6 +306,16 @@ class MainActivity : ComponentActivity() {
                         ) {
                             key(worldSession.navigationEpoch, identity.world) {
                                 navigation = rememberPrototypeNavigation(identity.world, worldSession.selectedTab(), identity.processSession, worldSession::selectTab)
+                                LaunchedEffect(pendingAppUpdate, sessionState.foreground, navigation.currentStack.last()) {
+                                    if (pendingAppUpdate && sessionState.foreground) {
+                                        val route = navigation.currentStack.last()
+                                        if (route == com.flux.manga.ui.navigation.AppUpdates) pendingAppUpdate = false
+                                        else if (navigation.isPrimaryRoot || route in listOf(com.flux.manga.ui.navigation.AppSettings, com.flux.manga.ui.navigation.AboutSettings)) {
+                                            pendingAppUpdate = false
+                                            navigation.openSettings(); navigation.openAppUpdates()
+                                        }
+                                    }
+                                }
                                 LaunchedEffect(pendingDownloadQueue, identity, sessionState.foreground) {
                                     if (pendingDownloadQueue && sessionState.foreground) {
                                         pendingDownloadQueue = false
@@ -462,6 +474,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         if (intent.action == com.flux.manga.data.ChapterDownloadService.OPEN_QUEUE) pendingDownloadQueue = true
+        if (intent.action == com.flux.manga.update.UpdateDownloadService.OPEN_UPDATES) pendingAppUpdate = true
     }
 
     override fun onPause() {

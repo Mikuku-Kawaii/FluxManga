@@ -90,7 +90,7 @@ internal val PicaWebSite = AccountWebSite("PicACG 网页账号", PicaWebLoginUrl
 
 // Official cn.baozimh.com redirect, observed 2026-10-26. Open the website's
 // browser verification normally; do not emulate its proof or reuse other origins' cookies.
-internal const val BaoziWebOrigin = "https://cn.bzmgcn.com/"
+internal const val BaoziWebOrigin = com.flux.manga.data.BaoziEndpoint.PUBLIC_URL
 internal val BaoziWebSite = AccountWebSite("包子漫画网页账号",
     "${BaoziWebOrigin}__gatekeeper_challenge/start?return=%2Fuser%2Fsignin",
     BaoziAccountOrigins.map { requireNotNull(Uri.parse(it).host) }.toSet())
@@ -155,6 +155,14 @@ internal class AccountWebPage(private val view: WebView, private val site: Accou
                 name == "TSID" || name.matches(Regex("__Host-gk_[A-Za-z0-9_]+"))
             }.joinToString("; ")
         return token to BaoziBrowserSession(cookies, view.settings.userAgentString, origin).also { it.validate(token) }
+    }
+
+    suspend fun baoziBookshelf(username: String): com.flux.manga.data.BaoziShelfSnapshot {
+        val origin = baoziOrigin()
+        // Successful form submission may leave the browser on /user/signin until navigation.
+        // The protected shelf response, rather than the current path, proves authentication.
+        if (cookie(origin, "TSID").isBlank()) throw BaoziLoginExpired()
+        return readBaoziWebShelf(view, origin, username, ::checkPage)
     }
 
     /** Existing /api/bui/signin protocol, executed by the verified same-origin browser.
@@ -389,7 +397,8 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
     val latestRestoreBaozi by rememberUpdatedState(restoreBaozi)
     val latestRecoveryFailure by rememberUpdatedState(backgroundRecoveryFailure)
     val backgroundRecovery = backgroundRecoveryFailure != null
-    val passwords = remember(session, site, passwordScope) {
+    var browserAttempt by remember { mutableIntStateOf(0) }
+    val passwords = remember(session, site, passwordScope, browserAttempt) {
         BrowserPasswordManager(site, com.flux.manga.data.BrowserPasswordStore(context, session, passwordScope))
     }
     var connected by remember { mutableStateOf(false) }
@@ -562,7 +571,8 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
         }
     }
 
-    DisposableEffect(site, owner) {
+    DisposableEffect(site, owner, browserAttempt) {
+        var route: BrowserNetworkRoute? = null
         var ownsStorage = false
         var persistent = false
         var browser: WebView? = null
@@ -579,7 +589,11 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 stopLoading(); clearHistory(); if (!persistent) clearCache(true); removeAllViews(); destroy()
             }
             view = null
-            if (ownsStorage) AccountWebStorage.release(persistent)
+            if (ownsStorage) {
+                val current = route
+                if (current != null) current.close { AccountWebStorage.release(persistent) }
+                else AccountWebStorage.release(persistent)
+            }
         }
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
@@ -592,6 +606,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
             ownsStorage = AccountWebStorage.acquire()
             if (!ownsStorage) error = "上一登录窗口仍在清理，请关闭后重新打开"
             else {
+                route = BrowserNetworkRoute(context, passwordScope, site)
                 browser = WebView(context).apply {
                     // Every login page needs a real viewport, including vh/fixed-position forms.
                     layoutParams = android.view.ViewGroup.LayoutParams(
@@ -628,6 +643,12 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                         override fun onProgressChanged(web: WebView, value: Int) { if (alive) progress = value }
                     }
                     webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(web: WebView, request: WebResourceRequest): WebResourceResponse? {
+                            if (route?.ready == false) return WebResourceResponse("text/plain", "UTF-8", 503,
+                                "Direct network unavailable", emptyMap(), java.io.ByteArrayInputStream("直连网络尚未准备好，请关闭后重试".toByteArray()))
+                            route?.requested(request.url)
+                            return null
+                        }
                         override fun shouldOverrideUrlLoading(web: WebView, request: WebResourceRequest): Boolean {
                             if (!request.isForMainFrame) return false
                             if (site.accepts(request.url.toString())) return false
@@ -666,8 +687,9 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                                     ERROR_FAILED_SSL_HANDSHAKE -> "网页登录安全连接失败"
                                     else -> "网页加载失败"
                                 }
-                                error = "$reason（${failure.errorCode}）。" +
-                                    if (loginUrls.isNotEmpty()) "请切换网页登录线路后重试。" else "请检查网络后重试。"
+                                error = if (route?.bypass == true) "网页登录直连失败，请检查 Wi-Fi／移动网络及 VPN 是否允许绕过。"
+                                    else "$reason（${failure.errorCode}）。" +
+                                        if (loginUrls.isNotEmpty()) "请切换网页登录线路后重试。" else "请检查网络后重试。"
                             }
                         }
                         override fun onReceivedHttpError(web: WebView, request: WebResourceRequest, response: WebResourceResponse) {
@@ -695,7 +717,10 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                             if (alive) { ready = false; error = "网页证书验证失败，已停止连接" }
                         }
                         override fun onRenderProcessGone(web: WebView, detail: RenderProcessGoneDetail): Boolean {
-                            disposeBrowser(); latestClose()
+                            disposeBrowser()
+                            ready = false; busy = false
+                            error = "网页运行异常，已停止加载。可以重新打开登录，已保存账号不受影响。"
+                            if (backgroundRecovery) latestClose()
                             return true
                         }
                     }
@@ -706,6 +731,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 prepareStorage {
                     if (alive) preparing = scope.launch {
                         try {
+                            route?.install()
                             val saved = if (site == BaoziWebSite) latestRestoreBaozi?.invoke() else null
                             ensureActive()
                             if (!alive) return@launch
@@ -729,7 +755,9 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                                         }
                                     }
                                 }
-                                loginUrl = "${profile.origin}user/my_bookshelf"
+                                // Restore cookies only to their issuing host; open the current official
+                                // site directly instead of replaying the retired host's 302.
+                                loginUrl = "${BaoziWebOrigin}user/my_bookshelf"
                             }
                             if (site == PicaWebSite) {
                                 browser?.doOnLayout { laidOut ->
@@ -738,7 +766,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                                 }
                             } else if (alive && site.accepts(loginUrl)) browser?.loadUrl(loginUrl)
                         } catch (cancelled: CancellationException) { throw cancelled }
-                        catch (_: Exception) { if (alive) error = "账号读取失败，请关闭后重试。" }
+                        catch (failure: Exception) { if (alive) error = if (failure is IOException) failure.message ?: "账号读取失败，请关闭后重试。" else "账号读取失败，请关闭后重试。" }
                     }
                 }
             }
@@ -772,8 +800,9 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                     TextButton({ back() }, enabled = !busy && view?.canGoBack() == true) { Text("网页返回") }
                     TextButton(feedbackAttempt({
                         ready = false; error = null; baoziMemory.automaticAttempted = false
-                        attemptedKey = null; gateAttempted = false; view?.loadUrl(loginUrl)
-                    }), enabled = view != null && !busy) { Text("重新打开登录") }
+                        attemptedKey = null; gateAttempted = false
+                        if (view == null) { busy = false; progress = 0; browserAttempt++ } else view?.loadUrl(loginUrl)
+                    }), enabled = !busy) { Text("重新打开登录") }
                     if (loginUrls.isNotEmpty()) Box {
                         TextButton({ chooseLoginUrl = true }, enabled = view != null && !busy) { Text("切换网页登录线路") }
                         DropdownMenu(chooseLoginUrl, { chooseLoginUrl = false }) {
@@ -793,7 +822,7 @@ internal fun AccountWebLogin(site: AccountWebSite, close: () -> Unit,
                 Text(host.ifBlank { "正在准备登录页面…" }, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
                 if (busy || (error == null && progress < 100 && !ready)) RequestLoading()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    view?.let { browser -> AndroidView(factory = { browser }, modifier = Modifier.fillMaxSize()) }
+                    view?.let { browser -> key(browser) { AndroidView(factory = { browser }, modifier = Modifier.fillMaxSize()) } }
                 }
                 Column(Modifier.fillMaxWidth().heightIn(max = 240.dp).verticalScroll(rememberScrollState()).padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {

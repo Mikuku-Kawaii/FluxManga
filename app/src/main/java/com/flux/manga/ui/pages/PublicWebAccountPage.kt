@@ -17,6 +17,7 @@ import com.flux.manga.data.*
 import com.flux.manga.session.WorldSession
 import kotlinx.coroutines.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PublicWebAccountPage(session: WorldSession, site: PublicWebSite, back: () -> Unit, browse: () -> Unit) {
     val identity by session.identity.collectAsState()
@@ -79,9 +80,10 @@ internal fun PublicWebAccountPage(session: WorldSession, site: PublicWebSite, ba
         owner.lifecycle.addObserver(observer)
         onDispose { alive = false; operation?.cancel(); password = ""; owner.lifecycle.removeObserver(observer) }
     }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading(site.label, "账号与图源", back) }
+        item("source-network") { SourceNetworkSettings(session, requireNotNull(com.flux.manga.data.SourceKind.of(site.sourceId))) }
         item { SettingsGroup {
             SettingsRow("浏览作品", "目录、搜索与详情", "public-source-browse", SettingsSymbol.SOURCES, browse)
         } }
@@ -89,12 +91,12 @@ internal fun PublicWebAccountPage(session: WorldSession, site: PublicWebSite, ba
             Text(accountStatus(loaded, verified, account != null, busy), style = MaterialTheme.typography.titleMedium)
             account?.let { Text(it.name, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (site == PublicWebSite.MANHUAGUI) {
-                OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), enabled = !busy,
+                SettingsTextField(username, { username = it }, Modifier.fillMaxWidth(), enabled = !busy,
                     label = { Text("用户名或邮箱") }, singleLine = true)
-                OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), enabled = !busy,
+                SettingsTextField(password, { password = it }, Modifier.fillMaxWidth(), enabled = !busy,
                     label = { Text("密码") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-                ReferenceButton(onClick = { launch {
+                SettingsButton(onClick = { launch {
                     val value = client.signIn(username, password)
                     accept(value); notice = "漫画柜账号已连接"
                 } }, enabled = loaded && !busy && username.isNotBlank() && password.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
@@ -102,14 +104,15 @@ internal fun PublicWebAccountPage(session: WorldSession, site: PublicWebSite, ba
                 }
                 Text("使用漫画柜官网账号登录，会话加密保存在本机。", style = MaterialTheme.typography.bodySmall)
             } else {
-                ReferenceButton(onClick = { browser = true; error = null; notice = null }, enabled = loaded && !busy,
+                SettingsButton(onClick = { browser = true; error = null; notice = null }, enabled = loaded && !busy,
                     modifier = Modifier.fillMaxWidth()) { Text("应用内网页登录 / 注册") }
                 Text(if (site == PublicWebSite.KUAIKAN) "在官网使用手机号密码或短信验证码登录，完成网站验证后点击连接账号。"
                     else "在官网使用手机号或账号密码登录，完成后点击连接账号。", style = MaterialTheme.typography.bodySmall)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(::refresh, enabled = !busy) { Text("检查账号状态") }
-                if (account != null) TextButton(onClick = { launch {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                SettingsTextButton(::refresh, enabled = !busy) { Text("检查账号状态") }
+                if (account != null) SettingsTextButton(onClick = { launch {
                     accept(null); notice = "已退出本机账号，书库和阅读进度保留"
                 } }, enabled = !busy) { Text("退出账号") }
             }
@@ -119,7 +122,7 @@ internal fun PublicWebAccountPage(session: WorldSession, site: PublicWebSite, ba
         }
         item { Text(when (site) {
             PublicWebSite.KUAIKAN -> "登录会话供本站请求使用；付费与受限章节仍遵循原站权限。更新栏目展示原站新上架作品。"
-            PublicWebSite.MANHUAGUI -> "使用漫画柜前请关闭 VPN／代理。沿用网站公开目录，阅读不会自动跨章节目录切换。"
+            PublicWebSite.MANHUAGUI -> "VPN 线路不兼容时，可开启绕过 VPN 或关闭代理。沿用网站公开目录，阅读不会自动跨章节目录切换。"
             else -> "开启图源开关后参与首页与聚合搜索。"
         }, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { Text("本页连接账号，不会自动导入原站收藏或覆盖本机书库。", style = MaterialTheme.typography.bodySmall,

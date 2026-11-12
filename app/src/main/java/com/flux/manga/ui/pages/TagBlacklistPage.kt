@@ -99,11 +99,11 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
     if (showHelp) ReferenceDialog(onDismissRequest = { showHelp = false },
         title = { Text("匹配规则") },
         text = { Text("标签按完整标签匹配；标签暂未读取的正常显示。可填写命名空间，如 female:标签。联想来自当前空间已读取的图源标签、书库资料和本地词库。\n\n开启标题关键词屏蔽后，标题包含任一关键词就隐藏，即使标签尚未读取也会生效。两种规则均不区分大小写与全半角，不做近义词或正则匹配。关闭标题开关不会删除关键词，也不影响标签规则。\n\n仅影响当前空间的推荐、更新、搜索与标签结果，已有书库与阅读进度保留。") },
-        confirmButton = { TextButton({ showHelp = false }) { Text("知道了") } })
-    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        confirmButton = { SettingsTextButton({ showHelp = false }) { Text("知道了") } })
+    LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading("黑名单", if (identity.world == PrototypeWorld.SFW) "表世界" else "里世界", back) }
-        item("input") { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        item("input") { SettingsPanel {
             SettingsSwitchRow("标签屏蔽", "隐藏命中标签的作品，关闭后保留已添加的标签", tagRules.enabled,
                 { save(tags, enabled = it) }, enabled = ready && !busy)
             ReferenceSubmitSearchField(input, { input = it }, "输入标签名称", submit = add,
@@ -116,13 +116,14 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
                 Text("仅影响当前空间，书库保留", modifier, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }, actions = {
-                TextButton({ showHelp = true }) { Text("匹配规则") }
+                SettingsTextButton({ showHelp = true }) { Text("匹配规则") }
             })
         } }
-        error?.let { message -> item("error") { RequestFeedback(message, failure = true)
-            if (!ready) TextButton({ reload++ }) { Text("重试") }
-        } }
-        item("blocked") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        error?.let { message -> item("error") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            RequestFeedback(message, failure = true)
+            if (!ready) SettingsTextButton({ reload++ }) { Text("重试") }
+        } } }
+        item("blocked") { SettingsPanel {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (ready) "已添加标签（${tags.size}）" else "已添加标签", Modifier.semantics { heading() },
                     style = MaterialTheme.typography.titleMedium)
@@ -138,10 +139,10 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
                 } }
             }
         } }
-        item("presets") {
+        item("presets") { SettingsPanel {
             BlacklistPresets("常用标签预设", blacklistPresets, tags, ready && !busy) { save(it) }
-        }
-        item("title-keywords") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        } }
+        item("title-keywords") { SettingsPanel {
             SettingsSwitchRow("标题关键词屏蔽", "标题包含任一关键词时隐藏；关闭后保留关键词", titleRules.enabled,
                 { saveTitles(titleRules.copy(enabled = it)) }, enabled = ready && !busy)
             ReferenceSubmitSearchField(titleInput, { titleInput = it }, "输入标题关键词", submit = addTitle,
@@ -163,11 +164,11 @@ internal fun TagBlacklistPage(session: WorldSession, back: () -> Unit) {
                 } }
             }
         } }
-        item("title-presets") {
+        item("title-presets") { SettingsPanel {
             BlacklistPresets("常用标题关键词预设", titlePresets, titleRules.keywords, ready && !busy) {
                 saveTitles(titleRules.copy(keywords = it))
             }
-        }
+        } }
     }
 }
 
@@ -183,7 +184,7 @@ private fun BlacklistSuggestionsRow(label: String, items: List<BlacklistSuggesti
                 BlacklistTagButton(suggestion.label, false, false, enabled) { add(suggestion.value) }
             } }
         }
-        if (items.size > limit) TextButton(more) { Text("更多建议") }
+        if (items.size > limit) SettingsTextButton(more) { Text("更多建议") }
     }
 }
 
@@ -205,22 +206,13 @@ private fun BlacklistPresets(label: String, presets: List<String>, values: List<
     }
 }
 
-/** Both groups share the tag page's shape, touch height and typography. */
+/** Presets and removable entries share the settings option style. */
 @Composable
 private fun BlacklistTagButton(label: String, selected: Boolean, removable: Boolean, enabled: Boolean, kind: String = "标签", click: () -> Unit) {
-    val background = referenceStateColor(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)
-    val foreground = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
-    TextButton(click, enabled = enabled,
-        modifier = Modifier.heightIn(min = referenceActionHeight()).semantics {
+    SettingsFilterChip(selected = selected, onClick = click, enabled = enabled,
+        label = { Text(label) }, modifier = Modifier.semantics {
             contentDescription = if (removable) "移除$kind $label" else label
-            if (!removable) this.selected = selected
-        }, shape = RoundedCornerShape(16.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        colors = ButtonDefaults.textButtonColors(containerColor = background, contentColor = foreground,
-            disabledContainerColor = background, disabledContentColor = foreground.copy(alpha = .38f))) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(label, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.labelLarge)
-            if (removable || selected) LucideIcon(if (removable) R.drawable.lucide_x else R.drawable.lucide_check, Modifier.size(16.dp))
-        }
-    }
+        }, trailingIcon = if (removable || selected) ({
+            LucideIcon(if (removable) R.drawable.lucide_x else R.drawable.lucide_check, Modifier.size(16.dp))
+        }) else null)
 }

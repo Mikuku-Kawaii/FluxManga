@@ -7,7 +7,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal data class ReaderOptions(val volume: Boolean = false, val invertVolume: Boolean = false,
-    val doubleTap: Boolean = true, val continuous: Boolean = true, val spread: Boolean = false)
+    val doubleTap: Boolean = true, val continuous: Boolean = true, val spread: Boolean = false, val wifiChapter: Boolean = false)
 
 /** Capture DOWN/UP as one gesture. Repeats and a released/replaced owner cannot turn pages. */
 internal class ReaderVolumeDispatcher {

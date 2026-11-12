@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReferenceRefreshBox(refreshing: Boolean, refresh: () -> Unit, modifier: Modifier = Modifier,
-    enabled: Boolean = true, content: @Composable BoxScope.() -> Unit) {
+    enabled: Boolean = true, persistentFeedback: Boolean = true, content: @Composable BoxScope.() -> Unit) {
     val state = rememberPullToRefreshState()
     val canRefresh = enabled && !refreshing
     val requestRefresh = feedbackAttempt(refresh)
@@ -26,7 +26,7 @@ internal fun ReferenceRefreshBox(refreshing: Boolean, refresh: () -> Unit, modif
         onRefresh = { if (canRefresh) requestRefresh() }).semantics {
         if (canRefresh) customActions = listOf(CustomAccessibilityAction("下拉刷新") { requestRefresh(); true })
     }) {
-        CompositionLocalProvider(LocalPersistentReadFeedback provides true) { content() }
+        CompositionLocalProvider(LocalPersistentReadFeedback provides persistentFeedback) { content() }
         PullToRefreshDefaults.Indicator(state, refreshing, Modifier.align(Alignment.TopCenter),
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             color = MaterialTheme.colorScheme.tertiary)
@@ -37,8 +37,8 @@ internal fun ReferenceRefreshBox(refreshing: Boolean, refresh: () -> Unit, modif
 internal fun ReferenceRefreshColumn(modifier: Modifier = Modifier, refreshing: Boolean, refresh: () -> Unit,
     refreshEnabled: Boolean = true, state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    verticalArrangement: Arrangement.Vertical = Arrangement.Top, content: LazyListScope.() -> Unit) {
-    ReferenceRefreshBox(refreshing, refresh, enabled = refreshEnabled) {
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top, persistentFeedback: Boolean = true, content: LazyListScope.() -> Unit) {
+    ReferenceRefreshBox(refreshing, refresh, enabled = refreshEnabled, persistentFeedback = persistentFeedback) {
         LazyColumn(modifier, state = state, contentPadding = contentPadding,
             verticalArrangement = verticalArrangement, content = content)
     }

@@ -151,6 +151,20 @@ internal class OnlineBookInformationLoader(private val app: Application, private
         return ids.distinct()
     }
     suspend fun load(source: String, id: String, force: Boolean = false, refreshMetadata: Boolean = false,
+        loadCover: Boolean = true, loadChapters: Boolean = true, onMetadata: suspend (OnlineBookInformation) -> Unit = {}): BookInformationResult {
+        if (!active()) throw CancellationException()
+        if (loadCover) return loadDirect(source, id, force, refreshMetadata, true, loadChapters, onMetadata)
+        val owner = sourceCacheIdentity(app, session, source)
+        val key = "$identity|$owner|${source.length}:$source${id.length}:$id|$force|$refreshMetadata|$loadChapters"
+        val result = session.bookInformationRequests.read(key) {
+            loadDirect(source, id, force, refreshMetadata, false, loadChapters)
+        }
+        currentCoroutineContext().ensureActive()
+        if (!active()) throw CancellationException()
+        onMetadata(result.info)
+        return result
+    }
+    private suspend fun loadDirect(source: String, id: String, force: Boolean = false, refreshMetadata: Boolean = false,
         loadCover: Boolean = true, loadChapters: Boolean = true, onMetadata: suspend (OnlineBookInformation) -> Unit = {}): BookInformationResult = coroutineScope {
         if (!active()) throw CancellationException()
         var info = store.read(source, id)
@@ -158,7 +172,7 @@ internal class OnlineBookInformationLoader(private val app: Application, private
         if (info == null || info.needsMetadataRefresh(source) || (loadChapters && !info.chaptersKnown) || force || refreshMetadata) {
             info = try { ContentRequests.run(source, ContentPriority.DETAIL) { if (identity.world == PrototypeWorld.SFW) when {
                 isCopySource(source) -> copyMangaClient(session, source).let { client ->
-                    val details = client.detail(id).info()
+                    val details = client.book(id).detail.info()
                     if (loadChapters) details.copy(chapterGroups = mapOf("default" to chapterIds { client.allChapters(id, it) }), chaptersKnown = true) else details
                 }
                 isPublicBookSource(source) -> publicBookSource(app, session, source).detail(id).let {

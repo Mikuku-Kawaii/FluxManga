@@ -39,7 +39,7 @@ private fun KomgaNotice(text: String) {
 internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: (String) -> Unit, imports: () -> Unit = {}) {
     val identity by session.identity.collectAsStateWithLifecycle()
     if (identity.world != PrototypeWorld.SFW) {
-        TextButton(onClick = back) { Text("图源设置仅在表世界可用 · 返回") }; return
+        SettingsTextButton(onClick = back) { Text("图源设置仅在表世界可用 · 返回") }; return
     }
     val app = LocalContext.current.applicationContext as Application
     val model: KomgaSettingsModel = viewModel(factory = viewModelFactory { initializer { KomgaSettingsModel(app, session) } })
@@ -47,8 +47,9 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
     val keyboard = LocalSoftwareKeyboardController.current
     DisposableEffect(model) { model.load(); onDispose { model.leave() } }
     LazyColumn(Modifier.fillMaxSize().imePadding().testTag("komga-settings"), state = navigation.scroll,
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        contentPadding = SettingsPagePadding, verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading(navigation.title("Komga"), "", navigation::back, backModifier = Modifier.testTag("komga-back")) }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item("source-network") { SourceNetworkSettings(session, com.flux.manga.data.SourceKind.KOMGA) }
         sourceSettingsOverview(navigation,
             account = if (!model.loaded) "配置待读取" else if (model.sourceId != null) "已保存服务器账号" else "尚未连接服务器",
             imports = imports, importSummary = "授权书库、系列集合与阅读列表",
@@ -57,9 +58,9 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
             importEnabled = model.loaded && !model.busy && model.sourceId != null)
         if (navigation.section == SourceSettingsSection.CONNECTION) item {
             AccountPanel("服务器与账号") {
-                OutlinedTextField(value = model.address, onValueChange = model::address,
+                SettingsTextField(value = model.address, onValueChange = model::address,
                     label = { Text("HTTPS 服务地址") }, placeholder = { Text("https://example.com/komga/") },
-                    singleLine = true, shape = MaterialTheme.shapes.small, enabled = !model.busy, modifier = Modifier.fillMaxWidth().testTag("komga-address"),
+                    singleLine = true, enabled = !model.busy, modifier = Modifier.fillMaxWidth().testTag("komga-address"),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next))
                 WebAccountEntry(model.address, session = session, passwordScope = "komga", note =
                     "网页登录成功后自动验证并保存账号；注册是否开放由服务器管理员决定。", enabled = !model.busy,
@@ -67,22 +68,22 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
                     autoConnectKey = { page, _, _ -> page.cookie(model.address, "KOMGA-SESSION").takeIf(String::isNotBlank) })
                 SettingsDisclosure("连接服务器账号") {
                     FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(model.auth == com.flux.manga.data.KomgaAuth.API_KEY, { model.auth(com.flux.manga.data.KomgaAuth.API_KEY) }, label = { Text("API Key") }, enabled = !model.busy)
-                        FilterChip(model.auth == com.flux.manga.data.KomgaAuth.BASIC, { model.auth(com.flux.manga.data.KomgaAuth.BASIC) }, label = { Text("邮箱 / 密码") }, enabled = !model.busy)
+                        SettingsFilterChip(model.auth == com.flux.manga.data.KomgaAuth.API_KEY, { model.auth(com.flux.manga.data.KomgaAuth.API_KEY) }, label = { Text("API Key", textAlign = androidx.compose.ui.text.style.TextAlign.Center) }, enabled = !model.busy)
+                        SettingsFilterChip(model.auth == com.flux.manga.data.KomgaAuth.BASIC, { model.auth(com.flux.manga.data.KomgaAuth.BASIC) }, label = { Text("邮箱 / 密码", textAlign = androidx.compose.ui.text.style.TextAlign.Center) }, enabled = !model.busy)
                     }
-                    if (model.auth == com.flux.manga.data.KomgaAuth.BASIC) OutlinedTextField(model.username, model::username,
-                        label = { Text("账号邮箱") }, singleLine = true, enabled = !model.busy, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth(),
+                    if (model.auth == com.flux.manga.data.KomgaAuth.BASIC) SettingsTextField(model.username, model::username,
+                        label = { Text("账号邮箱") }, singleLine = true, enabled = !model.busy, modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
                     if (model.auth == com.flux.manga.data.KomgaAuth.SESSION) Text("已连接网页账号；可重新网页登录更新会话")
                     else {
-                    OutlinedTextField(value = model.apiKey, onValueChange = model::apiKey,
-                        label = { Text(if (model.auth == com.flux.manga.data.KomgaAuth.API_KEY) "API Key" else "密码") }, singleLine = true, shape = MaterialTheme.shapes.small, enabled = !model.busy,
+                    SettingsTextField(value = model.apiKey, onValueChange = model::apiKey,
+                        label = { Text(if (model.auth == com.flux.manga.data.KomgaAuth.API_KEY) "API Key" else "密码") }, singleLine = true, enabled = !model.busy,
                         visualTransformation = PasswordVisualTransformation(),
                         supportingText = { Text("连接信息不变时，可留空沿用已保存凭据") },
                         modifier = Modifier.fillMaxWidth().testTag("komga-key"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { keyboard?.hide(); model.save() }))
-                    ReferenceButton(onClick = { keyboard?.hide(); model.save() },
+                    SettingsButton(onClick = { keyboard?.hide(); model.save() },
                         enabled = !model.busy && model.loaded, modifier = Modifier.heightIn(min = 48.dp).testTag("komga-save")) {
                         Text("验证并保存")
                     }
@@ -90,9 +91,9 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
                 }
                 if (model.busy) {
                     RequestLoading()
-                    if (!model.saving) TextButton(onClick = model::cancel) { Text("取消请求") }
+                    if (!model.saving) SettingsTextButton(onClick = model::cancel) { Text("取消请求") }
                 }
-                if (!model.loaded && !model.busy) TextButton(onClick = feedbackAttempt(model::load)) { Text("重新读取配置") }
+                if (!model.loaded && !model.busy) SettingsTextButton(onClick = feedbackAttempt(model::load)) { Text("重新读取配置") }
                 model.message?.let { KomgaNotice(it) }
             }
         }
@@ -102,13 +103,13 @@ internal fun KomgaSettingsPage(session: WorldSession, back: () -> Unit, browse: 
             item {
                 Text(model.savedAddress.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReferenceButton(onClick = { keyboard?.hide(); browse(sourceId) }, enabled = !model.busy,
+                    SettingsButton(onClick = { keyboard?.hide(); browse(sourceId) }, enabled = !model.busy,
                         modifier = Modifier.heightIn(min = 48.dp).testTag("komga-browse")) { Text("浏览作品") }
                 }
             }
         }
         if (navigation.section == SourceSettingsSection.CONNECTION) item { AccountMoreActions("账号管理") { close ->
-            if (model.sourceId != null) TextButton(onClick = { close(); model.logout() }, enabled = !model.busy && model.loaded) { Text("退出账号 · 保留书目与进度") }
+            if (model.sourceId != null) SettingsTextButton(onClick = { close(); model.logout() }, enabled = !model.busy && model.loaded) { Text("退出账号 · 保留书目与进度") }
             Text("可连接一个 Komga 服务。验证成功后，登录信息加密保存在本机。")
             Text("API Key 或邮箱密码连接信息不变时，凭据可以留空沿用；网页会话失效后需重新登录。")
             Text("支持在线阅读和章节下载，进度保存在本机；服务端进度同步尚未开放。")
@@ -150,7 +151,7 @@ internal fun KomgaContentPage(session: WorldSession, sourceId: String, mangaId: 
         ReferenceRefreshColumn(refreshing = state.busy, refresh = { model.refresh() }, refreshEnabled = true, modifier = Modifier.fillMaxSize().testTag(if (mangaId == null) "komga-catalog" else "komga-detail"),
             state = scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item(key = "heading") {
-                if (mangaId != null) DetailHeading(back, backModifier = Modifier.testTag("komga-back"))
+                if (mangaId != null) DetailHeading(back, backModifier = Modifier.testTag("komga-back"), sourceName = discoverySourceName(sourceId))
                 else SourceBrowseHeading("Komga", back,
                     "浏览全部作品", { changeQuery(""); model.search() }, sources,
                     "搜索服务器作品，留空可浏览全部。修改关键词后请重新搜索，阅读进度保存在本机。",

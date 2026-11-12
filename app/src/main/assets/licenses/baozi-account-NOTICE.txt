@@ -18,3 +18,9 @@ Checkpoint and book inserts share a Room transaction; existing local favorites,
 reading modes and progress are preserved. Added login/revalidation/logout UI,
 source-management/library entry points and deferred persistence tests.
 No whole-library pagination or verified-empty-account capability is claimed.
+
+2026-11-12: Reused the existing bookshelf parser for bounded same-origin
+WebView responses. Web-account connection and refresh retain the browser that
+completed official verification instead of repeating validation via native HTTP.
+Account identity, nonempty-shelf evidence, import checkpoints, encrypted storage
+and cancellation remain required. This adds no verification bypass or new host.

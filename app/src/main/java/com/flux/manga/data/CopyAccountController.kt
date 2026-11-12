@@ -55,19 +55,22 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
         val result = network.verify(c); check(ticket)
         if (result.userId != c.userId) throw SourceException.AuthenticationRequired()
     }
-    fun start() = start(refreshEntries = true)
-    fun reopen() = start(refreshEntries = false)
-    private fun start(refreshEntries: Boolean) = run("正在读取并验证账号") { ticket ->
+    fun start() = run("正在读取并验证账号") { ticket ->
+        val c = restore(ticket, refreshEntries = true)
+        if (c?.hasCredential != true) return@run
+        verify(c, ticket); mutable.value = state.value.copy(verified = true)
+        loadEntries(0, ticket)
+    }
+    /** Source overview reads local identity only; verification belongs to an explicit account/import action. */
+    fun reopen() = run("正在读取已保存账号") { ticket -> restore(ticket, refreshEntries = false) }
+    private suspend fun restore(ticket: Long, refreshEntries: Boolean): CopyAccount? {
         mutable.value = state.value.copy(verified = false)
         val c = store.current { allowed(ticket) }; check(ticket)
         if (refreshEntries || c?.sourceId != state.value.source || c?.hasCredential != true) {
             mutable.value = state.value.copy(entries = emptyList(), entriesLoaded = false, nextOffset = null, reportedTotal = null)
         }
         publish(c, ticket)
-        if (c?.hasCredential != true) return@run
-        verify(c, ticket); mutable.value = state.value.copy(verified = true)
-        if (!state.value.entriesLoaded) loadEntries(0, ticket)
-        // Reopening reads the checkpoint; it never silently resumes writes.
+        return c
     }
     fun signIn(username: String, password: String) {
         if (state.value.busy) return
@@ -188,7 +191,7 @@ internal class CopyAccountController(private val scope: CoroutineScope, private 
         }
     }
     fun leave() { revision++; work?.cancel(); work = null; account = null
-        mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false) }
+        mutable.value = state.value.copy(busy = false, verified = false, stage = null, loaded = false, error = null, notice = null) }
     fun close() { leave(); closed = true; mutable.value = CopyAccountState() }
 }
 internal fun copyAccountFailure(error: Exception) = sourceNetworkFailure(error) ?: when (error) {

@@ -8,6 +8,8 @@ import com.flux.manga.ui.navigation.PrototypeWorld
 import kotlinx.coroutines.*
 import java.io.IOException
 
+internal data class PrivateCatalogUpdate(val date: String, val chapter: String, val chapterCount: Long?)
+
 internal data class PrivateCatalogTag(val name: String, val query: String, val category: Boolean = false)
 
 /** Display feeds share the existing paginator; returned works retain their actual account identity.
@@ -75,21 +77,23 @@ internal class PrivateCatalog(private val app: Context, private val session: Wor
         ensureActive(); active(); result
     }
     /** Reuse the existing directory contracts for visible home cards; never count image pages as episodes. */
-    suspend fun update(card: MangaCard): Pair<String, String> = coroutineScope {
+    suspend fun update(card: MangaCard): PrivateCatalogUpdate = coroutineScope {
         active()
         val result = if (isPicaSource(card.key.sourceId)) {
             val account = PicaStore(app, session).account()?.takeIf { it.source == card.key.sourceId }
                 ?: throw IOException("请登录原账号")
             PicaClient(session, account, this, session.picaAccount(app)).use { client ->
                 val book = client.detail(card.key.mangaId)
-                book.updatedAt to (book.chapterCount?.let { "共${it}话" }.orEmpty())
+                PrivateCatalogUpdate(book.updatedAt, "", book.chapterCount?.toLong()
+                    ?: client.allChapters(card.key.mangaId).distinctBy { it.order }.size.toLong())
             }
         } else {
             val settings = JmStore(app, session).settings()
             if (card.key.sourceId != JM_SOURCE && card.key.sourceId != settings.account?.source) throw IOException("请登录原账号")
             JmClient(session, if (card.key.sourceId == JM_SOURCE) settings.copy(account = null) else settings, card.key.sourceId, this).use { client ->
                 val book = client.detail(card.key.mangaId)
-                book.updatedAt to (if (book.chapters.size == 1) "第1话" else book.chapters.lastOrNull()?.title.orEmpty())
+                PrivateCatalogUpdate(book.updatedAt, book.chapters.lastOrNull()?.title.orEmpty(),
+                    book.chapters.distinctBy { it.id }.size.toLong())
             }
         }
         ensureActive(); active(); result

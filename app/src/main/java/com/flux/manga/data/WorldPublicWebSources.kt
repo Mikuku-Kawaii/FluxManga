@@ -45,6 +45,8 @@ internal class PublicWebClient(private val session: WorldSession, private val si
     private val context = identity.sourceContext(site.sourceId)
     private val http = SourceHttpSession.publicCatalog(context)
     @Volatile private var closed = false
+    // Official reader routes share the same signed image path. Session-local only.
+    @Volatile private var manhuaguiImageHost = "eu.hamreus.com"
     private val covers = object : LinkedHashMap<String, String>(256, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 256
     }
@@ -296,7 +298,7 @@ internal class PublicWebClient(private val session: WorldSession, private val si
         if (entry() == null) pages(page.manga.mangaId, page.chapterId)
         val selected = entry() ?: throw SourceException.NotFound()
         if (selected.resource.copy(width = page.width, height = page.height) != page) throw SourceException.InvalidRequest()
-        return try { imageFile(selected.url, directory) } catch (error: SourceException) {
+        return try { readerImageFile(selected.url, directory) } catch (error: SourceException) {
             val expired = error is SourceException.NotFound || error is SourceException.AuthenticationRequired ||
                 (error is SourceException.HttpStatus && error.status.toInt() in setOf(401, 403, 404))
             if (site == PublicWebSite.GUAZI || !expired) throw error
@@ -305,8 +307,30 @@ internal class PublicWebClient(private val session: WorldSession, private val si
             pages(page.manga.mangaId, page.chapterId)
             val renewed = entry() ?: throw error
             if (renewed.resource.copy(width = page.width, height = page.height) != page || renewed.url == selected.url) throw error
-            imageFile(renewed.url, directory)
+            readerImageFile(renewed.url, directory)
         }
+    }
+    private suspend fun readerImageFile(url: String, directory: String): SourceImageFile {
+        if (site != PublicWebSite.MANHUAGUI) return imageFile(url, directory)
+        val hosts = listOf("eu.hamreus.com", "us.hamreus.com", "i.hamreus.com")
+        val original = URI(url)
+        if (original.host !in hosts) return imageFile(url, directory)
+        val routes = (listOf(manhuaguiImageHost) + hosts).distinct()
+        for ((index, host) in routes.withIndex()) {
+            currentCoroutineContext().ensureActive(); active()
+            // Replace only the authority; preserve the signed path/query byte for byte.
+            val routed = url.replaceFirst("https://${original.rawAuthority}/", "https://$host/")
+            try {
+                return imageFile(routed, directory).also { manhuaguiImageHost = host }
+            } catch (failure: Exception) {
+                currentCoroutineContext().ensureActive(); active()
+                val routeFailure = failure is SourceException.Network || failure is SourceException.Timeout ||
+                    failure is SourceException.Transport || failure is SourceException.NotFound ||
+                    (failure is SourceException.HttpStatus && failure.status.toInt() in 500..599)
+                if (!routeFailure || index == routes.lastIndex) throw failure
+            }
+        }
+        error("No Manhuagui image route")
     }
     suspend fun coverFile(id: String, directory: String): SourceImageFile {
         if (synchronized(covers) { covers[id] } == null) detail(id)

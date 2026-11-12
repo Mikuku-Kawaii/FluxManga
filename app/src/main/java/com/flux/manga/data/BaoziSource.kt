@@ -209,7 +209,13 @@ internal class BaoziSource(private val context: SourceContext, private val accep
             ?: throw SourceException.InvalidResponse()
         if (directory.none { it.id == chapterId }) throw SourceException.NotFound()
         val doc = document("", mangaId to chapterId)
-        val urls = doc.select(".comic-contain amp-img, .comic-contain img, .comic-article img, .chapter-img amp-img, .chapter-img img, .comic-page amp-img, .comic-page img, [class*=chapter] amp-img, [class*=chapter] img, [class*=comic] amp-img, [class*=comic] img")
+        // Latest-chapter ad ribbons also reuse comic-contain__item. Exclude the
+        // ad container for both layouts before validating actual panel URLs.
+        val panels = doc.select("img.comic-contain__item, amp-img.comic-contain__item").ifEmpty {
+            doc.select(".comic-contain amp-img, .comic-contain img, .comic-article img, .chapter-img amp-img, .chapter-img img, .comic-page amp-img, .comic-page img")
+        }
+        val urls = panels
+            .filter { it.closest(".bzmh-ad-ticket") == null }
             .mapNotNull { image -> image.absUrl("data-src").ifEmpty { image.absUrl("src") }.takeIf { it.isNotBlank() } }
             .filterNot { url -> listOf("/cover/", "logo", "loading.gif", "404.png", "favicon", "/img/", "banner", "recommend").any { url.contains(it, true) } }
             .distinct()

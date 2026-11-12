@@ -44,7 +44,7 @@ private fun LicenseLoading(failed: Boolean, retry: () -> Unit) {
         if (failed) {
             RequestFeedback("本地许可材料读取失败，请重试。", color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            TextButton(feedbackAttempt(retry)) { Text("重试") }
+            SettingsTextButton(feedbackAttempt(retry)) { Text("重试") }
         } else {
             Text("正在读取本地材料")
         }
@@ -61,16 +61,16 @@ internal fun OpenSourceLicensesPage(back: () -> Unit, open: (String) -> Unit) {
     var groupKey by rememberSaveable { mutableStateOf<String?>(null) }
     val group = LicenseGroup.entries.firstOrNull { it.key == groupKey }
     val matches = remember(loaded.value, query, group) { loaded.value?.filter(query, group).orEmpty() }
-    LazyColumn(Modifier.fillMaxSize().imePadding().testTag("license-catalog"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().imePadding().testTag("license-catalog"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading("开源许可", "", back) }
         item("search") { ReferenceSearchField(query, { query = it }, "搜索组件或许可", Modifier.testTag("license-query"),
-            trailingIcon = if (query.isNotEmpty()) ({ TextButton({ query = "" }) { Text("清空") } }) else null) }
+            trailingIcon = if (query.isNotEmpty()) ({ SettingsTextButton({ query = "" }) { Text("清空") } }) else null) }
         item("groups") { SettingsPanel { SettingsDisclosure("分类", group?.label ?: "全部组件") {
             FlowRow(itemVerticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(group == null, { groupKey = null }, { Text("全部") })
+                SettingsFilterChip(group == null, { groupKey = null }, { Text("全部", textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
                 LicenseGroup.entries.forEach { choice ->
-                    FilterChip(group == choice, { groupKey = choice.key }, { Text(choice.label) })
+                    SettingsFilterChip(group == choice, { groupKey = choice.key }, { Text(choice.label, textAlign = androidx.compose.ui.text.style.TextAlign.Center) })
                 }
             }
         } } }
@@ -82,10 +82,10 @@ internal fun OpenSourceLicensesPage(back: () -> Unit, open: (String) -> Unit) {
         if (loaded.value == null) item("load") { LicenseLoading(loaded.failed) { retry++ } }
         else {
             item("count") { Text("${matches.size} 项", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-            if (matches.isEmpty()) item("empty") {
+            if (matches.isEmpty()) item("empty") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("没有匹配的组件，可修改搜索或分类。")
-                if (query.isNotEmpty() || group != null) TextButton(onClick = { query = ""; groupKey = null }) { Text("清除筛选") }
-            }
+                if (query.isNotEmpty() || group != null) SettingsTextButton(onClick = { query = ""; groupKey = null }) { Text("清除筛选") }
+            } }
             items(matches, key = { it.id }, contentType = { "license" }) { entry -> Column {
                 SettingsRow(entry.name, "${entry.group.label} · ${entry.license}", "license-entry-${entry.id}", null, { open(entry.id) })
                 SettingsDivider()
@@ -101,8 +101,8 @@ internal fun LicenseEntryPage(id: String, back: () -> Unit, openDocument: (Strin
     val loaded = licenseLoad(id, retry) { reader.catalog().entries.single { it.id == id } }
     val uri = LocalUriHandler.current
     var linkFailed by rememberSaveable(id) { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().testTag("license-entry"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("license-entry"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading("组件许可", "", back) }
         val entry = loaded.value
         if (entry == null) item("load") { LicenseLoading(loaded.failed) { retry++ } }
@@ -114,7 +114,7 @@ internal fun LicenseEntryPage(id: String, back: () -> Unit, openDocument: (Strin
                     Text(entry.group.label, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } }
                 if (entry.project.startsWith("https://") || entry.project.startsWith("http://")) {
-                    TextButton({
+                    SettingsTextButton({
                         try { uri.openUri(entry.project); linkFailed = false }
                         catch (_: IllegalArgumentException) { linkFailed = true }
                         catch (_: android.content.ActivityNotFoundException) { linkFailed = true }
@@ -138,8 +138,8 @@ internal fun LicenseDocumentPage(entryId: String, hash: String, back: () -> Unit
     var retry by remember { mutableIntStateOf(0) }
     val loaded = licenseLoad(entryId to hash, retry) { reader.text(entryId, hash) }
     val paragraphs = remember(loaded.value) { loaded.value?.replace("\r\n", "\n")?.split("\n\n").orEmpty() }
-    LazyColumn(Modifier.fillMaxSize().testTag("license-document"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("license-document"), contentPadding = SettingsPagePadding,
+        verticalArrangement = SettingsSectionSpacing) {
         item("heading") { SettingsHeading("许可原文", "保留原始语言与版权声明", back) }
         if (loaded.value == null) item("load") { LicenseLoading(loaded.failed) { retry++ } }
         else items(paragraphs.size, key = { it }, contentType = { "paragraph" }) { index ->

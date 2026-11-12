@@ -127,12 +127,12 @@ internal fun sourceChapters(j: JSONObject, key: SourceMangaKey) = j.getJSONArray
 }
 internal fun chapterTotal(j: JSONObject) = if (j.isNull("total")) null else j.getLong("total")
 
-internal fun detailJson(book: CopyMangaBook) = JSONObject().put("detail", detailJson(book.detail))
+internal fun detailJson(book: CopyMangaBook) = JSONObject().put("contentRating", book.contentRating?.toLong() ?: JSONObject.NULL).put("detail", detailJson(book.detail))
     .put("groups", book.groups?.json { JSONObject().put("id", it.id).put("title", it.title).put("count", it.chapterCount?.toLong() ?: JSONObject.NULL) } ?: JSONObject.NULL)
     .put("themes", book.themes?.json { JSONObject().put("name", it.name).put("path", it.pathWord) } ?: JSONObject.NULL)
 internal fun copyDetail(j: JSONObject, context: SourceContext): CopyMangaBook {
     val detail = sourceDetail(j.getJSONObject("detail"), context)
-    return CopyMangaBook(detail, j.optJSONArray("groups")?.rows { CopyChapterGroup(detail.manga.key, it.getString("id"), it.getString("title"), it.number("count")) },
+    return CopyMangaBook(j.number("contentRating"), detail, j.optJSONArray("groups")?.rows { CopyChapterGroup(detail.manga.key, it.getString("id"), it.getString("title"), it.number("count")) },
         j.optJSONArray("themes")?.rows { CopyTheme(it.getString("name"), it.getString("path")) })
 }
 

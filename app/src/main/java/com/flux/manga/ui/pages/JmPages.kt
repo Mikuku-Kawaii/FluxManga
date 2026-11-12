@@ -277,8 +277,9 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
     val navigation = rememberSourceSettingsNavigation(back)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LaunchedEffect(lifecycle) { if (!lifecycle.isAtLeast(Lifecycle.State.STARTED)) password = "" }
-    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = navigation.scroll, contentPadding = SettingsPagePadding, verticalArrangement = SettingsSectionSpacing) {
         item { SettingsHeading(navigation.title("JMComic"), "", navigation::back) }
+        if (navigation.section == SourceSettingsSection.OVERVIEW) item("source-network") { SourceNetworkSettings(session, com.flux.manga.data.SourceKind.JM) }
         sourceSettingsOverview(navigation,
             account = if (!state.ready) "账号状态待读取" else state.settings.account?.let { "已保存会话 · ${it.username}" } ?: "未登录 · 可匿名阅读",
             imports = favorites, importSummary = "全部收藏或按文件夹导入", connectionSummary = "API 自动选线与图片线路",
@@ -290,7 +291,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                 api == host, { api = host }, enabled = !state.busy) }
             Text("首选图片线路 · 不可用时自动切换")
             JM_IMAGES.forEach { host -> SettingsChoiceRow(host, image == host, { image = host }, enabled = !state.busy) }
-            ReferenceButton({ model.configure(api, image) }, enabled = state.ready && !state.busy) { Text("保存线路") }
+            SettingsButton({ model.configure(api, image) }, enabled = state.ready && !state.busy) { Text("保存线路") }
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item { SettingsPanel {
             AccountSummary(when {
@@ -298,16 +299,16 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
                 state.settings.account != null -> "已保存登录会话"
                 else -> "未登录 · 可匿名搜索和阅读"
             }, "收藏文件夹与收藏作品", state.settings.account?.username.orEmpty())
-            ReferenceButton({ webLogin = true }, enabled = state.ready && !state.busy, modifier = Modifier.fillMaxWidth()) {
+            SettingsButton({ webLogin = true }, enabled = state.ready && !state.busy, modifier = Modifier.fillMaxWidth()) {
                 Text("应用内网页登录 / 注册")
             }
             Text("登录后连接账号与收藏；确认成功后进入原收藏导入页。", style = MaterialTheme.typography.bodySmall)
             SettingsDisclosure("API 账号连接") {
-                OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("账号") }, enabled = !state.busy)
-                OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("密码") }, visualTransformation = PasswordVisualTransformation(), enabled = !state.busy)
-                ReferenceButton(feedbackAttempt({ model.login(username, password); password = "" }), enabled = state.ready && !state.busy && username.isNotBlank() && password.isNotEmpty()) { Text("登录") }
+                SettingsTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("账号") }, enabled = !state.busy)
+                SettingsTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("密码") }, visualTransformation = PasswordVisualTransformation(), enabled = !state.busy)
+                SettingsButton(feedbackAttempt({ model.login(username, password); password = "" }), enabled = state.ready && !state.busy && username.isNotBlank() && password.isNotEmpty()) { Text("登录") }
             }
-            if (state.settings.account != null) TextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
+            if (state.settings.account != null) SettingsTextButton(model::logout, enabled = !state.busy) { Text("退出账号 · 保留书库") }
             Text("登录信息加密保存，自动或手动切换 API 线路保留账号；会话失效时才需重新登录。", style = MaterialTheme.typography.bodySmall)
         } }
         if (navigation.section == SourceSettingsSection.ACCOUNT) item("library-import") { SourceLibraryImportCard("全部收藏或按文件夹导入；已有书目与阅读进度保留。",
@@ -327,7 +328,7 @@ internal class JmModel(app: Application, private val session: WorldSession, priv
     LaunchedEffect(state.ready, state.source, state.settings) { if (state.ready && state.detail == null) model.detail(id) }
     ReferenceRefreshColumn(modifier = Modifier.fillMaxSize(), refreshing = state.busy, refresh = { model.detail(id) },
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { DetailHeading(back) }
+        item { DetailHeading(back, sourceName = discoverySourceName(source)) }
         if (!readContentLayout(state.detail != null, state.busy, state.detailError ?: state.message.takeIf { state.error && state.detail == null }, { model.detail(id) }, detail = true, cancel = model::stop)) {
             item("offline-entry") { TextButton(download) { Text("加密下载与离线章节") } }
             return@ReferenceRefreshColumn

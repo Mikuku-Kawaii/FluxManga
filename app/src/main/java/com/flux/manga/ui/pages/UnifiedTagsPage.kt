@@ -38,11 +38,14 @@ internal class UnifiedTagsModel(app: Application, private val session: WorldSess
     private var copyThemes: List<CopyTheme> = emptyList()
     private val mutable = MutableStateFlow<Map<String, SourceTagsState>>(emptyMap())
     val states = mutable.asStateFlow()
-    private val enabledSources = (listOfNotNull(BaoziEndpoint.SOURCE_ID, CopyMangaEndpoint.SOURCE_ID, komgaId) + PublicWebSite.sources)
-        .filter(SourceSelection(app, identity.world)::enabled)
-    private val snapshots = enabledSources
+    private val selection = SourceSelection(app, identity.world)
+    private var query = ""
+    private val availableSources = (listOfNotNull(BaoziEndpoint.SOURCE_ID, CopyMangaEndpoint.SOURCE_ID, komgaId) + PublicWebSite.sources)
+    private var enabledSources = availableSources.filter(selection::enabled)
+    private val snapshots = availableSources
         .associateWith { CatalogPageCache(app, session, "tags:$it", includeBlacklist = false, source = it) }
-    val directories = enabledSources.associateWith { source ->
+    val directories get() = allDirectories.filterKeys { it in enabledSources }
+    private val allDirectories = availableSources.associateWith { source ->
         SourceTagsController(viewModelScope, ::active, failureMessage = if (source == CopyMangaEndpoint.SOURCE_ID) ::copyMangaFailure else ::komgaFailure,
             restore = { query -> snapshots.getValue(source).decode(query) { json ->
                 if (source == CopyMangaEndpoint.SOURCE_ID) {
@@ -73,12 +76,26 @@ internal class UnifiedTagsModel(app: Application, private val session: WorldSess
             }
         }
     }
-    init { directories.forEach { (source, controller) -> viewModelScope.launch {
-        controller.state.collect { result -> if (active()) mutable.value = states.value + (source to result) }
+    init { allDirectories.forEach { (source, controller) -> viewModelScope.launch {
+        controller.state.collect { result -> if (active() && source in enabledSources) mutable.value = states.value + (source to result) }
     } } }
+    fun selectionChanged() {
+        val previous = enabledSources
+        enabledSources = availableSources.filter(selection::enabled)
+        (previous - enabledSources.toSet()).forEach { allDirectories.getValue(it).leave() }
+        mutable.value = states.value.filterKeys { it in enabledSources }
+        (enabledSources - previous.toSet()).forEach { source ->
+            val directory = allDirectories.getValue(source)
+            if (directory.state.value.query != query) directory.search(query) else directory.start()
+            mutable.value = states.value + (source to directory.state.value)
+        }
+    }
     fun start() = directories.values.forEach { it.start() }
     fun leave() = directories.values.forEach { it.leave() }
-    fun search(query: String) = directories.values.forEach { it.search(query.trim()) }
+    fun search(query: String) {
+        this.query = query.trim()
+        directories.values.forEach { it.search(this.query) }
+    }
     fun targets(name: String): List<TagTarget> = directories.keys.flatMap { source ->
         if (states.value[source]?.tags?.contains(name) != true) emptyList()
         else if (source == CopyMangaEndpoint.SOURCE_ID) copyThemes.filter { it.name == name }.map { TagTarget(source, it.pathWord) }
