@@ -1,123 +1,215 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable-nodpi/ic_launcher_portrait.png" width="88" height="88" alt="FluxManga 图标" />
+  <img src="app/src/main/res/drawable-nodpi/ic_launcher_portrait.png" width="96" height="96" alt="FluxManga 图标" />
 
-# FluxManga · 流光漫匣
+  <h1>FluxManga · 流光漫匣</h1>
 
-**想看的漫画，放进同一个书库。**
+  <p><strong>想看的漫画，放进同一个书库。</strong></p>
 
-一款 Android 漫画阅读器，连接在线图源与本地 CBZ，陪你从发现新作读到下一话。
+  <p>
+    一款采用液态玻璃界面的 Android 双空间漫画阅读器。<br />
+    聚合在线图源、Komga 与本地 CBZ，陪你从发现新作流畅读到下一话。
+  </p>
 
-[下载最新版](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest) · [功能介绍](#功能介绍) · [支持的来源](#支持的来源) · [反馈问题](https://github.com/Mikuku-Kawaii/FluxManga/issues)
+  <p>
+    <a href="https://github.com/Mikuku-Kawaii/FluxManga/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Mikuku-Kawaii/FluxManga?style=flat-square&label=Release&color=4B8DFF" alt="Latest Release" />
+    </a>
+    <a href="#下载与安装">
+      <img src="https://img.shields.io/badge/Android-12%2B%20(API%2031)-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 12+" />
+    </a>
+    <img src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin Jetpack Compose" />
+    <img src="https://img.shields.io/badge/Core-Rust%20%2B%20UniFFI-F97316?style=flat-square&logo=rust&logoColor=white" alt="Rust Core" />
+    <a href="LICENSE">
+      <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 License" />
+    </a>
+    <a href="https://github.com/Mikuku-Kawaii/FluxManga/stargazers">
+      <img src="https://img.shields.io/github/stars/Mikuku-Kawaii/FluxManga?style=flat-square&color=F59E0B" alt="GitHub Stars" />
+    </a>
+  </p>
 
-[![Release](https://img.shields.io/github/v/release/Mikuku-Kawaii/FluxManga?label=Release&color=4B8DFF)](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest)
-[![Android](https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white)](#下载与安装)
-
-
+  <p>
+    <a href="https://github.com/Mikuku-Kawaii/FluxManga/releases/latest"><strong>下载最新版</strong></a>
+    &nbsp;·&nbsp;
+    <a href="#界面预览">界面预览</a>
+    &nbsp;·&nbsp;
+    <a href="#功能介绍">功能介绍</a>
+    &nbsp;·&nbsp;
+    <a href="#支持的来源">支持的来源</a>
+    &nbsp;·&nbsp;
+    <a href="#开始使用">开始使用</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/Mikuku-Kawaii/FluxManga/issues">反馈问题</a>
+  </p>
 
 </div>
 
+---
+
+## 核心亮点
+
+<table>
+  <tr>
+    <td width="25%" valign="top">
+      <strong>多源聚合发现</strong><br /><br />
+      汇聚多站点推荐、最近更新与标签检索，支持跨源搜索与单源独立加载重试。
+    </td>
+    <td width="25%" valign="top">
+      <strong>统一本地与云书库</strong><br /><br />
+      在线漫画、自建 Komga 与本地 CBZ 同库管理，支持分组、标签筛选与云收藏导入。
+    </td>
+    <td width="25%" valign="top">
+      <strong>沉浸式流畅阅读</strong><br /><br />
+      支持条漫、日漫、页漫与宽屏双页模式，具备分块预热、整章预取与离线下载阅读。
+    </td>
+    <td width="25%" valign="top">
+      <strong>表里双空间隔离</strong><br /><br />
+      表世界（白蓝）与里世界（黑橙）完全独立存储，提供加密缓存、窗口保护与身份验证。
+    </td>
+  </tr>
+</table>
+
+---
+
+## 界面预览
+
+### 发现、标签与书库
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="assets/readme/discovery-sfw.jpg" width="240" alt="首页推荐和最近更新" />
+      <br />
+      <sub><strong>首页发现</strong> · 推荐与最近更新</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="assets/readme/tags-sfw.jpg" width="240" alt="按题材与标签探索作品" />
+      <br />
+      <sub><strong>标签探索</strong> · 按题材快速筛选</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="assets/readme/library-sfw.jpg" width="240" alt="书库、继续阅读和收藏作品" />
+      <br />
+      <sub><strong>统一书库</strong> · 续读卡与多维整理</sub>
+    </td>
+  </tr>
+</table>
+
+### 表里双空间与图源管理
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/readme/sources-outer.jpg" width="260" alt="表世界图源管理" />
+      <br />
+      <sub><strong>表世界</strong> · 白蓝清透配色与常规图源</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/readme/sources-inner.jpg" width="260" alt="里世界图源管理" />
+      <br />
+      <sub><strong>里世界</strong> · 黑橙暗色配色与独立加密空间</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 功能介绍
 
-### 发现下一部想读的作品
+### 发现与书库整理
 
-首页展示图源推荐和最近更新。通过关键词、作者或标签寻找漫画，可以一起查看多个来源的结果，也可以进入单个来源浏览。各来源独立加载和重试，找到喜欢的作品后可以加入书库。
+- **聚合探索**：首页集中呈现各图源推荐与最近更新，支持关键词、作者或标签跨源检索，各来源独立加载与重试，互不阻塞。
+- **高效书库管理**：在线漫画与本地 CBZ 统一收纳，支持网格 / 列表视图、分组、标签、阅读状态筛选、排序以及长按批量操作；顶部续读卡片直达上次阅读位置。
+- **云收藏导入与本地副本**：支持将图源账号的收藏或书架导入当前空间，保留已有书目与阅读进度；导入本地 CBZ 时保存应用副本，原文件保持不动。
+- **按空间标签黑名单**：可在「设置 → 图源管理 → 标签黑名单」中分别为表里空间配置屏蔽标签。输入联想完全基于本地词典与缓存（支持原文 / 译名、大小写及全半角归一化），不逐字联网，也不因过滤而额外触发逐本详情请求。
 
-<p align="center">
-  <img src="assets/readme/discovery-sfw.jpg" width="300" alt="首页推荐和最近更新" />
-  <img src="assets/readme/tags-sfw.jpg" width="300" alt="按题材与标签探索作品" />
-</p>
+### 沉浸阅读与智能缓存
 
-### 整理自己的书库
+- **多种阅读模式**：默认全屏沉浸阅读，轻触屏幕呼出章节目录、书签与页码工具；支持**从左向右**、**从右向左**、**上下逐页**、**连续条漫**及**宽屏双页**，支持双指缩放与音量键翻页。
+- **预加载与顺滑回看**：在线与本地 CBZ 条漫均自动预热相邻分块，回看优先展示清晰缓存或轻量预览；阅读当前章时持续后台预取，临近章末自动衔接下一话，已完结作品读至末章末页后自动标记已读。
+- **离线阅读与阅读统计**：支持章节下载离线阅读，完整记录阅读历史与阅读时长统计。
 
-在线漫画和本地 CBZ 可以放进书库，以网格或列表浏览。收藏、标签、分组、阅读状态筛选和排序帮助你整理作品；继续阅读入口保存上次阅读的位置。长按作品可批量选择或取消收藏。
+<details>
+<summary><strong>展开查看：缓存策略与内存预算说明</strong></summary>
 
-书库续读卡与首页图源推荐共用卡片高度和封面宽度规则；下方收藏标题与筛选栏采用紧凑间距，普通与多选模式保持一致。各来源详情页保持左封面、右信息并顶部对齐，封面宽高比固定为 1∶1.414，标题最多两行、作者一行，标签最多三行，多余标签通过行内“展开”查看。移除“全部信息”按钮，已有资料自然排列，不再整行隐藏；无标签时不留空位或展开入口。长书名和省略字段保留各自的完整内容入口，作者搜索、标签跳转保持；收藏 / 下载下方的简介默认两行，右侧“全部”打开完整简介。大字或多标签需要的额外高度由右侧信息区承接，不拉高封面。
+- **先显后更**：首页、搜索、标签与详情页优先展示本地已缓存内容，再按需联网刷新；刷新失败时保留旧内容并提供重试，单张封面或单个来源异常不会清空整页。
+- **内存与存储保护**：封面与阅读解码缓存共享内存上限（最大堆 1/4，最高 128 MiB），当前阅读请求始终优先于后台预取；存储空间不足时自动停止预加载并提示。
+- **安全清理**：可在「存储与清理」中一键释放临时缓存，同时安全保留活动阅读文件、书库资料、阅读进度、离线下载与用户原文件。需要长期离线保存的章节请使用正式下载功能。
 
-图源账号的收藏或书架可以导入当前空间，已有书目和阅读进度会保留。各来源的导入范围依网站和账号权限而不同；这不是跨设备的阅读进度同步。本地 CBZ 导入后保存应用副本，原文件保留在原处。
-
-<p align="center">
-  <img src="assets/readme/library-sfw.jpg" width="320" alt="书库、继续阅读和收藏作品" />
-</p>
-
-### 按自己的方式阅读
-
-阅读器默认全屏，轻触画面呼出章节、书签和页码工具。支持从左向右、从右向左、上下逐页和连续条漫阅读，可缩放、使用音量键翻页，宽屏还可使用双页。
-
-在线与本地 CBZ 条漫均预热上下相邻分块；回看先显示清晰缓存或轻量预览，再从本地原图补清晰图。在线当前章持续预加载至整章缓存，实际进入下一章后才继续整章预取。编码图片和磁盘预览保留至退出阅读器，系统恢复同一阅读入口时复用；里世界继续加密保存，后台释放解码引用，不影响阅读进度。2026-10-30 缓存整合已构建为 1.1.3 测试包并覆盖安装到 OPPO，实际回看与缓存效果待用户体验。
-
-接近章节末尾时预加载下一话；到达当前目录的最后一话后可返回详情。已完结作品在确认末章末页显示后标记为已读，保留阅读位置。支持下载的章节可离线阅读，阅读记录和统计帮助你回顾阅读时间。
-
-### 缓存与刷新
-
-首页、搜索、标签和详情先显示本地成功内容，再按需更新；刷新失败保留旧内容并提供重试。首页超过 5 分钟的缓存会在恢复前台时更新，短时返回复用；黑名单只对已有标签本地筛选，不逐本联网检查。书库资料、收藏和阅读进度保存在本地，单张封面或单个来源失败不会清空整页。
-
-封面与阅读解码缓存共用最大堆 1/4、最高 128 MiB 的保留预算；清晰图被淘汰后仍可从编码文件恢复。当前阅读请求优先于整章预取和后台刷新。存储不足会停止预加载并提示；“存储与清理”可清理缓存，保留活动阅读文件、书库、进度、离线下载与用户原文件。临时缓存可能被 Android 回收，需要长期离线保存的章节请使用下载功能。
-
-本轮按空间、来源和稳定账号身份调整了页面快照键，旧快照首次可能需要重读，账号和业务记录保留。
+</details>
 
 ### 两个空间，两份书库
 
-表世界采用白蓝配色，里世界采用黑橙配色。两个空间分别保存书库、进度、账号和缓存，可以通过底部切换键进入。里世界提供加密存储、窗口保护和可选身份验证；可在设置中选择退出后自动返回表世界的等待时间。
+| 特性 | 表世界（白蓝配色） | 里世界（黑橙配色） |
+| :--- | :--- | :--- |
+| **数据隔离** | 独立书库、阅读进度、账号、标签黑名单与缓存 | 独立书库、阅读进度、账号、标签黑名单与缓存 |
+| **快速切换** | 底部导航切换键进入 | 支持设置退出后自动返回表世界的等待时长 |
+| **隐私与保护** | 常规窗口与液态玻璃界面（可选低效果 / 减少动画） | 加密存储、后台遮挡、可选身份验证与默认禁止截图 |
 
-界面提供低效果和减少动画选项，漫画正文不模糊。「设置 → 隐私」新增「允许里世界截图」，默认关闭；开启后允许里世界前台页面截图和系统录屏，选择保存在本机，关闭时立即恢复窗口保护。后台遮挡、空间切换与身份验证保护保留，账号网页登录窗口仍禁止截图。空间保护仍需配合设备自身的安全设置使用。
+> [!TIP]
+> 如需在里世界临时截图，可在「设置 → 隐私」中开启「允许里世界截图」（默认关闭，仅保存在本机，关闭后立即恢复窗口保护；账号网页登录窗口始终禁止截图）。空间保护建议配合设备自身锁屏安全共同使用。
 
 <a id="ui-reference-20261019"></a>
 
+---
+
 ## 支持的来源
 
-| 来源 | 适合做什么 | 使用前需要知道 |
-| --- | --- | --- |
-| **本地 CBZ** | 导入漫画文件、离线阅读 | 应用保存副本，原文件保留 |
-| **Komga** | 浏览和阅读自己的漫画服务器 | 需要自行配置服务器和访问凭据 |
-| **拷贝漫画** | 浏览、搜索、阅读和导入云收藏 | 支持应用内网页登录，导入范围取决于接口 |
-| **包子漫画** | 浏览、阅读和导入网站书架 | 可能需要登录或浏览器验证，书架范围以网站返回为准 |
-| **瓜子漫画** | 热门推荐、更新、搜索、题材、阅读与下载 | 公开浏览；支持网页登录并连接账号，原站收藏导入待接入 |
-| **快看漫画** | 热门推荐、新上架、搜索、题材及公开章节阅读 | 支持官网网页登录；更新栏目使用原站新上架排序，章节权限遵循原站 |
-| **漫画柜** | 热门推荐、更新、搜索、题材、章节与阅读 | 支持用户名/邮箱密码登录；公开目录与原站限制保留，自动续章不跨目录分组 |
-| **JMComic** | 在里世界浏览、搜索、阅读及导入收藏 | API 自动选择可用线路，换线保留账号；内容取决于服务与账号 |
-| **PicACG** | 在里世界浏览、搜索、阅读及导入收藏 | 应用内网页登录 / 注册，成功后自动连接账号 |
-| **E-Hentai / ExHentai** | 在里世界搜索、阅读画廊及导入收藏 | ExHentai 权限需要单独确认 |
-
-各来源的功能、登录方式和导入范围不同。项目不提供漫画资源、账号或服务镜像。[查看详细图源说明](docs/release/supported-sources.md)。
-
-<p align="center">
-  <img src="assets/readme/sources-outer.jpg" width="300" align="top" alt="表世界图源管理" />
-  <img src="assets/readme/sources-inner.jpg" width="300" align="top" alt="里世界图源管理" />
-</p>
+| 空间 | 来源 | 核心能力 | 使用说明 |
+| :---: | :--- | :--- | :--- |
+| 通用 | **本地 CBZ** | 导入本地漫画、完全离线阅读 | 应用保存副本，原文件保留在原处 |
+| 通用 | **Komga** | 连接并阅读自建漫画服务器 | 需自行配置服务器地址与访问凭据 |
+| 表世界 | **拷贝漫画** | 浏览、搜索、阅读、导入云收藏 | 支持应用内网页登录；含只读备用线路 |
+| 表世界 | **包子漫画** | 浏览、阅读、导入网站书架 | 可能需要登录或浏览器验证 |
+| 表世界 | **瓜子漫画** | 推荐、更新、搜索、题材、阅读与下载 | 支持网页登录连接账号，原站收藏导入待接入 |
+| 表世界 | **快看漫画** | 推荐、新上架、搜索、题材与公开章节 | 支持官网网页登录，章节权限遵循原站 |
+| 表世界 | **漫画柜** | 推荐、更新、搜索、题材、章节与阅读 | 支持用户名 / 邮箱登录，自动续章不跨目录分组 |
+| 里世界 | **JMComic** | 浏览、搜索、阅读、导入收藏 | 支持 API 与图片 CDN 自动换线，换线保留账号 |
+| 里世界 | **PicACG** | 浏览、搜索、阅读、导入收藏 | 支持应用内网页登录 / 注册、加密封面缓存与备用线路 |
+| 里世界 | **E-Hentai / ExHentai** | 搜索、画廊阅读、导入收藏与本地标签词典 | ExHentai 访问权限需单独确认 |
 
 > [!NOTE]
-> 部分图源可能需要可用的网络代理才能正常访问，具体取决于所在网络和站点状态；请自行配置设备网络。
+> 各来源的可用性、登录方式与收藏导入范围受原站接口限制；本项目不提供任何漫画资源、账号或服务镜像，部分图源可能需要可用的网络代理才能访问。详情请参阅 [详细图源说明](docs/release/supported-sources.md)。
 
-图源官方 App、网站与本软件可能使用不同的 API 和 CDN 线路，因此官方 App 能直连不代表其网页或本软件的当前线路也能直连。
+<details>
+<summary><strong>展开查看：多线路容灾与网络优化机制</strong></summary>
 
-JM 会优先复用当前空间会话中成功的 API 线路，连接失败或超时后自动尝试其他已确认线路；图源管理中的 API 选项作为首选线路。图片 CDN 也支持在现有候选间自动换线，手动选择仍保留。拷贝匿名阅读和 PicACG 只读 API 同样加入已确认备用线路；换线保留账号、书库和进度，不自动重放登录或写入。2026-10-30 已完成双 ABI 构建并保留数据覆盖安装到 OPPO；安装核对完成，无 VPN 加载效果尚未进行功能测试。
+- 图源官方 App、网页与本软件可能使用不同的 API / CDN 线路，官方 App 可直连并不等同于所有接口均可直连。
+- **自动换线**：JMComic、拷贝漫画匿名阅读及 PicACG 只读接口支持在已确认备用线路与图片 CDN 候选间自动切换，同时保留手动线路选择；换线过程保留账号、书库与进度，不自动重放登录或写入请求。
+- **稳健重试**：失效的正文或封面地址支持自动重取，下载暂停时保留已下载字节，错误提示明确区分域名解析、安全连接与连接重置问题。
 
-PicACG 封面优先使用本地加密缓存，发现列表保留封面地址以减少重复详情请求；兼容图片 CDN 的 HTTPS 跳转，图片代理失败时可尝试接口提供的原始图片地址。失效的正文 / 封面地址可重取后再试一次；可重建缓存损坏不阻止后续联网，封面缓存写入失败保留已加载内容。阅读和可见内容优先于预加载，首页补充更新信息不再遍历 PicACG 全部章节。更新暂停会断开当前连接，保留已下载字节；错误提示区分域名解析、安全连接及连接重置。
+</details>
 
-「设置 → 图源管理 → 标签黑名单」可按空间添加、移除屏蔽标签。输入区复用软件统一搜索框的尺寸与样式，联想合并常用预设、当前空间已加载的图源标签目录和推荐标签、书库资料，以及已启用的 EH / EX 本地标签词典；输入时只做本地匹配，不逐字联网。支持原文 / 词典译名匹配、大小写及全半角归一化，前缀优先，已屏蔽项不重复建议，更多结果可展开；词典建议保存原始命名空间标签。也可手动添加其他标签。已屏蔽标签自动换行并带移除 ×；下方保留同样式常用预设。表里空间分别取值，共用布局并跟随各自配色。推荐、最近更新、搜索及标签下作品按已知标签过滤，已有书库、收藏导入和阅读进度保留。
-
-开启黑名单后，只使用图源列表、已有书库资料及本地缓存中的标签筛选；标签暂未读取的作品正常显示，不再为筛选逐本请求详情或等待整页补查。修改规则不刷新整库封面和章节，图源标签目录缓存独立于黑名单保存；书库可见项补资料不附带下载封面和完整章节，主动刷新仍保留章节更新。2026-10-30 已构建 1.1.3 / code 16 完整双 ABI 包并保留数据覆盖安装到 OPPO，安装后哈希一致；未运行功能测试，实际加载速度未实测。
+---
 
 ## 下载与安装
 
-从 [GitHub Releases](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest) 下载最新的通用 APK，支持 **Android 12 / API 31 及以上**、arm64-v8a 和 x86_64。
+前往 [GitHub Releases](https://github.com/Mikuku-Kawaii/FluxManga/releases/latest) 下载最新通用 APK：
 
-首次安装时按 Android 提示允许来源安装。同签名旧版可直接覆盖升级；签名冲突时请先核对安装包来源。应用启动时会检查更新，也可以在「设置 → 关于与更新」手动检查；下载完成后由 Android 确认安装。
+- **系统要求**：Android 12（API 31）及以上
+- **架构支持**：`arm64-v8a` / `x86_64`（通用包）
+- **安装与更新**：首次安装按系统提示允许未知来源安装；同签名版本可直接覆盖升级。应用启动时自动检查更新，也可在「设置 → 关于与更新」中手动检查。
+
+---
 
 ## 开始使用
 
-1. 安装并打开应用，在首页浏览推荐，或通过搜索和标签寻找作品。
-2. 在「设置 → 图源管理」按需连接账号或配置 Komga 服务器；如果图源无法连接，检查网络及代理设置。
-3. 从图源管理导入收藏，或在书库导入本地 CBZ，整理收藏与标签。
-4. 打开作品阅读，轻触画面切换阅读方式、查看目录、添加书签或跳转页码。
-5. 需要不同的书库与账号时切换表里空间，分别配置来源。
+1. **发现作品**：安装后在首页浏览推荐与最近更新，或通过搜索和标签寻找漫画。
+2. **配置图源**：在「设置 → 图源管理」按需登录图源账号或连接自建 Komga 服务器。
+3. **整理书库**：导入图源云收藏或本地 CBZ 文件，使用分组、标签与黑名单管理书单。
+4. **开始阅读**：打开章节后轻触屏幕切换阅读方向、呼出目录、添加书签或跳转页码。
+5. **切换空间**：需要区分书库与账号时，通过底部入口切换表里空间并分别配置。
 
-更换设备前，可通过应用的备份与记录导出功能保存需要的数据，并妥善保留本地漫画原文件。
+> [!TIP]
+> 更换设备前，可通过应用内的备份与记录导出功能保存书库与进度数据，并妥善保管本地漫画原文件。
+
+---
 
 ## 构建与贡献
 
-项目界面使用 Jetpack Compose；Android 层管理生命周期、业务数据和图片，部分核心能力与图源协议由 Rust 实现，通过 UniFFI 与 Kotlin 连接。当前构建脚本面向 **Windows x64**，需要 JDK 17、Android SDK 36、Build Tools 35.0.0、NDK 28.2.13676358 和 Rust 工具链。
+FluxManga 使用 **Kotlin / Jetpack Compose** 构建现代化 Android 界面，并由 **Rust** 实现部分核心能力与图源协议，通过 **UniFFI** 与 Kotlin 层桥接。
+
+当前构建脚本面向 **Windows x64**，需准备 **JDK 17**、**Android SDK 36**、**Build Tools 35.0.0**、**NDK 28.2.13676358** 与 **Rust 工具链**：
 
 ```powershell
 git clone https://github.com/Mikuku-Kawaii/FluxManga.git
@@ -126,16 +218,30 @@ cd FluxManga
 ```
 
 <details>
-<summary>构建环境与签名说明</summary>
+<summary><strong>构建环境与签名说明</strong></summary>
 
-详细配置见[构建与安装](docs/release/build-and-install.md)。自行签名的构建通常不能覆盖官方安装包。
+完整环境配置、NDK 与签名细节见 [构建与安装文档](docs/release/build-and-install.md)。自行签名的构建包通常无法直接覆盖安装官方发布版。
 
 </details>
 
 <a id="upstream-reuse"></a>
 
-项目在固定版本与许可条件下参考上游实现，保留相应版权及修改说明，详见[第三方声明](THIRD_PARTY_NOTICES.md)。欢迎提交 [Issue](https://github.com/Mikuku-Kawaii/FluxManga/issues) 或 Pull Request；反馈时请提供应用与 Android 版本、图源及重现步骤，不要附上密码、Token 或私密内容。
+项目在固定版本与许可条件下参考了上游实现并保留相应版权与修改说明，详见 [第三方声明](THIRD_PARTY_NOTICES.md)。欢迎提交 [Issue](https://github.com/Mikuku-Kawaii/FluxManga/issues) 或 Pull Request；反馈问题时请附上应用版本、Android 版本、涉及图源与复现步骤，切勿包含密码、Token 或私密信息。
+
+---
 
 ## 许可证
 
-FluxManga 自有代码采用 [GPL-3.0-only](LICENSE)。第三方代码、依赖和素材遵循各自许可，详见 [LICENSING.md](LICENSING.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+FluxManga 自有代码采用 [GPL-3.0-only](LICENSE) 开源许可。第三方代码、依赖与素材遵循各自原始许可，详见 [LICENSING.md](LICENSING.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+---
+
+<div align="center">
+  <a href="docs/release/supported-sources.md">图源说明</a>
+  &nbsp;·&nbsp;
+  <a href="docs/release/build-and-install.md">构建文档</a>
+  &nbsp;·&nbsp;
+  <a href="THIRD_PARTY_NOTICES.md">第三方声明</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/Mikuku-Kawaii/FluxManga/issues">问题反馈</a>
+</div>
