@@ -1,6 +1,7 @@
 //! Session-scoped transport with explicit source-specific POST operations. No cookie jar, credential persistence or source parsing.
 use crate::image_file::{ImageSink, SourceImageFile, MAX_IMAGE_BYTES};
 use crate::source::{SourceContext, SourceError, SourceWorld};
+use crate::source_route::{self, SourceNetwork};
 use reqwest::{header, Url};
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering::SeqCst},
@@ -150,10 +151,28 @@ fn transport_error(error: reqwest::Error) -> SourceError {
     }
 }
 
-fn eh_https(url: &Url) -> bool {
-    url.as_str().len() <= 8192 && url.scheme() == "https" && url.port_or_known_default() == Some(443) &&
+fn route_transport_error(error: reqwest::Error, direct: bool) -> SourceError {
+    if direct && (error.is_connect() || error.is_timeout()) {
+        SourceError::Network { kind: "vpn_bypass".into() }
+    } else { transport_error(error) }
+}
+
+async fn send_on_route(client: &reqwest::Client, request: reqwest::Request, limit: Option<Duration>,
+    direct: bool) -> Result<reqwest::Response, SourceError> {
+    let send = client.execute(request);
+    let response = if let Some(limit) = limit {
+        tokio::time::timeout(limit, send).await.map_err(|_| SourceError::Timeout)?
+    } else { send.await };
+    response.map_err(|error| route_transport_error(error, direct))
+}
+
+fn eh_https_host(url: &Url) -> bool {
+    url.as_str().len() <= 8192 && url.scheme() == "https" &&
         url.username().is_empty() && url.password().is_none() && url.fragment().is_none() &&
         url.host_str().is_some_and(|h| h.contains('.') && h.parse::<std::net::IpAddr>().is_err() && !h.starts_with('[') && !h.ends_with(".local") && !h.ends_with(".localhost"))
+}
+fn eh_https(url: &Url) -> bool {
+    eh_https_host(url) && url.port_or_known_default() == Some(443)
 }
 fn pica_image_url(url: &Url) -> bool {
     eh_https(url) && url.query().is_none() && url.path().starts_with("/static/")
@@ -173,7 +192,10 @@ fn gallery_favorite_popup(url: &Url) -> bool {
         pairs.iter().any(|(k, v)| k == "t" && v.len() == 10 && v.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 fn eh_media(url: &Url, host: &str) -> bool {
-    eh_https(url) && match url.host_str() {
+    eh_https_host(url) && match url.host_str() {
+        // Gallery pages can assign an H@H client on a non-default TLS port.
+        Some(h) if h.ends_with(".hath.network") => matches!(url.port_or_known_default(), Some(443 | 1024..=65535)),
+        _ if url.port_or_known_default() != Some(443) => false,
         Some(h) if h == host => gallery_protected_media(url, host) || url.path().starts_with("/img/"),
         Some(h) if h == "e-hentai.org" || h == "exhentai.org" || h.ends_with(".e-hentai.org") || h.ends_with(".exhentai.org") => false,
         Some(_) => true,
@@ -409,7 +431,7 @@ impl SourceHttpSession {
     pub async fn eh_read(&self, context: SourceContext, raw: String, cookie: String, image: bool) -> Result<SourceHttpReply, SourceError> {
         if self.state.context.world != SourceWorld::Nsfw || !(self.state.context.source_id.starts_with("ehentai-") || self.state.context.source_id.starts_with("exhentai-user-")) { return Err(SourceError::InvalidRequest); }
         let url = Url::parse(&raw).map_err(|_| SourceError::InvalidRequest)?;
-        if !eh_https(&url) { return Err(SourceError::InvalidRequest); }
+        if !image && !eh_https(&url) { return Err(SourceError::InvalidRequest); }
         let host = url.host_str().unwrap_or_default();
         let gallery_host = self.state.base.host_str().ok_or(SourceError::InvalidRequest)?;
         let parts: Vec<_> = url.path().trim_matches('/').split('/').collect();
@@ -943,7 +965,8 @@ impl SourceHttpSession {
         }
         let clients = crate::source_route::SourceClients::new(headers, image_user_agent,
             config.timeout_ms, context.source_id == "manhuagui-public-v1");
-        clients.client(&context.source_id, false)?;
+        let network = source_route::route(&context.source_id);
+        clients.client(&network, matches!(&network, SourceNetwork::Direct(_)), false)?;
         let runtime = Builder::new_multi_thread()
             .worker_threads(1)
             .thread_name("flux-source-http")
@@ -1155,8 +1178,20 @@ impl State {
             (body.is_none() || url.path() == "/comics/advanced-search") {
             // The only POST in this branch is the documented read-only search operation.
             &["picaapi.go2778.com", "picaapi.picacomic.com"]
+        } else if self.context.source_id == "manhuagui-public-v1" &&
+            matches!(host, "www.manhuagui.com" | "tw.manhuagui.com") && body.is_none() && directory.is_none() &&
+            !headers.contains_key(header::COOKIE) && public_catalog_url(&self.context.source_id, &url, false) {
+            // The official simplified and traditional pages share work and chapter IDs.
+            // Account operations remain on the exact origin that issued the cookie.
+            &["www.manhuagui.com", "tw.manhuagui.com"]
         } else { &[] };
-        if candidates.is_empty() { return self.get(url, body, directory, anonymous, headers, None).await; }
+        if candidates.is_empty() {
+            // Give H@H nodes a short connection/response-header budget. Once the
+            // image starts arriving, the original request budget covers its body.
+            let header_timeout = ((self.context.source_id.starts_with("ehentai-") || self.context.source_id.starts_with("exhentai-user-")) &&
+                host.ends_with(".hath.network")).then_some(Duration::from_secs(8));
+            return self.get(url, body, directory, anonymous, headers, header_timeout).await;
+        }
         let hint = self.route_hint.lock().map_err(|_| SourceError::Transport)?.clone();
         let mut hosts = Vec::new();
         for value in hint.as_deref().into_iter().chain(std::iter::once(host)).chain(candidates.iter().copied()) {
@@ -1220,7 +1255,14 @@ impl State {
             .await
             .map_err(|_| SourceError::SessionMismatch)?;
         let _in_flight = Count::new(&self.in_flight);
-        let retries = if body.as_ref().is_some_and(|body| !body.retryable) {
+        let gallery_source = self.context.source_id.starts_with("ehentai-") || self.context.source_id.starts_with("exhentai-user-");
+        let gallery_host = self.base.host_str().unwrap_or_default();
+        let eh_image = gallery_source && eh_media(&url, gallery_host);
+        let gallery_read = gallery_source && url.host_str() == Some(gallery_host) && body.is_none() && !eh_image &&
+            (matches!(url.path(), "/" | "/favorites.php") || url.path().starts_with("/g/") || url.path().starts_with("/s/"));
+        let retries = if gallery_read {
+            1
+        } else if body.as_ref().is_some_and(|body| !body.retryable) {
             0
         } else {
             self.config.max_retries
@@ -1234,12 +1276,13 @@ impl State {
             self.attempts.fetch_add(1, SeqCst);
             // Retry explicit transient statuses on GET / read-only Komga list POST. Transport,
             // TLS, auth, decoding and body-read failures are not blindly retried.
-            let (client, bypass) = self.clients.client(&self.context.source_id, anonymous)?;
-            let request_error = |error: reqwest::Error| {
-                if bypass && (error.is_connect() || error.is_timeout()) {
-                    SourceError::Network { kind: "vpn_bypass".into() }
-                } else { transport_error(error) }
-            };
+            let route = source_route::route(&self.context.source_id);
+            let automatic = matches!(&route, SourceNetwork::Auto(_)) && url.scheme() == "https" &&
+                (body.as_ref().is_none_or(|value| value.retryable) ||
+                    (self.context.source_id.starts_with("picacg-") && url.path() == "/comics/advanced-search"));
+            let mut bypass = matches!(&route, SourceNetwork::Direct(_)) ||
+                (automatic && self.clients.prefer_direct(&route, &url));
+            let mut client = self.clients.client(&route, bypass, anonymous)?;
             let request = if let Some(body) = &body {
                 client
                     .post(url.clone())
@@ -1265,9 +1308,36 @@ impl State {
                 request = request.header(header::USER_AGENT, "COPY/3.0.9")
                     .header("x-auth-timestamp", timestamp).header("x-auth-signature", signature);
             }
-            let mut response = if let Some(limit) = header_timeout {
-                tokio::time::timeout(limit, request.send()).await.map_err(|_| SourceError::Timeout)?.map_err(request_error)?
-            } else { request.send().await.map_err(request_error)? };
+            let request = request.build().map_err(transport_error)?;
+            let fallback = if automatic { request.try_clone() } else { None };
+            // Budget only the initial response headers and leave the existing
+            // outer deadline, image streaming and permit in place for both routes.
+            let first_limit = if fallback.is_some() {
+                let bound = if self.context.source_id.starts_with("jmcomic-") && url.path() == "/setting" {
+                    Duration::from_millis(1_500)
+                } else { Duration::from_secs(2) };
+                Some(header_timeout.map_or(bound, |limit| bound.min(limit / 2)))
+            } else { header_timeout };
+            let mut response = match send_on_route(&client, request, first_limit, bypass).await {
+                Ok(response) => response,
+                Err(primary) => {
+                    let Some(fallback) = fallback.filter(|_| matches!(&primary, SourceError::Timeout | SourceError::Network { .. })) else {
+                        return Err(primary);
+                    };
+                    if route != source_route::route(&self.context.source_id) { return Err(primary); }
+                    self.clients.remember_direct(&route, &url, false);
+                    bypass = !bypass;
+                    client = self.clients.client(&route, bypass, anonymous)?;
+                    self.attempts.fetch_add(1, SeqCst);
+                    let limit = header_timeout.zip(first_limit).map(|(total, first)| total - first);
+                    let response = send_on_route(&client, fallback, limit, bypass).await.map_err(|_| primary)?;
+                    if bypass && response.status().is_success() {
+                        self.clients.remember_direct(&route, &url, true);
+                    }
+                    response
+                }
+            };
+            let request_error = |error| route_transport_error(error, bypass);
             if public_catalog_origin(&self.context.source_id).is_some() && body.is_none() {
                 let mut current = url.clone();
                 let mut hops = 0;
@@ -1312,9 +1382,6 @@ impl State {
             }
             // EH/EX media uses its own redirect rules. Recheck destinations and remove Cookie
             // on leaving protected same-site media; never forward credentials to H@H/CDNs.
-            let gallery_source = self.context.source_id.starts_with("ehentai-") || self.context.source_id.starts_with("exhentai-user-");
-            let gallery_host = self.base.host_str().unwrap_or_default();
-            let eh_image = gallery_source && eh_media(&url, gallery_host);
             if eh_image {
                 let mut current = url.clone();
                 let mut redirected_headers = headers.clone();
@@ -1337,8 +1404,28 @@ impl State {
                 }
             }
             let status = response.status().as_u16();
+            let forum = url.host_str() == Some("forums.e-hentai.org");
+            if (gallery_source || (forum && self.context.source_id == "exhentai-login")) &&
+                response.headers().get("cf-mitigated").is_some_and(|value| value == "challenge") {
+                let kind = if forum { "gallery_forum_challenge" } else { "gallery_challenge" };
+                return Err(SourceError::Network { kind: kind.into() });
+            }
+            if gallery_read && gallery_host == "exhentai.org" && response.status().is_redirection() &&
+                response.headers().get(header::LOCATION).and_then(|value| value.to_str().ok())
+                    .and_then(|value| url.join(value).ok()).is_some_and(|next| {
+                        eh_https(&next) && next.host_str() == Some("forums.e-hentai.org") && next.path() == "/remoteapi.php"
+                    }) {
+                return Err(SourceError::AuthenticationRequired);
+            }
             if gallery_source && response.headers().get(header::CONTENT_DISPOSITION).and_then(|v| v.to_str().ok()).is_some_and(|v| v.contains("sadpanda.jpg")) {
                 return Err(SourceError::AuthenticationRequired);
+            }
+            if eh_image {
+                match response.url().path().rsplit('/').next() {
+                    Some("509.gif" | "509.png") => return Err(SourceError::HttpStatus { status: 509 }),
+                    Some("kokomade.jpg" | "sadpanda.jpg") => return Err(SourceError::AuthenticationRequired),
+                    _ => {}
+                }
             }
             let retry_after = response
                 .headers()
@@ -1351,7 +1438,10 @@ impl State {
                 let mut next = self.next_start.lock().await;
                 *next = (*next).max(Instant::now() + delay);
             }
-            if matches!(status, 429 | 502 | 503 | 504) && attempt < retries {
+            let retry_status = if gallery_read {
+                matches!(status, 502..=504) && retry_after.is_none_or(|seconds| seconds <= 2)
+            } else { matches!(status, 429 | 502 | 503 | 504) };
+            if retry_status && attempt < retries {
                 let delay = Duration::from_secs(retry_after.unwrap_or(0).into())
                     .max(Duration::from_millis(100 * (1 << attempt)));
                 drop(response);

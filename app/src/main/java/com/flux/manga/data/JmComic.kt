@@ -154,9 +154,10 @@ internal class JmClient(private val session: WorldSession, private val settings:
                     return@choose candidate
                 } catch (cancelled: CancellationException) { throw cancelled
                 } catch (error: Exception) {
-                    // Authentication failure here is from the anonymous probe, not the user's account.
+                    // A missing /setting endpoint invalidates this host, while a 404 for an
+                    // actual work or chapter still propagates from request() as NotFound.
                     if (!canChangeRoute(error) && error !is SourceException.AuthenticationRequired &&
-                        error !is SourceException.InvalidResponse && error !is JmRouteProbeFailure &&
+                        error !is SourceException.NotFound && error !is SourceException.InvalidResponse && error !is JmRouteProbeFailure &&
                         error !is JSONException && error !is GeneralSecurityException && error !is IllegalArgumentException) throw error
                     excluded += host
                     routeMemory.forget(setOf(host))

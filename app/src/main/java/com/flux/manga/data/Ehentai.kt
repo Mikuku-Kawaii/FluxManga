@@ -42,12 +42,22 @@ internal data class EhComment(val id: String, val author: String, val posted: St
     val editable: Boolean = false, val voteUp: Boolean = false, val voteDown: Boolean = false, val vote: Int = 0)
 internal data class EhComments(val title: String, val entries: List<EhComment>, val more: Boolean, val canPost: Boolean = false)
 internal data class EhCommentVote(val id: String, val score: Int, val vote: Int)
+internal class GalleryLimit(message: String) : IOException(message)
+
+internal fun isGalleryLimited(error: Exception): Boolean = error is GalleryLimit ||
+    error is SourceException.RateLimited || (error is SourceException.HttpStatus && error.status.toInt() == 509)
+
 internal fun ehFailure(error: Exception, site: GallerySite = GallerySite.EH) = com.flux.manga.data.sourceNetworkFailure(error) ?: when (error) {
     is IOException -> error.message ?: "${site.label} 请求失败"
     is SourceException.AuthenticationRequired -> "${site.label} 会话已过期或当前权限不足，请检查该站 Cookie"
     is SourceException.RateLimited -> "服务请求限流，请稍后重试"
     is SourceException.NotFound -> "画廊或图片已不可用"
     is SourceException.Timeout -> "${site.label} 请求超时，请重试"
+    is SourceException.HttpStatus -> when (error.status.toInt()) {
+        509 -> "图片配额已用尽，请等待站点恢复后再试"
+        in 500..599 -> "${site.label} 服务暂时不可用，请稍后重试"
+        else -> "${site.label} 返回 HTTP ${error.status}，请重试"
+    }
     else -> "${site.label} 加载失败，请重试。"
 }
 
@@ -125,10 +135,14 @@ internal class EhClient(private val session: WorldSession, val account: EhAccoun
                 throw IOException("EX 登录失效或权限不足，请检查 igneous。")
             }
             val doc = Jsoup.parse(body, url)
-            val text = doc.text()
-            if (text.contains("This page requires you to log on", true)) throw IOException("当前列表需要有效账号 Cookie")
-            if (text.contains("temporarily banned", true) || text.contains("exceeded your image", true)) throw IOException("服务访问或图片配额受限，请稍后再试")
             if (doc.selectFirst("#challenge-form, #cf-challenge-running") != null || doc.title().contains("Just a moment", true)) throw IOException("服务要求浏览器验证，当前请求未完成")
+            // Gallery titles and comments can quote these messages. Only inspect
+            // the page text for an error if the expected service content is absent.
+            if (doc.selectFirst("#gn, .itg, #img, .fp, #userlinks") == null) {
+                val text = doc.text()
+                if (text.contains("This page requires you to log on", true)) throw SourceException.AuthenticationRequired()
+                galleryLimit(text)?.let { throw it }
+            }
             return doc
         } finally { reply.body.fill(0) }
     }
@@ -317,20 +331,89 @@ internal class EhClient(private val session: WorldSession, val account: EhAccoun
         require(result.keys.toList() == (1..count).toList()) { "图片页序不连续" }
         return result.values.toList()
     }
+    private val reloadCall = Regex("""\bnl\(\s*['"]([a-zA-Z0-9_-]{1,128})['"]\s*\)""")
+
+    private fun reloadUrl(page: EhPage, doc: Document): String? {
+        val key = doc.select("a[onclick]").firstNotNullOfOrNull { reloadCall.find(it.attr("onclick"))?.groupValues?.get(1) }
+            ?: return null
+        val uri = URI(page.url)
+        if (uri.fragment != null || uri.rawQuery?.split('&')?.any { it.substringBefore('=') == "nl" } == true) return null
+        // Only attach a server-supplied token to the already validated page URL.
+        return page.url + (if (uri.rawQuery == null) "?" else "&") + "nl=$key"
+    }
+
+    private fun displayUrl(doc: Document): String? {
+        val url = doc.selectFirst("img#img")?.absUrl("src")?.takeIf(String::isNotBlank) ?: return null
+        when (URI(url).path?.substringAfterLast('/')?.lowercase()) {
+            "509.gif", "509.png" -> throw GalleryLimit("图片配额已用尽，请等待站点恢复后再试")
+            "kokomade.jpg", "sadpanda.jpg" -> throw SourceException.AuthenticationRequired()
+        }
+        return url
+    }
+
+    private fun isHathImage(url: String) = URI(url).host?.endsWith(".hath.network", ignoreCase = true) == true
+
+    private fun canReloadNode(error: Exception) = when (error) {
+        is SourceException.Timeout, is SourceException.Transport, is SourceException.NotFound, is GalleryNodeUnavailable -> true
+        is SourceException.Network -> error.kind in setOf("dns", "connect", "reset", "refused", "tls_eof")
+        is SourceException.HttpStatus -> error.status.toInt() in setOf(408, 500, 502, 503, 504, 520, 522, 524)
+        else -> false
+    }
+
+    private suspend fun timedImage(timeoutMillis: Long, load: suspend () -> ByteArray): ByteArray {
+        var bytes: ByteArray? = null
+        try {
+            withTimeoutOrNull(timeoutMillis) { bytes = load() } ?: throw SourceException.Timeout()
+            return requireNotNull(bytes).also { bytes = null }
+        } finally { bytes?.fill(0) }
+    }
+
     suspend fun pageImage(page: EhPage, original: Boolean): ByteArray {
         val doc = document(page.url)
-        val displayed = doc.selectFirst("img#img")?.absUrl("src")?.takeIf(String::isNotBlank)
-            ?: throw IOException("正文图片不可用，请检查配额或重新载入")
-        if (displayed.contains("509.gif") || displayed.contains("509.png")) throw IOException("图片配额已用尽，请稍后再试")
-        if (displayed.contains("/img/kokomade.jpg") || displayed.contains("sadpanda")) throw IOException("${site.label} 拒绝当前图片访问，请检查会话与权限")
-        val originalLink = doc.select("a[href]").firstOrNull { runCatching { val uri = URI(it.absUrl("href")); uri.host == site.host && uri.path == "/fullimg.php" }.getOrDefault(false) }?.absUrl("href")
-        if (original && originalLink == null) throw IOException("此页未提供可访问原图；可在图源设置使用站点图片")
-        return image(if (original) requireNotNull(originalLink) else displayed)
+        val displayed = displayUrl(doc)
+        if (original) {
+            val originalLink = doc.select("a[href]").firstOrNull {
+                runCatching { val uri = URI(it.absUrl("href")); uri.host == site.host && uri.path == "/fullimg.php" }.getOrDefault(false)
+            }?.absUrl("href") ?: throw IOException("此页未提供可访问原图。可在图源设置使用站点图片")
+            return image(originalLink)
+        }
+        val reload = reloadUrl(page, doc)
+        if (displayed != null && (!isHathImage(displayed) || reload == null)) return image(displayed)
+
+        val failure = if (displayed == null) GalleryNodeUnavailable() else try {
+            return image(displayed)
+        } catch (error: Exception) {
+            if (!canReloadNode(error)) throw error
+            error
+        }
+        if (reload == null) throw failure
+        return timedImage(18_000L) {
+            val refreshed = displayUrl(document(reload))?.takeUnless { it == displayed } ?: throw failure
+            image(refreshed)
+        }
     }
+
+    private class GalleryNodeUnavailable : IOException("正文图片节点暂不可用，请重试")
+
+    private fun galleryLimit(text: String): GalleryLimit? = when {
+        text.contains("temporarily banned", true) -> GalleryLimit("当前网络被站点暂时限制，请稍后重试")
+        text.contains("exceeded your image", true) || text.contains("Bandwidth Exceeded", true) ->
+            GalleryLimit("图片配额已用尽，请等待站点恢复后再试")
+        else -> null
+    }
+
     suspend fun image(url: String): ByteArray {
-        active(); val reply = native.ehRead(context, url, cookie(url), true)
+        active()
+        val reply = try { native.ehRead(context, url, cookie(url), true) } catch (error: SourceException.HttpStatus) {
+            if (error.status.toInt() == 509) throw GalleryLimit("图片配额已用尽，请等待站点恢复后再试")
+            throw error
+        }
         try { currentCoroutineContext().ensureActive(); active()
-            if (reply.contentType?.startsWith("image/") != true) throw IOException("图片返回了非图像内容，可能需要权限或配额")
+            if (reply.contentType?.startsWith("image/", ignoreCase = true) != true) {
+                galleryLimit(reply.body.decodeToString(0, minOf(reply.body.size, 4096)))?.let { throw it }
+                if (isHathImage(url)) throw GalleryNodeUnavailable()
+                throw IOException("图片返回了非图像内容，请检查权限或重试")
+            }
         } catch (error: Throwable) { reply.body.fill(0); throw error }
         return reply.body
     }

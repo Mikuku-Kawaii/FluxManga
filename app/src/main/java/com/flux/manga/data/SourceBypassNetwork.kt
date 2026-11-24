@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.SystemClock
 import android.util.Base64
 import com.flux.manga.core.configureSourceNetwork
 import kotlinx.coroutines.*
@@ -33,15 +34,16 @@ internal object SourceBypassNetwork {
         if (::app.isInitialized) return
         app = context.applicationContext
         for (kind in SourceKind.entries) {
-            if (enabled(kind)) {
+            val mode = mode(kind)
+            if (mode != SourceNetworkMode.SYSTEM) {
                 // A failed local listener must not silently revert a saved direct route to VPN.
-                val proxy = try { tunnel().authenticatedUrl } catch (_: IOException) { "http://127.0.0.1:1" }
-                prefixes(kind).forEach { configureSourceNetwork(it, proxy) }
+                val proxy = try { proxy(mode) } catch (_: IOException) { "http://127.0.0.1:1" }
+                applyNetwork(kind, mode, proxy)
             }
         }
     }
 
-    fun enabled(kind: SourceKind): Boolean = SourceSelection(app, kind.world).bypassVpn(kind)
+    fun mode(kind: SourceKind) = SourceSelection(app, kind.world).networkMode(kind)
 
     private fun prefixes(kind: SourceKind): List<String> = if (kind == SourceKind.BAOZI) listOf("baozi-", "baozimh-") else listOf(when (kind) {
         SourceKind.KOMGA -> "komga-"
@@ -69,30 +71,46 @@ internal object SourceBypassNetwork {
 
     @Synchronized private fun tunnel(): DirectTunnel = nativeTunnel ?: DirectTunnel(null).also { nativeTunnel = it }
 
-    suspend fun set(kind: SourceKind, value: Boolean, active: () -> Boolean) = withContext(Dispatchers.IO) {
-        val proxy = if (value) tunnel().authenticatedUrl else null
+    private fun proxy(mode: SourceNetworkMode) = when (mode) {
+        SourceNetworkMode.SYSTEM -> null
+        SourceNetworkMode.AUTO -> tunnel().authenticatedUrl(fallbackOnly = true)
+        SourceNetworkMode.DIRECT -> tunnel().authenticatedUrl(fallbackOnly = false)
+    }
+
+    private fun applyNetwork(kind: SourceKind, mode: SourceNetworkMode, proxy: String?) {
+        prefixes(kind).forEach { configureSourceNetwork(it, proxy, mode == SourceNetworkMode.AUTO) }
+    }
+
+    suspend fun set(kind: SourceKind, value: SourceNetworkMode, active: () -> Boolean) = withContext(Dispatchers.IO) {
+        val proxy = proxy(value)
         withContext(NonCancellable) {
-            SourceSelection(app, kind.world).setBypassVpn(kind, value, active)
-            prefixes(kind).forEach { configureSourceNetwork(it, proxy) }
+            SourceSelection(app, kind.world).setNetworkMode(kind, value, active)
+            applyNetwork(kind, value, proxy)
         }
     }
 
     /** Dedicated short-lived browser relay; unauthenticated CONNECT is restricted
      * to origins explicitly requested by the sole active login WebView. */
-    fun browser(scope: String, hosts: Set<String>): DirectTunnel? = kind(scope)?.takeIf(::enabled)?.let { DirectTunnel(hosts) }
+    fun browser(scope: String, hosts: Set<String>): DirectTunnel? =
+        kind(scope)?.takeIf { mode(it) == SourceNetworkMode.DIRECT }?.let { DirectTunnel(hosts) }
 
     internal class DirectTunnel internal constructor(browserHosts: Set<String>?) : Closeable {
         private val manager = app.getSystemService(ConnectivityManager::class.java)
         private val server = ServerSocket(0, 16, InetAddress.getByName("127.0.0.1"))
         private val token = UUID.randomUUID().toString()
-        private val authorization = "Basic " + Base64.encodeToString("flux:$token".toByteArray(), Base64.NO_WRAP)
+        private fun authorization(user: String) = "Basic " + Base64.encodeToString("$user:$token".toByteArray(), Base64.NO_WRAP)
+        private val directAuth = authorization("flux")
+        private val fallbackAuth = authorization("flux-auto")
         private val allowedHosts = browserHosts?.let { ConcurrentHashMap.newKeySet<String>().apply { addAll(it) } }
         private val connections = ConcurrentHashMap<Socket, Network?>()
         private val sockets = ConcurrentHashMap.newKeySet<Socket>()
         private val job = SupervisorJob(scope.coroutineContext[Job])
         private val work = CoroutineScope(scope.coroutineContext + job)
         val proxyAddress get() = "http://127.0.0.1:${server.localPort}"
-        val authenticatedUrl get() = "http://flux:$token@127.0.0.1:${server.localPort}"
+        fun authenticatedUrl(fallbackOnly: Boolean): String {
+            val user = if (fallbackOnly) "flux-auto" else "flux"
+            return "http://$user:$token@127.0.0.1:${server.localPort}"
+        }
         @Volatile private var closed = false
         fun allowBrowserHost(host: String?) { if (!closed && host != null) allowedHosts?.add(host.lowercase()) }
         private val callback = object : ConnectivityManager.NetworkCallback() {
@@ -117,27 +135,29 @@ internal object SourceBypassNetwork {
                 }
             }
         }
-        private fun network(): Network = manager.allNetworks.filter { network ->
-            val caps = manager.getNetworkCapabilities(network)
-            caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
-                !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-        }.sortedByDescending { network ->
-            val caps = manager.getNetworkCapabilities(network)
-            (if (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true) 4 else 0) +
-                (if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) 2 else 0)
-        }.firstOrNull() ?: throw IOException("没有可用的直连网络")
+        @Suppress("DEPRECATION")
+        private fun networks(fallbackOnly: Boolean): List<Network> {
+            val excluded = if (fallbackOnly) manager.activeNetwork else null
+            return manager.allNetworks.mapNotNull { network ->
+                val caps = manager.getNetworkCapabilities(network) ?: return@mapNotNull null
+                if (network == excluded || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+                    !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return@mapNotNull null
+                val score = (if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) 4 else 0) +
+                    (if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) 2 else 0)
+                network to score
+            }.sortedByDescending { it.second }.map { it.first }
+        }
 
-        private fun connect(network: Network, host: String, port: Int): Socket {
+        private fun connect(network: Network, host: String, port: Int, deadline: Long): Socket {
             // Preserve the existing Manhuagui alias workaround, resolving it on
             // the SAME physical network instead of using the VPN's Fake-IP DNS.
-            val addresses = if (host in setOf("www.manhuagui.com", "tw.manhuagui.com")) {
+            val addresses = if (host == "www.manhuagui.com") {
                 runCatching { network.getAllByName("www.mhgui.com") }.getOrElse { network.getAllByName(host) }
             } else network.getAllByName(host)
             var failure: IOException? = null
-            val deadline = android.os.SystemClock.elapsedRealtime() + 10_000
             for (address in addresses) {
-                val remaining = deadline - android.os.SystemClock.elapsedRealtime()
+                val remaining = deadline - SystemClock.elapsedRealtime()
                 if (closed || remaining <= 0) break
                 val socket = network.socketFactory.createSocket()
                 connections[socket] = network
@@ -171,14 +191,28 @@ internal object SourceBypassNetwork {
                 val port = target.port
                 if (target.userInfo != null || port !in 1..65535 || target.path.isNotEmpty() ||
                     (host in setOf("127.0.0.1", "localhost", "[::1]") && port == server.localPort)) throw IOException("Invalid target")
-                if (allowedHosts != null) {
+                val fallbackOnly = if (allowedHosts != null) {
                     if (host !in allowedHosts) throw IOException("Unrequested browser host")
-                } else if (lines.none { it.substringBefore(':').equals("Proxy-Authorization", true) &&
-                        it.substringAfter(':').trim() == authorization }) throw IOException("Unauthorized tunnel")
-                val network = network()
-                connections[local] = network
-                remote = connect(network, host, port)
-                val upstream = remote
+                    false
+                } else {
+                    val auth = lines.firstOrNull { it.substringBefore(':').equals("Proxy-Authorization", true) }
+                        ?.substringAfter(':')?.trim()
+                    when (auth) {
+                        directAuth -> false
+                        fallbackAuth -> true
+                        else -> throw IOException("Unauthorized tunnel")
+                    }
+                }
+                val deadline = SystemClock.elapsedRealtime() + 8_000L
+                for (network in networks(fallbackOnly)) {
+                    if (closed || SystemClock.elapsedRealtime() >= deadline) break
+                    val candidate = try { connect(network, host, port, minOf(deadline, SystemClock.elapsedRealtime() + 3_000L)) }
+                        catch (_: IOException) { continue }
+                    remote = candidate
+                    connections[local] = network
+                    break
+                }
+                val upstream = remote ?: throw IOException("没有可用的备用网络")
                 local.getOutputStream().write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())
                 established = true
                 local.soTimeout = 90_000; upstream.soTimeout = 90_000

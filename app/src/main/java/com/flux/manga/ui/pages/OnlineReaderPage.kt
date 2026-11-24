@@ -68,8 +68,10 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     readerRepository: ReaderRepository? = null, private val data: WorldDataStore = WorldDataStore(app)) : AndroidViewModel(app) {
     private val baozi = isBaoziSource(sourceId)
     private val copy = isCopySource(sourceId)
+    val gallery = isEhSource(sourceId) || isExSource(sourceId)
+    private var galleryPrefetchAfter = 0L
     val privateContent = syntheticPrivate || isPrivateComicSource(sourceId)
-    fun failure(error: Exception) = if (syntheticPrivate) "合成图片读取失败，可重试" else if (isEhSource(sourceId) || isExSource(sourceId)) ehFailure(error, GallerySite.forSource(sourceId)) else if (isPicaSource(sourceId)) picaFailure(error) else if (isJmSource(sourceId)) jmFailure(error) else if (isPublicWebSource(sourceId)) publicWebFailure(error, sourceId) else if (baozi) baoziFailure(error) else if (copy) copyMangaFailure(error) else komgaFailure(error)
+    fun failure(error: Exception) = if (syntheticPrivate) "合成图片读取失败，可重试" else if (gallery) ehFailure(error, GallerySite.forSource(sourceId)) else if (isPicaSource(sourceId)) picaFailure(error) else if (isJmSource(sourceId)) jmFailure(error) else if (isPublicWebSource(sourceId)) publicWebFailure(error, sourceId) else if (baozi) baoziFailure(error) else if (copy) copyMangaFailure(error) else komgaFailure(error)
     private val cacheSession = savedState.get<String>("reader-cache-session") ?: java.util.UUID.randomUUID().toString()
         .also { savedState["reader-cache-session"] = it }
     private val previewFiles = ReaderEncodedCache(data, cacheSession)
@@ -206,10 +208,11 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
     /** Cache only the chapter the reader has entered, without decoding full-size bitmaps. */
     suspend fun prefetchCurrentChapter(nearbyOnly: Boolean = false) {
         if (offlineOnly) return
+        if (gallery && android.os.SystemClock.elapsedRealtime() < galleryPrefetchAfter) return
         val initial = state.value
         val chapter = initial.pages.getOrNull(initial.index)?.chapterId ?: return
         val nearby = (initial.index - 2)..(initial.index + 2)
-        val remaining = initial.pages.filterIndexed { index, page -> page.chapterId == chapter && (!nearbyOnly || index in nearby) }.toMutableList()
+        val remaining = initial.pages.filterIndexed { index, page -> page.chapterId == chapter && (!(nearbyOnly || gallery) || index in nearby) }.toMutableList()
         fun active() {
             repository.active()
             val current = state.value
@@ -231,7 +234,11 @@ internal class OnlineReaderModel(app: Application, val session: WorldSession, pr
                 mutable.value = state.value.copy(cacheNotice = full.message)
                 return
             }
-            catch (_: Exception) {
+            catch (failure: Exception) {
+                if (gallery && isGalleryLimited(failure)) {
+                    galleryPrefetchAfter = android.os.SystemClock.elapsedRealtime() + 60_000L
+                    return
+                }
                 // A speculative failure must not block other pages. The page's existing
                 // foreground loader reports the actual error and offers image retry.
             }
@@ -582,7 +589,7 @@ internal fun OnlineReaderPage(session: WorldSession, sourceId: String, mangaId: 
     val currentChapter = state.pages.getOrNull(state.index)?.chapterId.orEmpty()
     val chapterStart = state.pages.indexOfFirst { it.chapterId == currentChapter }.coerceAtLeast(0)
     val chapterCount = state.pages.count { it.chapterId == currentChapter }
-    val nearbyOnly = options.wifiChapter && !readerWifiAvailable(options.wifiChapter)
+    val nearbyOnly = model.gallery || (options.wifiChapter && !readerWifiAvailable(options.wifiChapter))
     LaunchedEffect(model, owner, currentChapter, state.loading, sessionState.foreground, nearbyOnly, if (nearbyOnly) state.index else -1) {
         if (!state.loading && sessionState.foreground) {
             owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.prefetchCurrentChapter(nearbyOnly) }

@@ -88,7 +88,7 @@
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "77a149c3c20cef38e13f61cb277a820267883fa3962ded40ebf73afe26856893"
+          "sha256": "b2a26f9a0edb9cb82402684fd01f46a638c4f51f161e48aaeb5ab35f66592b55"
         }
       ],
       "evidence": [],
@@ -197,7 +197,7 @@
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "77a149c3c20cef38e13f61cb277a820267883fa3962ded40ebf73afe26856893"
+          "sha256": "b2a26f9a0edb9cb82402684fd01f46a638c4f51f161e48aaeb5ab35f66592b55"
         },
         {
           "path": "rust-core/src/detail_metadata.rs",
@@ -473,11 +473,11 @@
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "77a149c3c20cef38e13f61cb277a820267883fa3962ded40ebf73afe26856893"
+          "sha256": "b2a26f9a0edb9cb82402684fd01f46a638c4f51f161e48aaeb5ab35f66592b55"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/JmComic.kt",
-          "sha256": "f55516391028b7d0238c5943966a63cad2609fa913dcc1dfffb8d20cc46410a1"
+          "sha256": "6a5cf6984fca0e44be1a6fbf36bae020cc7d787b6d100efd4f4fb2012e4cbd02"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/JmCover.kt",
@@ -590,7 +590,7 @@
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "77a149c3c20cef38e13f61cb277a820267883fa3962ded40ebf73afe26856893"
+          "sha256": "b2a26f9a0edb9cb82402684fd01f46a638c4f51f161e48aaeb5ab35f66592b55"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/PicaAccountRecovery.kt",
@@ -647,7 +647,7 @@
       },
       "notice": {
         "path": "app/src/main/assets/licenses/ehentai-NOTICE.txt",
-        "sha256": "c458241e4b5d97e63f13819a061e48c9091536d46dabd24f0bc7808e843e6cbc"
+        "sha256": "f8a90ba8a3eba65f8f86abadc7e619c760582ef16a11a7b49665a8d498c5ef45"
       },
       "upstream_samples": [
         {
@@ -734,7 +734,7 @@
       "local_files": [
         {
           "path": "app/src/main/java/com/flux/manga/data/Ehentai.kt",
-          "sha256": "9cf70b9dc43d51ecba6af47943f0deafd2f2ea08153a569e296c616c5582098f"
+          "sha256": "092500c9eabed80de881c83f0e5d1bb1337badf90b2e9834ba5878cf0d6141b3"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/EhReaderRepository.kt",
@@ -746,7 +746,7 @@
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "77a149c3c20cef38e13f61cb277a820267883fa3962ded40ebf73afe26856893"
+          "sha256": "b2a26f9a0edb9cb82402684fd01f46a638c4f51f161e48aaeb5ab35f66592b55"
         },
         {
           "path": "app/src/main/java/com/flux/manga/ui/pages/EhInteractionPage.kt",
@@ -793,7 +793,7 @@
       },
       "notice": {
         "path": "app/src/main/assets/licenses/exhentai-NOTICE.txt",
-        "sha256": "f019f6ce3e4357662268b7c3a1f9e36eb9b68a76509c9313648534ff1e1589f4"
+        "sha256": "14248f6231d93c04edb8952d4cefaa821b41db3c037fd0858c75564fd9240cd3"
       },
       "upstream_samples": [
         {
@@ -880,7 +880,7 @@
       "local_files": [
         {
           "path": "app/src/main/java/com/flux/manga/data/Ehentai.kt",
-          "sha256": "9cf70b9dc43d51ecba6af47943f0deafd2f2ea08153a569e296c616c5582098f"
+          "sha256": "092500c9eabed80de881c83f0e5d1bb1337badf90b2e9834ba5878cf0d6141b3"
         },
         {
           "path": "app/src/main/java/com/flux/manga/data/EhReaderRepository.kt",
@@ -892,7 +892,7 @@
         },
         {
           "path": "rust-core/src/transport.rs",
-          "sha256": "77a149c3c20cef38e13f61cb277a820267883fa3962ded40ebf73afe26856893"
+          "sha256": "b2a26f9a0edb9cb82402684fd01f46a638c4f51f161e48aaeb5ab35f66592b55"
         },
         {
           "path": "app/src/main/java/com/flux/manga/ui/pages/EhInteractionPage.kt",

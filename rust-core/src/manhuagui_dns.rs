@@ -11,7 +11,7 @@ impl Resolve for ManhuaguiDns {
     fn resolve(&self, name: Name) -> Resolving {
         let host = name.as_str().to_owned();
         Box::pin(async move {
-            if matches!(host.as_str(), "www.manhuagui.com" | "tw.manhuagui.com") {
+            if host == "www.manhuagui.com" {
                 if let Ok(Ok(addresses)) = tokio::time::timeout(
                     Duration::from_secs(3),
                     tokio::net::lookup_host(("www.mhgui.com", 0)),

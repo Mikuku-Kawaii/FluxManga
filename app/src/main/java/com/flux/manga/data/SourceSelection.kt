@@ -30,6 +30,8 @@ internal enum class SourceKind(val label: String, val world: PrototypeWorld) {
     }
 }
 
+internal enum class SourceNetworkMode { SYSTEM, AUTO, DIRECT }
+
 /** Non-secret discovery preferences only; account/session data stays in its existing store. */
 internal class SourceSelection(context: Context, private val world: PrototypeWorld) {
     private val preferences = context.applicationContext.getSharedPreferences("source-selection-${world.name.lowercase()}", Context.MODE_PRIVATE)
@@ -38,13 +40,20 @@ internal class SourceSelection(context: Context, private val world: PrototypeWor
         preferences.getBoolean(kind.name, kind == SourceKind.COPY || kind == SourceKind.JM)
     fun enabled(source: String) = SourceKind.of(source)?.let(::enabled) ?: false
     fun snapshot() = SourceKind.entries.filter { it.world == world }.associateWith(::enabled)
-    fun bypassVpn(kind: SourceKind) = kind.world == world && preferences.getBoolean("bypass-vpn-${kind.name}", false)
-    suspend fun setBypassVpn(kind: SourceKind, value: Boolean, allowed: () -> Boolean) = withContext(Dispatchers.IO) {
+    fun networkMode(kind: SourceKind): SourceNetworkMode {
+        require(kind.world == world)
+        val saved = preferences.getString("network-mode-${kind.name}", null)
+        return SourceNetworkMode.entries.firstOrNull { it.name == saved }
+            ?: if (preferences.getBoolean("bypass-vpn-${kind.name}", false)) SourceNetworkMode.DIRECT else SourceNetworkMode.SYSTEM
+    }
+
+    suspend fun setNetworkMode(kind: SourceKind, value: SourceNetworkMode, allowed: () -> Boolean) = withContext(Dispatchers.IO) {
         require(kind.world == world)
         if (!allowed()) throw CancellationException("Expired source settings session")
-        val previous = bypassVpn(kind)
-        if (!preferences.edit().putBoolean("bypass-vpn-${kind.name}", value).commit()) {
-            preferences.edit().putBoolean("bypass-vpn-${kind.name}", previous).apply()
+        val key = "network-mode-${kind.name}"
+        val previous = preferences.getString(key, null)
+        if (!preferences.edit().putString(key, value.name).commit()) {
+            preferences.edit().putString(key, previous).apply()
             throw IOException("网络设置保存失败，请重试")
         }
     }

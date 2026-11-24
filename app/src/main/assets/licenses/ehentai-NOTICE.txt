@@ -69,3 +69,9 @@ No global cookie jar, WebView, database or runtime dependency added. Passwords
 are not persisted; account credentials are sealed only after site verification.
 EX still requires user-provided igneous and independent EX access confirmation.
 No tests, build, packaging or live authentication requests were performed.
+
+2026-11-24 reader reliability: parse the current page reload token using the
+same pinned Apache-2.0 GalleryPageParser contract. Retry an eligible image
+node failure once using the original page URL, distinguish site challenges
+and image quota, and restrict speculative fetching to nearby pages. No
+new upstream files or dependencies.
